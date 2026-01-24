@@ -1,0 +1,21 @@
+app_name = "iam-auth"
+app_env = "development"
+
+[database]
+url = "postgres://postgres:postgres@localhost:5432/cuba"
+max_connections = 10
+
+[redis]
+url = "redis://localhost:6379"
+
+[jwt]
+secret = "your-super-secret-key-change-in-production"
+expires_in = 3600
+refresh_expires_in = 604800
+
+[server]
+host = "127.0.0.1"
+port = 50051
+
+[telemetry]
+log_level = "debug"

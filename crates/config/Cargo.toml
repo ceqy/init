@@ -1,0 +1,11 @@
+[package]
+name = "cuba-config"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+figment = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }

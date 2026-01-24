@@ -1,0 +1,17 @@
+[package]
+name = "cuba-adapter-kafka"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+cuba-errors = { workspace = true }
+cuba-ports = { workspace = true }
+rdkafka = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+futures-util = "0.3"

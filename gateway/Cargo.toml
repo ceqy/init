@@ -1,0 +1,21 @@
+[package]
+name = "cuba-gateway"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+cuba-config = { workspace = true }
+cuba-errors = { workspace = true }
+cuba-telemetry = { workspace = true }
+cuba-auth-core = { workspace = true }
+cuba-bootstrap = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tonic = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }

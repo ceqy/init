@@ -1,0 +1,14 @@
+[package]
+name = "cuba-auth-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+cuba-common = { workspace = true }
+cuba-errors = { workspace = true }
+jsonwebtoken = { workspace = true }
+serde = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }

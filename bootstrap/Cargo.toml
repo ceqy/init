@@ -1,0 +1,16 @@
+[package]
+name = "cuba-bootstrap"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+cuba-config = { workspace = true }
+cuba-errors = { workspace = true }
+cuba-telemetry = { workspace = true }
+cuba-auth-core = { workspace = true }
+tonic = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tower = { workspace = true }

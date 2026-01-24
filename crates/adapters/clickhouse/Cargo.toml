@@ -1,0 +1,14 @@
+[package]
+name = "cuba-adapter-clickhouse"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+cuba-errors = { workspace = true }
+clickhouse = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }

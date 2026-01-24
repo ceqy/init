@@ -1,8 +1,103 @@
-[package]
-name = "init"
+[workspace]
+resolver = "2"
+members = [
+    "crates/common",
+    "crates/errors",
+    "crates/config",
+    "crates/telemetry",
+    "crates/auth-core",
+    "crates/ports",
+    "crates/domain-core",
+    "crates/cqrs-core",
+    "crates/event-core",
+    "crates/adapters/postgres",
+    "crates/adapters/redis",
+    "crates/adapters/clickhouse",
+    "crates/adapters/kafka",
+    "bootstrap",
+    "gateway",
+    "services/*",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
+authors = ["eqycc <a@eqy.cc>"]
+license = "Apache-2.0"
+repository = "https://github.com/ceqy/init"
 
-[dependencies]
-axum = "0.8.8"
-tokio = { version = "1.49.0", features = ["full"] }
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.49", features = ["full"] }
+
+# Web framework
+axum = { version = "0.8" }
+
+# gRPC
+tonic = { version = "0.13" }
+tonic-build = { version = "0.13" }
+prost = { version = "0.13" }
+prost-types = { version = "0.13" }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json"] }
+
+# Redis
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
+
+# Kafka
+rdkafka = { version = "0.37", features = ["tokio"] }
+
+# ClickHouse
+clickhouse = { version = "0.13" }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+
+# Configuration
+figment = { version = "0.10", features = ["toml", "env"] }
+
+# Error handling
+thiserror = { version = "2.0" }
+anyhow = { version = "1.0" }
+
+# Tracing
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Metrics
+metrics = { version = "0.24" }
+metrics-exporter-prometheus = { version = "0.16" }
+
+# Auth
+jsonwebtoken = { version = "9.3" }
+argon2 = { version = "0.5" }
+
+# Utilities
+uuid = { version = "1.16", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+async-trait = { version = "0.1" }
+derive_more = { version = "2.0", features = ["display", "from", "error"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["cors", "trace", "timeout"] }
+
+# Testing
+tokio-test = { version = "0.4" }
+mockall = { version = "0.13" }
+
+# Internal crates
+cuba-common = { path = "crates/common" }
+cuba-errors = { path = "crates/errors" }
+cuba-config = { path = "crates/config" }
+cuba-telemetry = { path = "crates/telemetry" }
+cuba-auth-core = { path = "crates/auth-core" }
+cuba-ports = { path = "crates/ports" }
+cuba-domain-core = { path = "crates/domain-core" }
+cuba-cqrs-core = { path = "crates/cqrs-core" }
+cuba-event-core = { path = "crates/event-core" }
+cuba-adapter-postgres = { path = "crates/adapters/postgres" }
+cuba-adapter-redis = { path = "crates/adapters/redis" }
+cuba-adapter-clickhouse = { path = "crates/adapters/clickhouse" }
+cuba-adapter-kafka = { path = "crates/adapters/kafka" }
+cuba-bootstrap = { path = "bootstrap" }

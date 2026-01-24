@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package cuba.common;
+
+option go_package = "github.com/cuba-erp/api/common";
+
+import "google/protobuf/timestamp.proto";
+
+// 分页请求
+message PaginationRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+// 分页响应
+message PaginationResponse {
+  int32 page = 1;
+  int32 page_size = 2;
+  int64 total = 3;
+  int32 total_pages = 4;
+}
+
+// 审计信息
+message AuditInfo {
+  google.protobuf.Timestamp created_at = 1;
+  string created_by = 2;
+  google.protobuf.Timestamp updated_at = 3;
+  string updated_by = 4;
+}
+
+// 空请求
+message Empty {}
+
+// 通用 ID 请求
+message IdRequest {
+  string id = 1;
+}
+
+// 通用成功响应
+message SuccessResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// 金额
+message Money {
+  int64 amount = 1;      // 金额（最小单位，如分）
+  string currency = 2;   // 货币代码
+}
+
+// 数量
+message Quantity {
+  int64 value = 1;       // 数量值
+  int32 precision = 2;   // 精度因子
+  string unit = 3;       // 计量单位
+}

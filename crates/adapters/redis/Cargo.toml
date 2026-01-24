@@ -1,0 +1,14 @@
+[package]
+name = "cuba-adapter-redis"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+cuba-errors = { workspace = true }
+cuba-ports = { workspace = true }
+redis = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }

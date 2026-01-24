@@ -1,0 +1,4 @@
+app_env = "production"
+
+[telemetry]
+log_level = "info"
