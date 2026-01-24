@@ -8,15 +8,116 @@ mod proto {
 pub use proto::auth_service_server::{AuthService, AuthServiceServer};
 pub use proto::*;
 
+use std::sync::Arc;
+
+use chrono::{Duration, Utc};
+use cuba_auth_core::TokenService;
+use cuba_common::{TenantId, UserId};
+use prost_types::Timestamp;
+use sha2::{Digest, Sha256};
 use tonic::{Request, Response, Status};
+use uuid::Uuid;
+
+use crate::domain::entities::{Session as DomainSession, SessionId, UserStatus};
+use crate::domain::repositories::{SessionRepository, UserRepository};
+use crate::domain::value_objects::{HashedPassword, Username};
 
 /// AuthService 实现
-#[derive(Debug, Default)]
-pub struct AuthServiceImpl {}
+pub struct AuthServiceImpl {
+    user_repo: Arc<dyn UserRepository>,
+    session_repo: Arc<dyn SessionRepository>,
+    token_service: Arc<TokenService>,
+    refresh_token_expires_in: i64,
+}
 
 impl AuthServiceImpl {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(
+        user_repo: Arc<dyn UserRepository>,
+        session_repo: Arc<dyn SessionRepository>,
+        token_service: Arc<TokenService>,
+        refresh_token_expires_in: i64,
+    ) -> Self {
+        Self {
+            user_repo,
+            session_repo,
+            token_service,
+            refresh_token_expires_in,
+        }
+    }
+}
+
+/// 计算 SHA256 哈希
+fn sha256_hash(input: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(input.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
+/// 将 Domain User 转换为 Proto User
+fn user_to_proto(user: &crate::domain::entities::User) -> User {
+    User {
+        id: user.id.0.to_string(),
+        username: user.username.as_str().to_string(),
+        email: user.email.as_str().to_string(),
+        display_name: user.display_name.clone().unwrap_or_default(),
+        phone: user.phone.clone().unwrap_or_default(),
+        avatar_url: user.avatar_url.clone().unwrap_or_default(),
+        tenant_id: user.tenant_id.0.to_string(),
+        role_ids: user.role_ids.clone(),
+        status: format!("{:?}", user.status),
+        language: user.language.clone(),
+        timezone: user.timezone.clone(),
+        two_factor_enabled: user.two_factor_enabled,
+        last_login_at: user.last_login_at.map(|dt| Timestamp {
+            seconds: dt.timestamp(),
+            nanos: dt.timestamp_subsec_nanos() as i32,
+        }),
+        audit_info: Some(AuditInfo {
+            created_at: Some(Timestamp {
+                seconds: user.audit_info.created_at.timestamp(),
+                nanos: user.audit_info.created_at.timestamp_subsec_nanos() as i32,
+            }),
+            created_by: user
+                .audit_info
+                .created_by
+                .as_ref()
+                .map(|u| u.0.to_string())
+                .unwrap_or_default(),
+            updated_at: Some(Timestamp {
+                seconds: user.audit_info.updated_at.timestamp(),
+                nanos: user.audit_info.updated_at.timestamp_subsec_nanos() as i32,
+            }),
+            updated_by: user
+                .audit_info
+                .updated_by
+                .as_ref()
+                .map(|u| u.0.to_string())
+                .unwrap_or_default(),
+        }),
+    }
+}
+
+/// 将 Domain Session 转换为 Proto Session
+fn session_to_proto(session: &DomainSession, is_current: bool) -> Session {
+    Session {
+        id: session.id.0.to_string(),
+        user_id: session.user_id.0.to_string(),
+        device_info: session.device_info.clone().unwrap_or_default(),
+        ip_address: session.ip_address.clone().unwrap_or_default(),
+        user_agent: session.user_agent.clone().unwrap_or_default(),
+        is_current,
+        created_at: Some(Timestamp {
+            seconds: session.created_at.timestamp(),
+            nanos: session.created_at.timestamp_subsec_nanos() as i32,
+        }),
+        expires_at: Some(Timestamp {
+            seconds: session.expires_at.timestamp(),
+            nanos: session.expires_at.timestamp_subsec_nanos() as i32,
+        }),
+        last_activity_at: Some(Timestamp {
+            seconds: session.last_activity_at.timestamp(),
+            nanos: session.last_activity_at.timestamp_subsec_nanos() as i32,
+        }),
     }
 }
 
@@ -29,30 +130,97 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(username = %req.username, tenant_id = %req.tenant_id, "Login attempt");
 
-        // TODO: 实现真正的登录逻辑
+        // 1. 解析租户 ID
+        let tenant_id = TenantId::from_uuid(
+            Uuid::parse_str(&req.tenant_id)
+                .map_err(|_| Status::invalid_argument("Invalid tenant ID"))?,
+        );
+
+        // 2. 构建用户名值对象
+        let username = Username::new(&req.username)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+        // 3. 查找用户
+        let user = self
+            .user_repo
+            .find_by_username(&username, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::unauthenticated("Invalid credentials"))?;
+
+        // 4. 验证密码
+        let valid = user
+            .password_hash
+            .verify(&req.password)
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if !valid {
+            tracing::warn!(username = %req.username, "Invalid password");
+            return Err(Status::unauthenticated("Invalid credentials"));
+        }
+
+        // 5. 检查用户状态
+        if !user.is_active() {
+            tracing::warn!(username = %req.username, status = ?user.status, "User not active");
+            return Err(Status::permission_denied("User account is not active"));
+        }
+
+        // 6. 检查是否需要 2FA
+        if user.two_factor_enabled {
+            // 创建临时会话用于 2FA 验证
+            let session_id = SessionId::new();
+            tracing::info!(username = %req.username, "2FA required");
+            return Ok(Response::new(LoginResponse {
+                require_2fa: true,
+                session_id: session_id.0.to_string(),
+                ..Default::default()
+            }));
+        }
+
+        // 7. 生成令牌
+        let access_token = self
+            .token_service
+            .generate_access_token(&user.id, &user.tenant_id, vec![], user.role_ids.clone())
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let refresh_token = self
+            .token_service
+            .generate_refresh_token(&user.id, &user.tenant_id)
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 8. 创建会话
+        let refresh_token_hash = sha256_hash(&refresh_token);
+        let expires_at = Utc::now() + Duration::seconds(self.refresh_token_expires_in);
+
+        let mut session = DomainSession::new(user.id.clone(), refresh_token_hash, expires_at);
+
+        if !req.device_info.is_empty() {
+            session = session.with_device_info(&req.device_info);
+        }
+        if !req.ip_address.is_empty() {
+            session = session.with_ip_address(&req.ip_address);
+        }
+
+        self.session_repo
+            .save(&session)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 9. 更新用户最后登录时间
+        let mut updated_user = user.clone();
+        updated_user.record_login();
+        let _ = self.user_repo.update(&updated_user).await;
+
+        tracing::info!(username = %req.username, user_id = %user.id.0, "Login successful");
+
         Ok(Response::new(LoginResponse {
-            access_token: "mock_access_token".to_string(),
-            refresh_token: "mock_refresh_token".to_string(),
-            expires_in: 3600,
+            access_token,
+            refresh_token,
+            expires_in: self.token_service.access_token_expires_in(),
             token_type: "Bearer".to_string(),
-            user: Some(User {
-                id: "user_001".to_string(),
-                username: req.username,
-                email: "user@example.com".to_string(),
-                display_name: "Test User".to_string(),
-                phone: "".to_string(),
-                avatar_url: "".to_string(),
-                tenant_id: req.tenant_id,
-                role_ids: vec!["admin".to_string()],
-                status: "active".to_string(),
-                language: "zh-CN".to_string(),
-                timezone: "Asia/Shanghai".to_string(),
-                two_factor_enabled: false,
-                last_login_at: None,
-                audit_info: None,
-            }),
+            user: Some(user_to_proto(&user)),
             require_2fa: false,
-            session_id: "".to_string(),
+            session_id: session.id.0.to_string(),
         }))
     }
 
@@ -63,6 +231,25 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(logout_all = %req.logout_all_devices, "Logout request");
 
+        // 验证 token 获取用户信息
+        let claims = self
+            .token_service
+            .validate_token(&req.access_token)
+            .map_err(|_| Status::unauthenticated("Invalid token"))?;
+
+        let user_id = claims
+            .user_id()
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if req.logout_all_devices {
+            // 撤销所有会话
+            self.session_repo
+                .revoke_all_by_user_id(&user_id)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+            tracing::info!(user_id = %user_id.0, "All sessions revoked");
+        }
+
         Ok(Response::new(LogoutResponse { success: true }))
     }
 
@@ -70,13 +257,64 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<RefreshTokenRequest>,
     ) -> Result<Response<RefreshTokenResponse>, Status> {
-        let _req = request.into_inner();
+        let req = request.into_inner();
         tracing::info!("Refresh token request");
 
+        // 1. 验证 refresh token
+        let claims = self
+            .token_service
+            .validate_token(&req.refresh_token)
+            .map_err(|_| Status::unauthenticated("Invalid refresh token"))?;
+
+        // 2. 计算 token hash 并查找 session
+        let token_hash = sha256_hash(&req.refresh_token);
+        let session = self
+            .session_repo
+            .find_by_refresh_token_hash(&token_hash)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::unauthenticated("Session not found"))?;
+
+        // 3. 检查 session 是否有效
+        if !session.is_valid() {
+            return Err(Status::unauthenticated("Session expired or revoked"));
+        }
+
+        // 4. 获取用户信息
+        let user = self
+            .user_repo
+            .find_by_id(&session.user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("User not found"))?;
+
+        // 5. 生成新的 tokens
+        let new_access_token = self
+            .token_service
+            .generate_access_token(&user.id, &user.tenant_id, vec![], user.role_ids.clone())
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let new_refresh_token = self
+            .token_service
+            .generate_refresh_token(&user.id, &user.tenant_id)
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 6. 更新 session
+        let new_hash = sha256_hash(&new_refresh_token);
+        let new_expires = Utc::now() + Duration::seconds(self.refresh_token_expires_in);
+        let mut updated_session = session;
+        updated_session.refresh(new_hash, new_expires);
+        self.session_repo
+            .update(&updated_session)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tracing::info!(user_id = %claims.sub, "Token refreshed");
+
         Ok(Response::new(RefreshTokenResponse {
-            access_token: "new_mock_access_token".to_string(),
-            refresh_token: "new_mock_refresh_token".to_string(),
-            expires_in: 3600,
+            access_token: new_access_token,
+            refresh_token: new_refresh_token,
+            expires_in: self.token_service.access_token_expires_in(),
         }))
     }
 
@@ -84,16 +322,25 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<ValidateTokenRequest>,
     ) -> Result<Response<ValidateTokenResponse>, Status> {
-        let _req = request.into_inner();
-        tracing::info!("Validate token request");
+        let req = request.into_inner();
+        tracing::debug!("Validate token request");
 
-        Ok(Response::new(ValidateTokenResponse {
-            valid: true,
-            user_id: "user_001".to_string(),
-            tenant_id: "tenant_001".to_string(),
-            permissions: vec!["read".to_string(), "write".to_string()],
-            expires_at: None,
-        }))
+        match self.token_service.validate_token(&req.access_token) {
+            Ok(claims) => Ok(Response::new(ValidateTokenResponse {
+                valid: true,
+                user_id: claims.sub,
+                tenant_id: claims.tenant_id,
+                permissions: claims.permissions,
+                expires_at: Some(Timestamp {
+                    seconds: claims.exp,
+                    nanos: 0,
+                }),
+            })),
+            Err(_) => Ok(Response::new(ValidateTokenResponse {
+                valid: false,
+                ..Default::default()
+            })),
+        }
     }
 
     async fn change_password(
@@ -102,6 +349,49 @@ impl AuthService for AuthServiceImpl {
     ) -> Result<Response<ChangePasswordResponse>, Status> {
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Change password request");
+
+        // 1. 解析用户 ID
+        let user_id = UserId::from_uuid(
+            Uuid::parse_str(&req.user_id)
+                .map_err(|_| Status::invalid_argument("Invalid user ID"))?,
+        );
+
+        // 2. 获取用户
+        let mut user = self
+            .user_repo
+            .find_by_id(&user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("User not found"))?;
+
+        // 3. 验证旧密码
+        let valid = user
+            .password_hash
+            .verify(&req.old_password)
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if !valid {
+            return Err(Status::unauthenticated("Invalid old password"));
+        }
+
+        // 4. 哈希新密码
+        let new_hash = HashedPassword::from_plain(&req.new_password)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+        // 5. 更新密码
+        user.update_password(new_hash);
+        self.user_repo
+            .update(&user)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 6. 撤销所有会话（安全考虑）
+        self.session_repo
+            .revoke_all_by_user_id(&user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tracing::info!(user_id = %req.user_id, "Password changed successfully");
 
         Ok(Response::new(ChangePasswordResponse {
             success: true,
@@ -116,10 +406,8 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(email = %req.email, "Request password reset");
 
-        Ok(Response::new(RequestPasswordResetResponse {
-            success: true,
-            message: "Password reset email sent".to_string(),
-        }))
+        // TODO: 实现密码重置邮件发送
+        Err(Status::unimplemented("Password reset not implemented yet"))
     }
 
     async fn reset_password(
@@ -129,36 +417,37 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(email = %req.email, "Reset password");
 
-        Ok(Response::new(ResetPasswordResponse {
-            success: true,
-            message: "Password reset successfully".to_string(),
-        }))
+        // TODO: 实现密码重置
+        Err(Status::unimplemented("Password reset not implemented yet"))
     }
 
     async fn get_current_user(
         &self,
         request: Request<GetCurrentUserRequest>,
     ) -> Result<Response<GetCurrentUserResponse>, Status> {
-        let _req = request.into_inner();
-        tracing::info!("Get current user request");
+        let req = request.into_inner();
+        tracing::debug!("Get current user request");
+
+        // 1. 验证 token
+        let claims = self
+            .token_service
+            .validate_token(&req.access_token)
+            .map_err(|_| Status::unauthenticated("Invalid token"))?;
+
+        // 2. 获取用户
+        let user_id = claims
+            .user_id()
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let user = self
+            .user_repo
+            .find_by_id(&user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(GetCurrentUserResponse {
-            user: Some(User {
-                id: "user_001".to_string(),
-                username: "testuser".to_string(),
-                email: "user@example.com".to_string(),
-                display_name: "Test User".to_string(),
-                phone: "".to_string(),
-                avatar_url: "".to_string(),
-                tenant_id: "tenant_001".to_string(),
-                role_ids: vec!["admin".to_string()],
-                status: "active".to_string(),
-                language: "zh-CN".to_string(),
-                timezone: "Asia/Shanghai".to_string(),
-                two_factor_enabled: false,
-                last_login_at: None,
-                audit_info: None,
-            }),
+            user: Some(user_to_proto(&user)),
         }))
     }
 
@@ -169,23 +458,47 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Update profile request");
 
+        // 1. 解析用户 ID
+        let user_id = UserId::from_uuid(
+            Uuid::parse_str(&req.user_id)
+                .map_err(|_| Status::invalid_argument("Invalid user ID"))?,
+        );
+
+        // 2. 获取用户
+        let mut user = self
+            .user_repo
+            .find_by_id(&user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("User not found"))?;
+
+        // 3. 更新字段
+        if !req.display_name.is_empty() {
+            user.display_name = Some(req.display_name);
+        }
+        if !req.phone.is_empty() {
+            user.phone = Some(req.phone);
+        }
+        if !req.avatar_url.is_empty() {
+            user.avatar_url = Some(req.avatar_url);
+        }
+        if !req.language.is_empty() {
+            user.language = req.language;
+        }
+        if !req.timezone.is_empty() {
+            user.timezone = req.timezone;
+        }
+
+        // 4. 保存更新
+        self.user_repo
+            .update(&user)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tracing::info!(user_id = %req.user_id, "Profile updated");
+
         Ok(Response::new(UpdateProfileResponse {
-            user: Some(User {
-                id: req.user_id,
-                username: "testuser".to_string(),
-                email: req.email,
-                display_name: req.display_name,
-                phone: req.phone,
-                avatar_url: req.avatar_url,
-                tenant_id: "tenant_001".to_string(),
-                role_ids: vec!["admin".to_string()],
-                status: "active".to_string(),
-                language: req.language,
-                timezone: req.timezone,
-                two_factor_enabled: false,
-                last_login_at: None,
-                audit_info: None,
-            }),
+            user: Some(user_to_proto(&user)),
         }))
     }
 
@@ -196,15 +509,8 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, method = %req.method, "Enable 2FA request");
 
-        Ok(Response::new(Enable2FaResponse {
-            secret: "MOCK_SECRET_KEY".to_string(),
-            qr_code_url: "otpauth://totp/Example:user@example.com?secret=MOCK_SECRET_KEY&issuer=Example".to_string(),
-            backup_codes: vec![
-                "12345678".to_string(),
-                "23456789".to_string(),
-                "34567890".to_string(),
-            ],
-        }))
+        // TODO: 实现 2FA
+        Err(Status::unimplemented("2FA not implemented yet"))
     }
 
     async fn disable2_fa(
@@ -214,7 +520,8 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Disable 2FA request");
 
-        Ok(Response::new(Disable2FaResponse { success: true }))
+        // TODO: 实现 2FA
+        Err(Status::unimplemented("2FA not implemented yet"))
     }
 
     async fn verify2_fa(
@@ -224,11 +531,8 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Verify 2FA request");
 
-        Ok(Response::new(Verify2FaResponse {
-            success: true,
-            access_token: "mock_access_token_after_2fa".to_string(),
-            refresh_token: "mock_refresh_token_after_2fa".to_string(),
-        }))
+        // TODO: 实现 2FA
+        Err(Status::unimplemented("2FA not implemented yet"))
     }
 
     async fn get_active_sessions(
@@ -238,18 +542,24 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Get active sessions request");
 
+        let user_id = UserId::from_uuid(
+            Uuid::parse_str(&req.user_id)
+                .map_err(|_| Status::invalid_argument("Invalid user ID"))?,
+        );
+
+        let sessions = self
+            .session_repo
+            .find_active_by_user_id(&user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let proto_sessions: Vec<Session> = sessions
+            .into_iter()
+            .map(|s| session_to_proto(&s, false))
+            .collect();
+
         Ok(Response::new(GetActiveSessionsResponse {
-            sessions: vec![Session {
-                id: "session_001".to_string(),
-                user_id: req.user_id,
-                device_info: "Chrome on macOS".to_string(),
-                ip_address: "127.0.0.1".to_string(),
-                user_agent: "Mozilla/5.0".to_string(),
-                is_current: true,
-                created_at: None,
-                expires_at: None,
-                last_activity_at: None,
-            }],
+            sessions: proto_sessions,
         }))
     }
 
@@ -259,6 +569,35 @@ impl AuthService for AuthServiceImpl {
     ) -> Result<Response<RevokeSessionResponse>, Status> {
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, session_id = %req.session_id, "Revoke session request");
+
+        let session_id = SessionId(
+            Uuid::parse_str(&req.session_id)
+                .map_err(|_| Status::invalid_argument("Invalid session ID"))?,
+        );
+
+        // 获取并验证会话属于该用户
+        let session = self
+            .session_repo
+            .find_by_id(&session_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("Session not found"))?;
+
+        if session.user_id.0.to_string() != req.user_id {
+            return Err(Status::permission_denied(
+                "Cannot revoke other user's session",
+            ));
+        }
+
+        // 撤销会话
+        let mut session = session;
+        session.revoke();
+        self.session_repo
+            .update(&session)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tracing::info!(session_id = %req.session_id, "Session revoked");
 
         Ok(Response::new(RevokeSessionResponse { success: true }))
     }
