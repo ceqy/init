@@ -529,10 +529,16 @@ dependencies = [
 name = "cuba-bootstrap"
 version = "0.1.0"
 dependencies = [
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
  "cuba-auth-core",
  "cuba-config",
  "cuba-errors",
+ "cuba-ports",
  "cuba-telemetry",
+ "http",
+ "redis",
+ "sqlx",
  "tokio",
  "tonic",
  "tower",

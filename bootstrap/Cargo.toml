@@ -6,11 +6,26 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+# 内部 crates
 cuba-config = { workspace = true }
 cuba-errors = { workspace = true }
 cuba-telemetry = { workspace = true }
 cuba-auth-core = { workspace = true }
+cuba-ports = { workspace = true }
+cuba-adapter-postgres = { workspace = true }
+cuba-adapter-redis = { workspace = true }
+
+# gRPC
 tonic = { workspace = true }
+http = { workspace = true }
+
+# 异步运行时
 tokio = { workspace = true }
+
+# 日志
 tracing = { workspace = true }
+
+# 其他
 tower = { workspace = true }
+redis = { workspace = true }
+sqlx = { workspace = true }

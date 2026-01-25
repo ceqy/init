@@ -1,4 +1,6 @@
-//! IAM Auth Service
+//! IAM Auth Service - 认证服务入口
+//!
+//! 使用 cuba-bootstrap 统一启动模式
 
 mod api;
 mod application;
@@ -10,69 +12,39 @@ mod infrastructure;
 use std::sync::Arc;
 
 use api::grpc::{AuthServiceImpl, AuthServiceServer};
-use cuba_adapter_postgres::{create_pool, PostgresConfig};
-use cuba_adapter_redis::{create_connection_manager, RedisCache};
-use cuba_auth_core::TokenService;
-use cuba_bootstrap::init_runtime;
-use cuba_config::AppConfig;
+use cuba_bootstrap::{run, Infrastructure};
 use cuba_ports::CachePort;
 use domain::repositories::{SessionRepository, UserRepository};
 use infrastructure::cache::{AuthCache, RedisAuthCache};
 use infrastructure::persistence::{PostgresSessionRepository, PostgresUserRepository};
-use tonic::transport::Server;
-use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. 加载配置
-    let config = AppConfig::load("config")?;
+    run("config", |infra: Infrastructure| async move {
+        // 从 Infrastructure 获取资源
+        let pool = infra.postgres_pool();
+        let token_service = infra.token_service();
+        let config = infra.config();
 
-    // 2. 初始化运行时（日志、追踪）
-    init_runtime(&config);
+        // 组装 Cache（依赖 CachePort trait）
+        let cache: Arc<dyn CachePort> = Arc::new(infra.redis_cache());
+        let auth_cache: Arc<dyn AuthCache> = Arc::new(RedisAuthCache::new(cache));
 
-    info!("Starting IAM Auth Service");
+        // 组装 Repositories（依赖 domain trait）
+        let user_repo: Arc<dyn UserRepository> = Arc::new(PostgresUserRepository::new(pool.clone()));
+        let session_repo: Arc<dyn SessionRepository> =
+            Arc::new(PostgresSessionRepository::new(pool.clone()));
 
-    // 3. 创建数据库连接池
-    let pg_config = PostgresConfig::new(&config.database.url)
-        .with_max_connections(config.database.max_connections);
-    let pool = create_pool(&pg_config).await?;
-    info!("Database connection pool created");
+        // 组装 AuthService
+        let auth_service = AuthServiceImpl::new(
+            user_repo,
+            session_repo,
+            token_service,
+            auth_cache,
+            config.jwt.refresh_expires_in as i64,
+        );
 
-    // 4. 创建 Redis 连接
-    let redis_conn = create_connection_manager(&config.redis.url).await?;
-    let cache: Arc<dyn CachePort> = Arc::new(RedisCache::new(redis_conn));
-    let auth_cache: Arc<dyn AuthCache> = Arc::new(RedisAuthCache::new(cache));
-    info!("Redis connection created");
-
-    // 5. 创建 TokenService
-    let token_service = Arc::new(TokenService::new(
-        &config.jwt.secret,
-        config.jwt.expires_in as i64,
-        config.jwt.refresh_expires_in as i64,
-    ));
-
-    // 6. 创建 Repositories
-    let user_repo: Arc<dyn UserRepository> = Arc::new(PostgresUserRepository::new(pool.clone()));
-    let session_repo: Arc<dyn SessionRepository> =
-        Arc::new(PostgresSessionRepository::new(pool.clone()));
-
-    // 7. 创建 AuthService
-    let auth_service = AuthServiceImpl::new(
-        user_repo,
-        session_repo,
-        token_service,
-        auth_cache,
-        config.jwt.refresh_expires_in as i64,
-    );
-
-    // 8. 启动 gRPC 服务器
-    let addr = format!("{}:{}", config.server.host, config.server.port).parse()?;
-    info!(%addr, "gRPC server starting");
-
-    Server::builder()
-        .add_service(AuthServiceServer::new(auth_service))
-        .serve(addr)
-        .await?;
-
-    Ok(())
+        AuthServiceServer::new(auth_service)
+    })
+    .await
 }
