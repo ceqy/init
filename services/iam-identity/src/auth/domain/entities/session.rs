@@ -27,6 +27,7 @@ impl Default for SessionId {
 pub struct Session {
     pub id: SessionId,
     pub user_id: UserId,
+    pub tenant_id: cuba_common::TenantId,
     pub refresh_token_hash: String,
     pub device_info: Option<String>,
     pub ip_address: Option<String>,
@@ -40,6 +41,7 @@ pub struct Session {
 impl Session {
     pub fn new(
         user_id: UserId,
+        tenant_id: cuba_common::TenantId,
         refresh_token_hash: String,
         expires_at: DateTime<Utc>,
     ) -> Self {
@@ -47,6 +49,7 @@ impl Session {
         Self {
             id: SessionId::new(),
             user_id,
+            tenant_id,
             refresh_token_hash,
             device_info: None,
             ip_address: None,

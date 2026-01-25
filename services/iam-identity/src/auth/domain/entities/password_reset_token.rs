@@ -40,6 +40,9 @@ pub struct PasswordResetToken {
     /// 用户 ID
     pub user_id: UserId,
 
+    /// 租户 ID
+    pub tenant_id: cuba_common::TenantId,
+
     /// 令牌哈希（存储 SHA256 哈希，不存储原始令牌）
     pub token_hash: String,
 
@@ -61,15 +64,17 @@ impl PasswordResetToken {
     ///
     /// # 参数
     /// - `user_id`: 用户 ID
+    /// - `tenant_id`: 租户 ID
     /// - `token_hash`: 令牌的 SHA256 哈希
     /// - `expires_in_minutes`: 过期时间（分钟）
-    pub fn new(user_id: UserId, token_hash: String, expires_in_minutes: i64) -> Self {
+    pub fn new(user_id: UserId, tenant_id: cuba_common::TenantId, token_hash: String, expires_in_minutes: i64) -> Self {
         let now = Utc::now();
         let expires_at = now + Duration::minutes(expires_in_minutes);
 
         Self {
             id: PasswordResetTokenId::new(),
             user_id,
+            tenant_id,
             token_hash,
             expires_at,
             used: false,

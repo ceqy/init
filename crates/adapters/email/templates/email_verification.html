@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邮箱验证</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #3498db;
+            margin: 0;
+            font-size: 28px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .code-box {
+            background-color: #f8f9fa;
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .code {
+            font-size: 36px;
+            font-weight: bold;
+            color: #3498db;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+        }
+        .info {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .footer {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 邮箱验证</h1>
+        </div>
+        
+        <div class="content">
+            <p>您好，<strong>{{ user_name }}</strong>！</p>
+            <p>感谢您使用 Cuba ERP 系统。请使用以下验证码完成邮箱验证：</p>
+            
+            <div class="code-box">
+                <div class="code">{{ code }}</div>
+                <div class="info">验证码将在 {{ expires_in_minutes }} 分钟后失效</div>
+            </div>
+            
+            <p>请在验证页面输入此验证码以完成邮箱验证。</p>
+            
+            <div class="warning">
+                <strong>⚠️ 安全提示：</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>如果您没有请求此验证码，请忽略此邮件</li>
+                    <li>请勿将验证码分享给任何人</li>
+                    <li>验证码仅可使用一次</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>此邮件由 Cuba ERP 系统自动发送，请勿回复。</p>
+            <p>&copy; 2026 Cuba ERP. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

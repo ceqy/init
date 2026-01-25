@@ -28,15 +28,16 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
         sqlx::query(
             r#"
             INSERT INTO webauthn_credentials (
-                id, user_id, credential_id, public_key, counter,
+                id, user_id, tenant_id, credential_id, public_key, counter,
                 name, aaguid, transports, backup_eligible, backup_state,
                 created_at, last_used_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             "#,
         )
         .bind(credential.id.0)
         .bind(credential.user_id)
+        .bind(credential.tenant_id.0)
         .bind(&credential.credential_id)
         .bind(&credential.public_key)
         .bind(credential.counter as i64)
@@ -54,19 +55,20 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
         Ok(())
     }
 
-    async fn find_by_id(&self, id: &WebAuthnCredentialId) -> AppResult<Option<WebAuthnCredential>> {
+    async fn find_by_id(&self, id: &WebAuthnCredentialId, tenant_id: &cuba_common::TenantId) -> AppResult<Option<WebAuthnCredential>> {
         debug!("Finding WebAuthn credential by id: {}", id);
 
         let row = sqlx::query_as::<_, WebAuthnCredentialRow>(
             r#"
-            SELECT id, user_id, credential_id, public_key, counter,
+            SELECT id, user_id, tenant_id, credential_id, public_key, counter,
                    name, aaguid, transports, backup_eligible, backup_state,
                    created_at, last_used_at
             FROM webauthn_credentials
-            WHERE id = $1
+            WHERE id = $1 AND tenant_id = $2
             "#,
         )
         .bind(id.0)
+        .bind(tenant_id.0)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| AppError::database(format!("Failed to find WebAuthn credential: {}", e)))?;
@@ -74,19 +76,20 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
         Ok(row.map(|r| r.into()))
     }
 
-    async fn find_by_credential_id(&self, credential_id: &[u8]) -> AppResult<Option<WebAuthnCredential>> {
+    async fn find_by_credential_id(&self, credential_id: &[u8], tenant_id: &cuba_common::TenantId) -> AppResult<Option<WebAuthnCredential>> {
         debug!("Finding WebAuthn credential by credential_id");
 
         let row = sqlx::query_as::<_, WebAuthnCredentialRow>(
             r#"
-            SELECT id, user_id, credential_id, public_key, counter,
+            SELECT id, user_id, tenant_id, credential_id, public_key, counter,
                    name, aaguid, transports, backup_eligible, backup_state,
                    created_at, last_used_at
             FROM webauthn_credentials
-            WHERE credential_id = $1
+            WHERE credential_id = $1 AND tenant_id = $2
             "#,
         )
         .bind(credential_id)
+        .bind(tenant_id.0)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| AppError::database(format!("Failed to find WebAuthn credential: {}", e)))?;
@@ -94,20 +97,21 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
         Ok(row.map(|r| r.into()))
     }
 
-    async fn find_by_user_id(&self, user_id: &Uuid) -> AppResult<Vec<WebAuthnCredential>> {
+    async fn find_by_user_id(&self, user_id: &cuba_common::UserId, tenant_id: &cuba_common::TenantId) -> AppResult<Vec<WebAuthnCredential>> {
         debug!("Finding WebAuthn credentials for user: {}", user_id);
 
         let rows = sqlx::query_as::<_, WebAuthnCredentialRow>(
             r#"
-            SELECT id, user_id, credential_id, public_key, counter,
+            SELECT id, user_id, tenant_id, credential_id, public_key, counter,
                    name, aaguid, transports, backup_eligible, backup_state,
                    created_at, last_used_at
             FROM webauthn_credentials
-            WHERE user_id = $1
+            WHERE user_id = $1 AND tenant_id = $2
             ORDER BY created_at DESC
             "#,
         )
-        .bind(user_id)
+        .bind(user_id.0)
+        .bind(tenant_id.0)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| AppError::database(format!("Failed to find WebAuthn credentials: {}", e)))?;
@@ -124,13 +128,14 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
             SET counter = $2,
                 name = $3,
                 last_used_at = $4
-            WHERE id = $1
+            WHERE id = $1 AND tenant_id = $5
             "#,
         )
         .bind(credential.id.0)
         .bind(credential.counter as i64)
         .bind(&credential.name)
         .bind(credential.last_used_at)
+        .bind(credential.tenant_id.0)
         .execute(&self.pool)
         .await
         .map_err(|e| AppError::database(format!("Failed to update WebAuthn credential: {}", e)))?;
@@ -138,11 +143,12 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
         Ok(())
     }
 
-    async fn delete(&self, id: &WebAuthnCredentialId) -> AppResult<()> {
+    async fn delete(&self, id: &WebAuthnCredentialId, tenant_id: &cuba_common::TenantId) -> AppResult<()> {
         debug!("Deleting WebAuthn credential: {}", id);
 
-        sqlx::query("DELETE FROM webauthn_credentials WHERE id = $1")
+        sqlx::query("DELETE FROM webauthn_credentials WHERE id = $1 AND tenant_id = $2")
             .bind(id.0)
+            .bind(tenant_id.0)
             .execute(&self.pool)
             .await
             .map_err(|e| AppError::database(format!("Failed to delete WebAuthn credential: {}", e)))?;
@@ -150,13 +156,14 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
         Ok(())
     }
 
-    async fn has_credentials(&self, user_id: &Uuid) -> AppResult<bool> {
+    async fn has_credentials(&self, user_id: &cuba_common::UserId, tenant_id: &cuba_common::TenantId) -> AppResult<bool> {
         debug!("Checking if user has WebAuthn credentials: {}", user_id);
 
         let result: (bool,) = sqlx::query_as(
-            "SELECT EXISTS(SELECT 1 FROM webauthn_credentials WHERE user_id = $1)",
+            "SELECT EXISTS(SELECT 1 FROM webauthn_credentials WHERE user_id = $1 AND tenant_id = $2)",
         )
-        .bind(user_id)
+        .bind(user_id.0)
+        .bind(tenant_id.0)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| AppError::database(format!("Failed to check credentials: {}", e)))?;
@@ -170,6 +177,7 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
 struct WebAuthnCredentialRow {
     id: Uuid,
     user_id: Uuid,
+    tenant_id: Uuid,
     credential_id: Vec<u8>,
     public_key: Vec<u8>,
     counter: i64,
@@ -187,6 +195,7 @@ impl From<WebAuthnCredentialRow> for WebAuthnCredential {
         Self {
             id: WebAuthnCredentialId::from_uuid(row.id),
             user_id: row.user_id,
+            tenant_id: cuba_common::TenantId::from_uuid(row.tenant_id),
             credential_id: row.credential_id,
             public_key: row.public_key,
             counter: row.counter as u32,

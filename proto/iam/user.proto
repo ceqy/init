@@ -57,6 +57,20 @@ service UserService {
 
   // 获取用户角色
   rpc GetUserRoles(GetUserRolesRequest) returns (GetUserRolesResponse);
+
+  // ========== 验证管理 ==========
+
+  // 发送邮箱验证码
+  rpc SendEmailVerification(SendEmailVerificationRequest) returns (SendEmailVerificationResponse);
+
+  // 验证邮箱
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
+
+  // 发送手机验证码
+  rpc SendPhoneVerification(SendPhoneVerificationRequest) returns (SendPhoneVerificationResponse);
+
+  // 验证手机
+  rpc VerifyPhone(VerifyPhoneRequest) returns (VerifyPhoneResponse);
 }
 
 // ============ 消息定义 ============
@@ -228,6 +242,56 @@ message GetUserRolesRequest {
 // 获取用户角色响应
 message GetUserRolesResponse {
   repeated Role roles = 1;      // 角色列表
+}
+
+// ========== 验证相关消息 ==========
+
+// 发送邮箱验证码请求
+message SendEmailVerificationRequest {
+  string user_id = 1;           // 用户 ID
+}
+
+// 发送邮箱验证码响应
+message SendEmailVerificationResponse {
+  bool success = 1;             // 是否成功
+  string message = 2;           // 消息
+  int32 expires_in_seconds = 3; // 验证码有效期（秒）
+}
+
+// 验证邮箱请求
+message VerifyEmailRequest {
+  string user_id = 1;           // 用户 ID
+  string code = 2;              // 验证码
+}
+
+// 验证邮箱响应
+message VerifyEmailResponse {
+  bool success = 1;             // 是否成功
+  string message = 2;           // 消息
+}
+
+// 发送手机验证码请求
+message SendPhoneVerificationRequest {
+  string user_id = 1;           // 用户 ID
+}
+
+// 发送手机验证码响应
+message SendPhoneVerificationResponse {
+  bool success = 1;             // 是否成功
+  string message = 2;           // 消息
+  int32 expires_in_seconds = 3; // 验证码有效期（秒）
+}
+
+// 验证手机请求
+message VerifyPhoneRequest {
+  string user_id = 1;           // 用户 ID
+  string code = 2;              // 验证码
+}
+
+// 验证手机响应
+message VerifyPhoneResponse {
+  bool success = 1;             // 是否成功
+  string message = 2;           // 消息
 }
 
 // ============ 实体定义 ============

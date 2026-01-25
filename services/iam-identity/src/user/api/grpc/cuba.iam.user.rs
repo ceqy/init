@@ -290,6 +290,86 @@ pub struct GetUserRolesResponse {
     #[prost(message, repeated, tag = "1")]
     pub roles: ::prost::alloc::vec::Vec<Role>,
 }
+/// 发送邮箱验证码请求
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SendEmailVerificationRequest {
+    /// 用户 ID
+    #[prost(string, tag = "1")]
+    pub user_id: ::prost::alloc::string::String,
+}
+/// 发送邮箱验证码响应
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SendEmailVerificationResponse {
+    /// 是否成功
+    #[prost(bool, tag = "1")]
+    pub success: bool,
+    /// 消息
+    #[prost(string, tag = "2")]
+    pub message: ::prost::alloc::string::String,
+    /// 验证码有效期（秒）
+    #[prost(int32, tag = "3")]
+    pub expires_in_seconds: i32,
+}
+/// 验证邮箱请求
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct VerifyEmailRequest {
+    /// 用户 ID
+    #[prost(string, tag = "1")]
+    pub user_id: ::prost::alloc::string::String,
+    /// 验证码
+    #[prost(string, tag = "2")]
+    pub code: ::prost::alloc::string::String,
+}
+/// 验证邮箱响应
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct VerifyEmailResponse {
+    /// 是否成功
+    #[prost(bool, tag = "1")]
+    pub success: bool,
+    /// 消息
+    #[prost(string, tag = "2")]
+    pub message: ::prost::alloc::string::String,
+}
+/// 发送手机验证码请求
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SendPhoneVerificationRequest {
+    /// 用户 ID
+    #[prost(string, tag = "1")]
+    pub user_id: ::prost::alloc::string::String,
+}
+/// 发送手机验证码响应
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SendPhoneVerificationResponse {
+    /// 是否成功
+    #[prost(bool, tag = "1")]
+    pub success: bool,
+    /// 消息
+    #[prost(string, tag = "2")]
+    pub message: ::prost::alloc::string::String,
+    /// 验证码有效期（秒）
+    #[prost(int32, tag = "3")]
+    pub expires_in_seconds: i32,
+}
+/// 验证手机请求
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct VerifyPhoneRequest {
+    /// 用户 ID
+    #[prost(string, tag = "1")]
+    pub user_id: ::prost::alloc::string::String,
+    /// 验证码
+    #[prost(string, tag = "2")]
+    pub code: ::prost::alloc::string::String,
+}
+/// 验证手机响应
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct VerifyPhoneResponse {
+    /// 是否成功
+    #[prost(bool, tag = "1")]
+    pub success: bool,
+    /// 消息
+    #[prost(string, tag = "2")]
+    pub message: ::prost::alloc::string::String,
+}
 /// 用户
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct User {
@@ -485,6 +565,38 @@ pub mod user_service_server {
             request: tonic::Request<super::GetUserRolesRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetUserRolesResponse>,
+            tonic::Status,
+        >;
+        /// 发送邮箱验证码
+        async fn send_email_verification(
+            &self,
+            request: tonic::Request<super::SendEmailVerificationRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::SendEmailVerificationResponse>,
+            tonic::Status,
+        >;
+        /// 验证邮箱
+        async fn verify_email(
+            &self,
+            request: tonic::Request<super::VerifyEmailRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::VerifyEmailResponse>,
+            tonic::Status,
+        >;
+        /// 发送手机验证码
+        async fn send_phone_verification(
+            &self,
+            request: tonic::Request<super::SendPhoneVerificationRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::SendPhoneVerificationResponse>,
+            tonic::Status,
+        >;
+        /// 验证手机
+        async fn verify_phone(
+            &self,
+            request: tonic::Request<super::VerifyPhoneRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::VerifyPhoneResponse>,
             tonic::Status,
         >;
     }
@@ -1179,6 +1291,188 @@ pub mod user_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetUserRolesSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cuba.iam.user.UserService/SendEmailVerification" => {
+                    #[allow(non_camel_case_types)]
+                    struct SendEmailVerificationSvc<T: UserService>(pub Arc<T>);
+                    impl<
+                        T: UserService,
+                    > tonic::server::UnaryService<super::SendEmailVerificationRequest>
+                    for SendEmailVerificationSvc<T> {
+                        type Response = super::SendEmailVerificationResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SendEmailVerificationRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as UserService>::send_email_verification(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SendEmailVerificationSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cuba.iam.user.UserService/VerifyEmail" => {
+                    #[allow(non_camel_case_types)]
+                    struct VerifyEmailSvc<T: UserService>(pub Arc<T>);
+                    impl<
+                        T: UserService,
+                    > tonic::server::UnaryService<super::VerifyEmailRequest>
+                    for VerifyEmailSvc<T> {
+                        type Response = super::VerifyEmailResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::VerifyEmailRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as UserService>::verify_email(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = VerifyEmailSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cuba.iam.user.UserService/SendPhoneVerification" => {
+                    #[allow(non_camel_case_types)]
+                    struct SendPhoneVerificationSvc<T: UserService>(pub Arc<T>);
+                    impl<
+                        T: UserService,
+                    > tonic::server::UnaryService<super::SendPhoneVerificationRequest>
+                    for SendPhoneVerificationSvc<T> {
+                        type Response = super::SendPhoneVerificationResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SendPhoneVerificationRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as UserService>::send_phone_verification(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SendPhoneVerificationSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cuba.iam.user.UserService/VerifyPhone" => {
+                    #[allow(non_camel_case_types)]
+                    struct VerifyPhoneSvc<T: UserService>(pub Arc<T>);
+                    impl<
+                        T: UserService,
+                    > tonic::server::UnaryService<super::VerifyPhoneRequest>
+                    for VerifyPhoneSvc<T> {
+                        type Response = super::VerifyPhoneResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::VerifyPhoneRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as UserService>::verify_phone(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = VerifyPhoneSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

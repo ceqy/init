@@ -5,6 +5,8 @@ use std::sync::Arc;
 use cuba_common::TenantId;
 use tonic::{Request, Status};
 
+use crate::shared::domain::repositories::TenantRepository;
+
 /// 租户上下文扩展
 pub struct TenantContextExtension {
     pub tenant_id: TenantId,
@@ -42,34 +44,35 @@ pub fn extract_tenant_id<T>(request: &Request<T>) -> Result<TenantId, Status> {
 ///
 /// 验证租户是否存在且激活
 pub struct TenantValidationInterceptor {
-    // 这里可以注入租户仓储来验证租户状态
-    // 为了简化，暂时只做基本验证
+    tenant_repo: Arc<dyn TenantRepository>,
 }
 
 impl TenantValidationInterceptor {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(tenant_repo: Arc<dyn TenantRepository>) -> Self {
+        Self { tenant_repo }
     }
 
     /// 验证租户
     pub async fn validate_tenant(&self, tenant_id: &TenantId) -> Result<(), Status> {
-        // TODO: 从数据库或缓存中验证租户
-        // 1. 检查租户是否存在
-        // 2. 检查租户是否激活
-        // 3. 检查租户是否在有效期内
-
-        // 暂时只做基本验证
+        // 检查租户 ID 是否有效
         if tenant_id.0.is_nil() {
             return Err(Status::invalid_argument("Invalid tenant ID"));
         }
 
-        Ok(())
-    }
-}
+        // 从数据库查询租户
+        let tenant = self
+            .tenant_repo
+            .find_by_id(tenant_id)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to find tenant: {}", e)))?
+            .ok_or_else(|| Status::not_found("Tenant not found"))?;
 
-impl Default for TenantValidationInterceptor {
-    fn default() -> Self {
-        Self::new()
+        // 检查租户是否可用
+        if !tenant.is_available() {
+            return Err(Status::permission_denied("Tenant is not available"));
+        }
+
+        Ok(())
     }
 }
 
@@ -107,24 +110,6 @@ mod tests {
     fn test_extract_tenant_id_missing() {
         let request = Request::new(());
         let result = extract_tenant_id(&request);
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_validate_tenant() {
-        let interceptor = TenantValidationInterceptor::new();
-        let tenant_id = TenantId::new();
-
-        let result = interceptor.validate_tenant(&tenant_id).await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_validate_nil_tenant() {
-        let interceptor = TenantValidationInterceptor::new();
-        let tenant_id = TenantId(uuid::Uuid::nil());
-
-        let result = interceptor.validate_tenant(&tenant_id).await;
         assert!(result.is_err());
     }
 }

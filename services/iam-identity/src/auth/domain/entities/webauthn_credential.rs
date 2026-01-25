@@ -14,6 +14,9 @@ pub struct WebAuthnCredential {
     /// 用户 ID
     pub user_id: Uuid,
 
+    /// 租户 ID
+    pub tenant_id: cuba_common::TenantId,
+
     /// WebAuthn 凭证 ID（二进制）
     pub credential_id: Vec<u8>,
 

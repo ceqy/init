@@ -85,6 +85,22 @@ pub struct DeviceInfo {
     pub browser_version: Option<String>,
     /// 是否为移动设备
     pub is_mobile: bool,
+    /// 设备指纹
+    pub device_fingerprint: Option<String>,
+}
+
+impl Default for DeviceInfo {
+    fn default() -> Self {
+        Self {
+            device_type: "Unknown".to_string(),
+            os: "Unknown".to_string(),
+            os_version: None,
+            browser: "Unknown".to_string(),
+            browser_version: None,
+            is_mobile: false,
+            device_fingerprint: None,
+        }
+    }
 }
 
 impl DeviceInfo {

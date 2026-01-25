@@ -31,6 +31,7 @@ impl Default for BackupCodeId {
 pub struct BackupCode {
     pub id: BackupCodeId,
     pub user_id: UserId,
+    pub tenant_id: cuba_common::TenantId,
     pub code_hash: String,
     pub used: bool,
     pub used_at: Option<DateTime<Utc>>,
@@ -38,10 +39,11 @@ pub struct BackupCode {
 }
 
 impl BackupCode {
-    pub fn new(user_id: UserId, code_hash: String) -> Self {
+    pub fn new(user_id: UserId, tenant_id: cuba_common::TenantId, code_hash: String) -> Self {
         Self {
             id: BackupCodeId::new(),
             user_id,
+            tenant_id,
             code_hash,
             used: false,
             used_at: None,

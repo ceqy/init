@@ -15,6 +15,15 @@ fn main() {
         .compile_protos(&["../../proto/iam/user.proto"], &["../../proto"])
         .expect("Failed to compile user.proto");
 
+    // 编译 oauth.proto
+    tonic_build::configure()
+        .build_server(true)
+        .build_client(false)
+        .out_dir("src/oauth/api/grpc")
+        .compile_protos(&["../../proto/iam/oauth.proto"], &["../../proto"])
+        .expect("Failed to compile oauth.proto");
+
     println!("cargo:rerun-if-changed=../../proto/iam/auth.proto");
     println!("cargo:rerun-if-changed=../../proto/iam/user.proto");
+    println!("cargo:rerun-if-changed=../../proto/iam/oauth.proto");
 }

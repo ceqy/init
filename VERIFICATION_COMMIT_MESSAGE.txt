@@ -1,0 +1,38 @@
+feat(iam): 实现完整的邮箱和手机验证流程
+
+完成验证流程的完整实现（含 gRPC API）：
+
+基础设施层：
+- PostgresEmailVerificationRepository - 邮箱验证仓储（3 个集成测试）
+- PostgresPhoneVerificationRepository - 手机验证仓储（3 个集成测试）
+
+领域服务层：
+- EmailVerificationService - 邮箱验证服务（2 个集成测试）
+- PhoneVerificationService - 手机验证服务（3 个集成测试）
+- SmsSender trait - 短信发送器接口
+
+应用层：
+- SendEmailVerificationCommand/Handler - 发送邮箱验证码（1 个集成测试）
+- VerifyEmailCommand/Handler - 验证邮箱（1 个集成测试）
+- SendPhoneVerificationCommand/Handler - 发送手机验证码（1 个集成测试）
+- VerifyPhoneCommand/Handler - 验证手机（1 个集成测试）
+
+API 层：
+- Proto 定义更新 - 添加 4 个验证 RPC 方法
+- UserServiceImpl - 实现 4 个验证 RPC 方法
+- 租户 ID 从 gRPC metadata 获取
+
+邮件模板：
+- email_verification.html - HTML 邮件模板
+- email_verification.txt - 纯文本邮件模板
+
+安全特性：
+- 6 位随机验证码
+- 邮箱 10 分钟过期，手机 5 分钟过期
+- 每用户每天最多 5 次
+- 验证码一次性使用
+- 完整租户隔离
+
+测试覆盖：23 个测试（含实体测试）
+
+待完成：短信服务集成

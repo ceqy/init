@@ -9,7 +9,16 @@ use tracing::info;
 
 use cuba_auth_core::TokenService;
 use cuba_common::{TenantId, UserId};
+use cuba_cqrs_core::CommandHandler;
 
+use crate::shared::application::commands::{
+    SendEmailVerificationCommand, SendPhoneVerificationCommand, VerifyEmailCommand,
+    VerifyPhoneCommand,
+};
+use crate::shared::application::handlers::{
+    SendEmailVerificationHandler, SendPhoneVerificationHandler, VerifyEmailHandler,
+    VerifyPhoneHandler,
+};
 use crate::shared::domain::entities::{User, UserStatus};
 use crate::shared::domain::repositories::UserRepository;
 use crate::shared::domain::value_objects::{Email, HashedPassword, Username};
@@ -25,21 +34,39 @@ use proto::{
     DeleteUserRequest, GetCurrentUserRequest, GetCurrentUserResponse, GetUserRequest,
     GetUserResponse, GetUserRolesRequest, GetUserRolesResponse, ListUsersRequest,
     ListUsersResponse, LockUserRequest, LockUserResponse, RegisterRequest, RegisterResponse,
-    RemoveRolesRequest, RemoveRolesResponse, UnlockUserRequest, UnlockUserResponse,
-    UpdateProfileRequest, UpdateProfileResponse, UpdateUserRequest, UpdateUserResponse,
+    RemoveRolesRequest, RemoveRolesResponse, SendEmailVerificationRequest,
+    SendEmailVerificationResponse, SendPhoneVerificationRequest, SendPhoneVerificationResponse,
+    UnlockUserRequest, UnlockUserResponse, UpdateProfileRequest, UpdateProfileResponse,
+    UpdateUserRequest, UpdateUserResponse, VerifyEmailRequest, VerifyEmailResponse,
+    VerifyPhoneRequest, VerifyPhoneResponse,
 };
 
 /// UserService 实现
 pub struct UserServiceImpl {
     user_repo: Arc<dyn UserRepository>,
     token_service: Arc<TokenService>,
+    send_email_verification_handler: Arc<SendEmailVerificationHandler>,
+    verify_email_handler: Arc<VerifyEmailHandler>,
+    send_phone_verification_handler: Arc<SendPhoneVerificationHandler>,
+    verify_phone_handler: Arc<VerifyPhoneHandler>,
 }
 
 impl UserServiceImpl {
-    pub fn new(user_repo: Arc<dyn UserRepository>, token_service: Arc<TokenService>) -> Self {
+    pub fn new(
+        user_repo: Arc<dyn UserRepository>,
+        token_service: Arc<TokenService>,
+        send_email_verification_handler: Arc<SendEmailVerificationHandler>,
+        verify_email_handler: Arc<VerifyEmailHandler>,
+        send_phone_verification_handler: Arc<SendPhoneVerificationHandler>,
+        verify_phone_handler: Arc<VerifyPhoneHandler>,
+    ) -> Self {
         Self {
             user_repo,
             token_service,
+            send_email_verification_handler,
+            verify_email_handler,
+            send_phone_verification_handler,
+            verify_phone_handler,
         }
     }
 
@@ -612,5 +639,165 @@ impl UserService for UserServiceImpl {
     ) -> Result<Response<GetUserRolesResponse>, Status> {
         // TODO: 需要实现角色查询逻辑，可能需要调用 RBAC 服务
         Err(Status::unimplemented("GetUserRoles not yet implemented"))
+    }
+
+    /// 发送邮箱验证码
+    async fn send_email_verification(
+        &self,
+        request: Request<SendEmailVerificationRequest>,
+    ) -> Result<Response<SendEmailVerificationResponse>, Status> {
+        let req = request.into_inner();
+        info!("Sending email verification for user: {}", req.user_id);
+
+        // 从 metadata 中获取 tenant_id
+        let tenant_id = request
+            .metadata()
+            .get("tenant-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+
+        if tenant_id.is_empty() {
+            return Err(Status::invalid_argument("tenant_id is required in metadata"));
+        }
+
+        // 创建命令
+        let command = SendEmailVerificationCommand {
+            user_id: req.user_id,
+            tenant_id,
+        };
+
+        // 执行命令
+        let result = self
+            .send_email_verification_handler
+            .handle(command)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(SendEmailVerificationResponse {
+            success: result.success,
+            message: result.message,
+            expires_in_seconds: result.expires_in_seconds as i32,
+        }))
+    }
+
+    /// 验证邮箱
+    async fn verify_email(
+        &self,
+        request: Request<VerifyEmailRequest>,
+    ) -> Result<Response<VerifyEmailResponse>, Status> {
+        let req = request.into_inner();
+        info!("Verifying email for user: {}", req.user_id);
+
+        // 从 metadata 中获取 tenant_id
+        let tenant_id = request
+            .metadata()
+            .get("tenant-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+
+        if tenant_id.is_empty() {
+            return Err(Status::invalid_argument("tenant_id is required in metadata"));
+        }
+
+        // 创建命令
+        let command = VerifyEmailCommand {
+            user_id: req.user_id,
+            code: req.code,
+            tenant_id,
+        };
+
+        // 执行命令
+        let result = self
+            .verify_email_handler
+            .handle(command)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(VerifyEmailResponse {
+            success: result.success,
+            message: result.message,
+        }))
+    }
+
+    /// 发送手机验证码
+    async fn send_phone_verification(
+        &self,
+        request: Request<SendPhoneVerificationRequest>,
+    ) -> Result<Response<SendPhoneVerificationResponse>, Status> {
+        let req = request.into_inner();
+        info!("Sending phone verification for user: {}", req.user_id);
+
+        // 从 metadata 中获取 tenant_id
+        let tenant_id = request
+            .metadata()
+            .get("tenant-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+
+        if tenant_id.is_empty() {
+            return Err(Status::invalid_argument("tenant_id is required in metadata"));
+        }
+
+        // 创建命令
+        let command = SendPhoneVerificationCommand {
+            user_id: req.user_id,
+            tenant_id,
+        };
+
+        // 执行命令
+        let result = self
+            .send_phone_verification_handler
+            .handle(command)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(SendPhoneVerificationResponse {
+            success: result.success,
+            message: result.message,
+            expires_in_seconds: result.expires_in_seconds as i32,
+        }))
+    }
+
+    /// 验证手机
+    async fn verify_phone(
+        &self,
+        request: Request<VerifyPhoneRequest>,
+    ) -> Result<Response<VerifyPhoneResponse>, Status> {
+        let req = request.into_inner();
+        info!("Verifying phone for user: {}", req.user_id);
+
+        // 从 metadata 中获取 tenant_id
+        let tenant_id = request
+            .metadata()
+            .get("tenant-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+
+        if tenant_id.is_empty() {
+            return Err(Status::invalid_argument("tenant_id is required in metadata"));
+        }
+
+        // 创建命令
+        let command = VerifyPhoneCommand {
+            user_id: req.user_id,
+            code: req.code,
+            tenant_id,
+        };
+
+        // 执行命令
+        let result = self
+            .verify_phone_handler
+            .handle(command)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(VerifyPhoneResponse {
+            success: result.success,
+            message: result.message,
+        }))
     }
 }
