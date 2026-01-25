@@ -40,6 +40,11 @@ pub struct User {
     pub two_factor_enabled: bool,
     pub two_factor_secret: Option<String>,
     pub last_login_at: Option<DateTime<Utc>>,
+    // 账户锁定相关
+    pub locked_until: Option<DateTime<Utc>>,
+    pub lock_reason: Option<String>,
+    pub failed_login_count: i32,
+    pub last_failed_login_at: Option<DateTime<Utc>>,
     pub audit_info: AuditInfo,
 }
 
@@ -66,6 +71,10 @@ impl User {
             two_factor_enabled: false,
             two_factor_secret: None,
             last_login_at: None,
+            locked_until: None,
+            lock_reason: None,
+            failed_login_count: 0,
+            last_failed_login_at: None,
             audit_info: AuditInfo::default(),
         }
     }
@@ -112,6 +121,82 @@ impl User {
 
     pub fn remove_role(&mut self, role_id: &str) {
         self.role_ids.retain(|r| r != role_id);
+    }
+
+    // ========================================================
+    // 账户锁定相关方法
+    // ========================================================
+
+    /// 记录登录失败
+    pub fn record_login_failure(&mut self) {
+        self.failed_login_count += 1;
+        self.last_failed_login_at = Some(Utc::now());
+
+        // 如果失败次数达到10次，自动锁定账户30分钟
+        if self.failed_login_count >= 10 {
+            self.lock_account(30, "Too many failed login attempts".to_string());
+        }
+    }
+
+    /// 清除登录失败记录（登录成功后）
+    pub fn clear_login_failures(&mut self) {
+        self.failed_login_count = 0;
+        self.last_failed_login_at = None;
+    }
+
+    /// 锁定账户
+    pub fn lock_account(&mut self, minutes: i64, reason: String) {
+        self.locked_until = Some(Utc::now() + chrono::Duration::minutes(minutes));
+        self.lock_reason = Some(reason);
+        self.status = UserStatus::Locked;
+
+        tracing::warn!(
+            user_id = %self.id,
+            locked_until = ?self.locked_until,
+            reason = %self.lock_reason.as_ref().unwrap(),
+            "User account locked"
+        );
+    }
+
+    /// 解锁账户
+    pub fn unlock_account(&mut self) {
+        self.locked_until = None;
+        self.lock_reason = None;
+        self.failed_login_count = 0;
+        self.last_failed_login_at = None;
+        
+        // 如果之前是锁定状态，恢复为激活状态
+        if self.status == UserStatus::Locked {
+            self.status = UserStatus::Active;
+        }
+
+        tracing::info!(user_id = %self.id, "User account unlocked");
+    }
+
+    /// 检查账户是否被锁定
+    pub fn is_locked(&self) -> bool {
+        if let Some(locked_until) = self.locked_until {
+            Utc::now() < locked_until
+        } else {
+            false
+        }
+    }
+
+    /// 检查账户是否应该自动解锁
+    pub fn should_auto_unlock(&self) -> bool {
+        if let Some(locked_until) = self.locked_until {
+            Utc::now() >= locked_until
+        } else {
+            false
+        }
+    }
+
+    /// 获取剩余锁定时间（秒）
+    pub fn get_lock_remaining_seconds(&self) -> Option<i64> {
+        self.locked_until.map(|locked_until| {
+            let remaining = locked_until.timestamp() - Utc::now().timestamp();
+            remaining.max(0)
+        })
     }
 }
 
