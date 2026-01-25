@@ -31,7 +31,7 @@ pub struct LoginResponse {
 }
 
 async fn login(Json(req): Json<LoginRequest>) -> Json<LoginResponse> {
-    // TODO: 调用 iam-auth gRPC 服务
+    // TODO: 调用 iam-identity gRPC 服务
     Json(LoginResponse {
         access_token: "todo".to_string(),
         refresh_token: "todo".to_string(),
@@ -52,7 +52,7 @@ pub struct SuccessResponse {
 }
 
 async fn logout(Json(_req): Json<LogoutRequest>) -> Json<SuccessResponse> {
-    // TODO: 调用 iam-auth gRPC 服务
+    // TODO: 调用 iam-identity gRPC 服务
     Json(SuccessResponse {
         success: true,
         message: None,
@@ -65,7 +65,7 @@ pub struct RefreshTokenRequest {
 }
 
 async fn refresh_token(Json(_req): Json<RefreshTokenRequest>) -> Json<LoginResponse> {
-    // TODO: 调用 iam-auth gRPC 服务
+    // TODO: 调用 iam-identity gRPC 服务
     Json(LoginResponse {
         access_token: "todo".to_string(),
         refresh_token: "todo".to_string(),

@@ -40,7 +40,7 @@ async fn readiness_check() -> Json<ReadinessResponse> {
         ready: true,
         checks: vec![
             ServiceCheck {
-                name: "iam-auth".to_string(),
+                name: "iam-identity".to_string(),
                 healthy: true,
             },
         ],

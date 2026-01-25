@@ -1,4 +1,4 @@
-app_name = "iam-auth"
+app_name = "iam-identity"
 app_env = "development"
 
 [database]

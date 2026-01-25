@@ -23,7 +23,7 @@ cuba-erp/
 │       └── kafka/
 ├── proto/                     # Protocol Buffers 定义
 ├── services/                  # 微服务
-│   └── iam-auth/              # 认证服务
+│   └── iam-identity/          # 身份服务（认证、用户、OAuth）
 ├── gateway/                   # API 网关
 ├── bootstrap/                 # 统一启动骨架
 ├── deploy/                    # 部署配置

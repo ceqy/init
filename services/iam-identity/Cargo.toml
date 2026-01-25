@@ -1,5 +1,5 @@
 [package]
-name = "iam-auth"
+name = "iam-identity"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
