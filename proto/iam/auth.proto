@@ -30,12 +30,6 @@ service AuthService {
   // 重置密码
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
 
-  // 获取当前用户
-  rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse);
-
-  // 更新个人资料
-  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
-
   // 启用 2FA
   rpc Enable2FA(Enable2FARequest) returns (Enable2FAResponse);
 
@@ -149,33 +143,7 @@ message ResetPasswordResponse {
   string message = 2;
 }
 
-// 获取当前用户请求
-message GetCurrentUserRequest {
-  string access_token = 1;
-}
-
-// 获取当前用户响应
-message GetCurrentUserResponse {
-  User user = 1;
-}
-
-// 更新个人资料请求
-message UpdateProfileRequest {
-  string user_id = 1;
-  string display_name = 2;
-  string email = 3;
-  string phone = 4;
-  string avatar_url = 5;
-  string language = 6;
-  string timezone = 7;
-}
-
-// 更新个人资料响应
-message UpdateProfileResponse {
-  User user = 1;
-}
-
-// 启用 2FA 请求
+// 请求重置密码请求
 message Enable2FARequest {
   string user_id = 1;
   string method = 2;  // TOTP, SMS, EMAIL

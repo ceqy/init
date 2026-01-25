@@ -32,4 +32,15 @@ pub trait UserRepository: Send + Sync {
 
     /// 检查邮箱是否存在
     async fn exists_by_email(&self, email: &Email, tenant_id: &TenantId) -> AppResult<bool>;
+
+    /// 分页查询用户列表
+    async fn list(
+        &self,
+        tenant_id: Option<&TenantId>,
+        status: Option<&str>,
+        search: Option<&str>,
+        role_ids: &[String],
+        page: i32,
+        page_size: i32,
+    ) -> AppResult<(Vec<User>, i64)>;
 }

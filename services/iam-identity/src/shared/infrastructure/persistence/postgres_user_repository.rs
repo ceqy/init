@@ -182,6 +182,139 @@ impl UserRepository for PostgresUserRepository {
 
         Ok(result.0)
     }
+
+    async fn list(
+        &self,
+        tenant_id: Option<&TenantId>,
+        status: Option<&str>,
+        search: Option<&str>,
+        _role_ids: &[String],
+        page: i32,
+        page_size: i32,
+    ) -> AppResult<(Vec<User>, i64)> {
+        let offset = (page - 1).max(0) * page_size;
+
+        // 构建查询条件
+        let mut where_conditions = Vec::new();
+        let mut param_count = 0;
+        
+        if tenant_id.is_some() {
+            param_count += 1;
+            where_conditions.push(format!("tenant_id = ${}", param_count));
+        }
+        
+        if status.is_some() {
+            param_count += 1;
+            where_conditions.push(format!("status = ${}", param_count));
+        }
+        
+        if search.is_some() {
+            param_count += 1;
+            where_conditions.push(format!(
+                "(username ILIKE ${} OR email ILIKE ${} OR display_name ILIKE ${})",
+                param_count, param_count, param_count
+            ));
+        }
+
+        let where_clause = if where_conditions.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", where_conditions.join(" AND "))
+        };
+
+        // 查询总数
+        let count_query = format!("SELECT COUNT(*) FROM users {}", where_clause);
+        
+        let mut count_query_builder = sqlx::query_scalar::<_, i64>(&count_query);
+        
+        if let Some(tid) = tenant_id {
+            count_query_builder = count_query_builder.bind(tid.0);
+        }
+        
+        if let Some(s) = status {
+            count_query_builder = count_query_builder.bind(s);
+        }
+        
+        if let Some(search_term) = search {
+            let search_pattern = format!("%{}%", search_term);
+            count_query_builder = count_query_builder.bind(search_pattern);
+        }
+        
+        let total = count_query_builder
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to count users: {}", e)))?;
+
+        // 查询数据 - 重新计算参数位置（LIMIT 和 OFFSET 在前）
+        let limit_param = 1;
+        let offset_param = 2;
+        let mut data_param_count = 2;
+        
+        let mut data_where_conditions = Vec::new();
+        
+        if tenant_id.is_some() {
+            data_param_count += 1;
+            data_where_conditions.push(format!("tenant_id = ${}", data_param_count));
+        }
+        
+        if status.is_some() {
+            data_param_count += 1;
+            data_where_conditions.push(format!("status = ${}", data_param_count));
+        }
+        
+        if search.is_some() {
+            data_param_count += 1;
+            data_where_conditions.push(format!(
+                "(username ILIKE ${} OR email ILIKE ${} OR display_name ILIKE ${})",
+                data_param_count, data_param_count, data_param_count
+            ));
+        }
+
+        let data_where_clause = if data_where_conditions.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", data_where_conditions.join(" AND "))
+        };
+
+        let data_query = format!(
+            r#"
+            SELECT id, username, email, password_hash, display_name, phone, avatar_url,
+                   tenant_id, role_ids, status, language, timezone, two_factor_enabled,
+                   two_factor_secret, last_login_at, created_at, created_by, updated_at, updated_by
+            FROM users
+            {}
+            ORDER BY created_at DESC
+            LIMIT ${} OFFSET ${}
+            "#,
+            data_where_clause, limit_param, offset_param
+        );
+
+        let mut data_query_builder = sqlx::query_as::<_, UserRow>(&data_query)
+            .bind(page_size)
+            .bind(offset);
+        
+        if let Some(tid) = tenant_id {
+            data_query_builder = data_query_builder.bind(tid.0);
+        }
+        
+        if let Some(s) = status {
+            data_query_builder = data_query_builder.bind(s);
+        }
+        
+        if let Some(search_term) = search {
+            let search_pattern = format!("%{}%", search_term);
+            data_query_builder = data_query_builder.bind(search_pattern);
+        }
+        
+        let rows = data_query_builder
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to list users: {}", e)))?;
+
+        let users = rows.into_iter().map(|r| r.into_user()).collect();
+
+        Ok((users, total))
+    }
 }
 
 #[derive(sqlx::FromRow)]

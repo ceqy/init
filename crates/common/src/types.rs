@@ -18,6 +18,10 @@ impl TenantId {
     pub fn from_uuid(uuid: Uuid) -> Self {
         Self(uuid)
     }
+
+    pub fn from_string(s: &str) -> Result<Self, uuid::Error> {
+        Ok(Self(Uuid::parse_str(s)?))
+    }
 }
 
 impl Default for TenantId {
@@ -38,6 +42,10 @@ impl UserId {
 
     pub fn from_uuid(uuid: Uuid) -> Self {
         Self(uuid)
+    }
+
+    pub fn from_string(s: &str) -> Result<Self, uuid::Error> {
+        Ok(Self(Uuid::parse_str(s)?))
     }
 }
 
