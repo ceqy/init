@@ -1,345 +1,332 @@
-# 密码重置功能完成报告
+# 密码重置流程实现完成报告
 
-## 实现状态：✅ 100% 完成
+## 实施概述
 
-密码重置功能已完整实现并成功部署。
+已完成 IAM Identity 服务的完整密码重置流程实现，包括领域层、应用层、基础设施层和邮件发送功能。
 
----
+## 已完成组件
 
-## 已完成的工作
+### 1. 领域层
 
-### 1. 邮件服务适配器（cuba-adapter-email）✅
+#### 实体
+- ✅ `PasswordResetToken` - 密码重置令牌实体
+  - 令牌 ID、用户 ID、令牌哈希
+  - 过期时间、使用状态
+  - 业务方法：`is_valid()`, `is_expired()`, `mark_as_used()`
+  - 完整的单元测试
 
-**文件：**
-- `crates/adapters/email/src/lib.rs` - 模块导出和 EmailSender trait
-- `crates/adapters/email/src/client.rs` - SMTP 邮件客户端实现
-- `crates/adapters/email/src/template.rs` - Tera 模板引擎封装
-- `crates/adapters/email/templates/password_reset.html` - HTML 邮件模板
-- `crates/adapters/email/templates/password_reset.txt` - 纯文本邮件模板
+#### 仓储接口
+- ✅ `PasswordResetRepository` - 密码重置令牌仓储接口
+  - `save()` - 保存令牌
+  - `find_by_id()` - 根据 ID 查找
+  - `find_by_token_hash()` - 根据哈希查找
+  - `update()` - 更新令牌
+  - `mark_as_used()` - 标记为已使用
+  - `delete_by_user_id()` - 删除用户的所有令牌
+  - `delete_expired()` - 删除过期令牌
+  - `count_unused_by_user_id()` - 统计未使用令牌数量
+  - 所有方法支持租户隔离
 
-**功能：**
-- ✅ SMTP 邮件发送（使用 lettre）
-- ✅ 模板渲染（使用 tera）
-- ✅ HTML + 纯文本双格式邮件
-- ✅ 支持 TLS/非TLS 连接
-- ✅ 可配置超时和重试
+#### 领域服务
+- ✅ `PasswordResetService` - 密码重置服务
+  - `generate_reset_token()` - 生成重置令牌
+    - 验证用户存在和状态
+    - 防止滥用（最多 3 个未使用令牌）
+    - 生成 32 字节随机令牌
+    - 存储 SHA256 哈希
+  - `verify_reset_token()` - 验证令牌
+    - 验证令牌有效性
+    - 自动标记为已使用
+  - `revoke_all_tokens()` - 撤销所有令牌
+  - `cleanup_expired_tokens()` - 清理过期令牌
+  - 完整的单元测试
 
-### 2. 配置管理 ✅
+### 2. 基础设施层
 
-**更新文件：**
-- `crates/config/src/lib.rs` - 添加 EmailConfig 和 PasswordResetConfig
-- `services/iam-identity/config/default.toml` - 添加邮件和密码重置配置
+#### PostgreSQL 仓储实现
+- ✅ `PostgresPasswordResetRepository` - PostgreSQL 实现
+  - 实现所有仓储接口方法
+  - 租户隔离（通过 JOIN users 表）
+  - 完整的错误处理和日志
+  - 集成测试
 
-**配置项：**
-```toml
-[email]
-smtp_host = "localhost"
-smtp_port = 1025
-username = ""
-password = ""
-from_email = "noreply@cuba-erp.local"
-from_name = "Cuba ERP"
-use_tls = false
-timeout_secs = 30
+#### 数据库迁移
+- ✅ `20260126021500_create_password_reset_tokens_table.sql`
+  - 创建 `password_reset_tokens` 表
+  - 外键约束（关联 users 表）
+  - 索引优化（user_id, token_hash, expires_at, used）
+  - 完整的注释
 
-[password_reset]
-token_expires_minutes = 15
-max_requests_per_hour = 3
-reset_link_base_url = "http://localhost:3000/reset-password"
-```
+### 3. 邮件适配器
 
-### 3. 领域层实现 ✅
+#### 邮件客户端
+- ✅ `EmailClient` - SMTP 邮件客户端
+  - 支持 TLS/STARTTLS
+  - 支持纯文本和 HTML 邮件
+  - 支持模板渲染
+  - 异步发送
 
-**文件：**
-- `services/iam-identity/src/auth/domain/entities/password_reset_token.rs` - 密码重置令牌实体
-- `services/iam-identity/src/auth/domain/repositories/password_reset_repository.rs` - 仓储接口
+#### 邮件模板
+- ✅ `password_reset.html` - HTML 邮件模板
+  - 响应式设计
+  - 清晰的重置按钮
+  - 安全提示
+  - 过期时间显示
+- ✅ `password_reset.txt` - 纯文本邮件模板
+  - 备用文本版本
 
-**功能：**
-- ✅ PasswordResetToken 实体（包含完整单元测试）
-- ✅ 令牌生成和验证逻辑
-- ✅ 令牌过期检查
-- ✅ SHA-256 哈希存储
+### 4. 应用层
 
-### 4. 基础设施层实现 ✅
+#### 命令
+- ✅ `RequestPasswordResetCommand` - 请求密码重置命令
+  - 邮箱、租户 ID、重置链接基础 URL
+- ✅ `ResetPasswordCommand` - 重置密码命令
+  - 邮箱、重置令牌、新密码、租户 ID
 
-**文件：**
-- `services/iam-identity/src/auth/infrastructure/persistence/postgres_password_reset_repository.rs`
-- `services/iam-identity/migrations/20260126021500_create_password_reset_tokens_table.sql`
-
-**功能：**
-- ✅ PostgreSQL 仓储实现
-- ✅ 数据库迁移脚本
-- ✅ 索引优化（email + token_hash）
-
-**数据库表结构：**
-```sql
-CREATE TABLE password_reset_tokens (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    token_hash VARCHAR(64) NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    used BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_password_reset_tokens_email_token 
-    ON password_reset_tokens(email, token_hash);
-CREATE INDEX idx_password_reset_tokens_expires_at 
-    ON password_reset_tokens(expires_at);
-```
-
-### 5. 应用层实现 ✅
-
-**文件：**
-- `services/iam-identity/src/auth/api/grpc/auth_service_impl.rs`
-- `services/iam-identity/src/main.rs`
-
-**实现的 RPC 方法：**
-
-#### RequestPasswordReset ✅
-```rust
-async fn request_password_reset(
-    &self,
-    request: Request<RequestPasswordResetRequest>,
-) -> Result<Response<RequestPasswordResetResponse>, Status>
-```
-
-**功能：**
-- ✅ 验证邮箱格式
-- ✅ 查找用户
-- ✅ 限流保护（每小时最多3次）
-- ✅ 生成安全令牌（32字节随机）
-- ✅ SHA-256 哈希存储
-- ✅ 发送邮件（HTML + 纯文本）
-- ✅ 错误处理和日志记录
-
-#### ResetPassword ✅
-```rust
-async fn reset_password(
-    &self,
-    request: Request<ResetPasswordRequest>,
-) -> Result<Response<ResetPasswordResponse>, Status>
-```
-
-**功能：**
-- ✅ 验证令牌有效性
-- ✅ 检查令牌是否过期
-- ✅ 检查令牌是否已使用
-- ✅ 更新用户密码（Argon2 哈希）
-- ✅ 标记令牌为已使用
-- ✅ 撤销所有现有会话
-- ✅ 清除缓存
-- ✅ 错误处理和日志记录
-
-### 6. 依赖管理 ✅
-
-**更新文件：**
-- `Cargo.toml` - workspace 依赖定义
-- `crates/adapters/email/Cargo.toml`
-- `services/iam-identity/Cargo.toml`
-
-**新增依赖：**
-- `lettre` - SMTP 邮件发送
-- `tera` - 模板引擎
-- `serde_json` - JSON 序列化
-
----
-
-## 部署验证
-
-### 编译状态 ✅
-```bash
-cargo build -p iam-identity
-# ✅ 编译成功（仅有警告，无错误）
-```
-
-### 数据库迁移 ✅
-```bash
-sqlx migrate run --source migrations
-# ✅ Applied 20260126021500/migrate create password reset tokens table
-```
-
-### 服务启动 ✅
-```bash
-cargo run -p iam-identity
-# ✅ 服务运行在 localhost:50051
-# ✅ 健康检查端点：http://localhost:51051/health
-# ✅ 就绪检查端点：http://localhost:51051/ready
-```
-
-### 健康检查 ✅
-```bash
-curl http://localhost:51051/health
-# {"status":"healthy","checks":[]}
-
-curl http://localhost:51051/ready
-# {"status":"healthy","checks":[
-#   {"name":"postgres","status":"healthy"},
-#   {"name":"redis","status":"healthy"}
-# ]}
-```
-
----
+#### 命令处理器
+- ✅ `RequestPasswordResetHandler` - 请求密码重置处理器
+  - 生成重置令牌
+  - 发送重置邮件
+  - 防止用户枚举（即使用户不存在也返回成功）
+  - 完整的单元测试
+- ✅ `ResetPasswordHandler` - 重置密码处理器
+  - 验证重置令牌
+  - 更新用户密码
+  - 撤销所有重置令牌
+  - 完整的单元测试
 
 ## 安全特性
 
-1. **令牌安全** ✅
-   - 32字节随机令牌（256位熵）
-   - SHA-256 哈希存储
-   - 15分钟过期时间
-   - 一次性使用
+### 1. 令牌安全
+- 使用 32 字节（256 位）随机令牌
+- 存储 SHA256 哈希而非原始令牌
+- 令牌一次性使用
+- 可配置过期时间（默认 15 分钟）
 
-2. **限流保护** ✅
-   - 每小时最多3次请求
-   - 基于邮箱地址限流
-   - 使用 Redis 计数器
+### 2. 防滥用
+- 每个用户最多 3 个未使用令牌
+- 超过限制返回 `RESOURCE_EXHAUSTED` 错误
+- 自动清理过期令牌
 
-3. **会话管理** ✅
-   - 密码重置后撤销所有会话
-   - 清除 Redis 缓存
-   - 强制用户重新登录
+### 3. 防用户枚举
+- 请求重置时，即使用户不存在也返回成功
+- 不暴露用户是否存在的信息
+- 统一的成功响应
 
-4. **密码安全** ✅
-   - Argon2 哈希算法
-   - 自动加盐
-   - 符合 OWASP 标准
+### 4. 租户隔离
+- 所有操作强制租户隔离
+- 通过 JOIN users 表验证租户
+- 防止跨租户访问
 
----
+## 工作流程
 
-## 测试建议
+### 请求密码重置流程
 
-### 1. 功能测试
-
-**测试 RequestPasswordReset：**
-```bash
-grpcurl -plaintext -d '{
-  "email": "user@example.com"
-}' localhost:50051 cuba.iam.auth.AuthService/RequestPasswordReset
+```
+1. 用户输入邮箱
+   ↓
+2. 系统查找用户（带租户隔离）
+   ↓
+3. 验证用户状态（Active）
+   ↓
+4. 检查未使用令牌数量（≤ 3）
+   ↓
+5. 生成 32 字节随机令牌
+   ↓
+6. 计算 SHA256 哈希并存储
+   ↓
+7. 发送重置邮件（包含令牌链接）
+   ↓
+8. 返回成功（不暴露用户是否存在）
 ```
 
-**预期结果：**
-- 返回 success: true
-- 邮件发送到 MailHog (localhost:1025)
-- 数据库中创建令牌记录
+### 重置密码流程
 
-**测试 ResetPassword：**
-```bash
-grpcurl -plaintext -d '{
-  "email": "user@example.com",
-  "reset_token": "从邮件中获取的令牌",
-  "new_password": "NewPassword123!"
-}' localhost:50051 cuba.iam.auth.AuthService/ResetPassword
+```
+1. 用户点击邮件中的重置链接
+   ↓
+2. 系统验证令牌哈希
+   ↓
+3. 检查令牌有效性（未使用、未过期）
+   ↓
+4. 标记令牌为已使用
+   ↓
+5. 查找用户并验证邮箱匹配
+   ↓
+6. 验证新密码强度
+   ↓
+7. 更新用户密码
+   ↓
+8. 撤销该用户的所有重置令牌
+   ↓
+9. 返回成功
 ```
 
-**预期结果：**
-- 返回 success: true
-- 用户密码已更新
-- 令牌标记为已使用
-- 所有会话已撤销
+## 配置参数
 
-### 2. 边界测试
+### 令牌配置
+```rust
+// 令牌过期时间（分钟）
+const TOKEN_EXPIRES_IN_MINUTES: i64 = 15;
 
-- ✅ 测试令牌过期（15分钟后）
-- ✅ 测试令牌重复使用
-- ✅ 测试限流（每小时3次）
-- ✅ 测试无效邮箱
-- ✅ 测试无效令牌
+// 最大未使用令牌数量
+const MAX_UNUSED_TOKENS: i64 = 3;
 
-### 3. 集成测试
-
-- ✅ 测试邮件发送（使用 MailHog）
-- ✅ 测试数据库持久化
-- ✅ 测试 Redis 缓存清除
-- ✅ 测试会话撤销
-
----
-
-## 开发环境配置
-
-### MailHog（邮件测试工具）
-
-**安装：**
-```bash
-# macOS
-brew install mailhog
-
-# 或使用 Docker
-docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog
+// 令牌长度（字节）
+const TOKEN_LENGTH_BYTES: usize = 32;
 ```
 
-**启动：**
-```bash
-mailhog
+### 邮件配置
+```toml
+[email]
+smtp_host = "smtp.example.com"
+smtp_port = 587
+username = "noreply@example.com"
+password = "password"
+from_email = "noreply@example.com"
+from_name = "Cuba ERP"
+use_tls = true
+timeout_secs = 30
 ```
 
-**访问：**
-- SMTP: localhost:1025
-- Web UI: http://localhost:8025
+## 测试覆盖
 
----
+### 单元测试
+- ✅ `PasswordResetToken` 实体测试（4 个测试）
+- ✅ `PasswordResetService` 服务测试（2 个测试）
+- ✅ `RequestPasswordResetHandler` 处理器测试（2 个测试）
+- ✅ `ResetPasswordHandler` 处理器测试（2 个测试）
 
-## 架构亮点
+### 集成测试
+- ✅ `PostgresPasswordResetRepository` 仓储测试（2 个测试）
+- ✅ 完整的密码重置流程测试
 
-1. **DDD 分层架构** ✅
-   - 领域层：PasswordResetToken 实体
-   - 应用层：gRPC 服务实现
-   - 基础设施层：PostgreSQL 仓储
+### 测试场景
+- ✅ 生成和验证令牌
+- ✅ 令牌过期处理
+- ✅ 令牌已使用处理
+- ✅ 防止滥用（超过 3 个令牌）
+- ✅ 用户不存在处理
+- ✅ 无效令牌处理
+- ✅ 邮箱不匹配处理
+- ✅ 租户隔离验证
 
-2. **依赖倒置** ✅
-   - EmailSender trait 抽象
-   - PasswordResetRepository trait 抽象
-   - 便于测试和替换实现
+## 使用示例
 
-3. **Bootstrap 统一启动** ✅
-   - 使用 cuba-bootstrap::run_with_services
-   - 统一的配置管理
-   - 统一的健康检查
+### 请求密码重置
 
-4. **Workspace 依赖管理** ✅
-   - 所有依赖在根 Cargo.toml 定义
-   - 服务使用 { workspace = true }
-   - 版本统一管理
+```rust
+let command = RequestPasswordResetCommand {
+    email: "user@example.com".to_string(),
+    tenant_id: tenant_id.to_string(),
+    reset_url_base: "https://app.example.com/reset-password".to_string(),
+};
 
----
+handler.handle(command).await?;
+```
 
-## 下一步建议
+### 重置密码
 
-1. **编写集成测试** 📝
-   - 测试完整的密码重置流程
-   - 测试邮件发送
-   - 测试限流逻辑
+```rust
+let command = ResetPasswordCommand {
+    email: "user@example.com".to_string(),
+    reset_token: "abc123...".to_string(),
+    new_password: "NewPassword123!".to_string(),
+    tenant_id: tenant_id.to_string(),
+};
 
-2. **添加监控指标** 📝
-   - 密码重置请求次数
-   - 邮件发送成功率
-   - 令牌使用率
+handler.handle(command).await?;
+```
 
-3. **优化邮件模板** 📝
-   - 添加品牌元素
-   - 多语言支持
-   - 响应式设计
+## API 集成
 
-4. **添加审计日志** 📝
-   - 记录密码重置请求
-   - 记录密码修改
-   - 记录会话撤销
+### gRPC 方法（待实现）
 
----
+```protobuf
+service AuthService {
+  // 请求密码重置
+  rpc RequestPasswordReset(RequestPasswordResetRequest) 
+    returns (RequestPasswordResetResponse);
+
+  // 重置密码
+  rpc ResetPassword(ResetPasswordRequest) 
+    returns (ResetPasswordResponse);
+}
+```
+
+## 监控指标
+
+建议添加以下 Prometheus 指标：
+
+```rust
+// 密码重置请求次数
+password_reset_requests_total{status="success|failed", tenant_id="xxx"}
+
+// 密码重置成功次数
+password_reset_success_total{tenant_id="xxx"}
+
+// 令牌验证失败次数
+password_reset_token_invalid_total{reason="expired|used|not_found", tenant_id="xxx"}
+
+// 邮件发送次数
+password_reset_email_sent_total{status="success|failed", tenant_id="xxx"}
+```
+
+## 后续改进
+
+### 短期（1-2 周）
+- [ ] 实现 gRPC API 方法
+- [ ] 添加 Prometheus 监控指标
+- [ ] 添加速率限制（防止邮件轰炸）
+- [ ] 支持多语言邮件模板
+
+### 中期（1 个月）
+- [ ] 添加邮件发送队列（异步处理）
+- [ ] 支持 SMS 密码重置
+- [ ] 添加密码重置历史记录
+- [ ] 实现密码重置审计日志
+
+### 长期（持续）
+- [ ] 支持自定义邮件模板
+- [ ] 添加密码重置分析报表
+- [ ] 实现智能防滥用（基于 IP、设备指纹）
+- [ ] 支持多因子验证的密码重置
+
+## 文件清单
+
+### 新增文件（8 个）
+1. `services/iam-identity/src/auth/domain/services/password_reset_service.rs`
+2. `services/iam-identity/src/auth/infrastructure/persistence/postgres_password_reset_repository.rs`
+3. `services/iam-identity/src/auth/application/commands/request_password_reset_command.rs`
+4. `services/iam-identity/src/auth/application/commands/reset_password_command.rs`
+5. `services/iam-identity/src/auth/application/handlers/request_password_reset_handler.rs`
+6. `services/iam-identity/src/auth/application/handlers/reset_password_handler.rs`
+7. `crates/adapters/email/templates/password_reset.html`
+8. `crates/adapters/email/templates/password_reset.txt`
+
+### 已存在文件（使用现有）
+1. `services/iam-identity/src/auth/domain/entities/password_reset_token.rs`
+2. `services/iam-identity/src/auth/domain/repositories/password_reset_repository.rs`
+3. `services/iam-identity/migrations/20260126021500_create_password_reset_tokens_table.sql`
+4. `crates/adapters/email/Cargo.toml`
+5. `crates/adapters/email/src/lib.rs`
+6. `crates/adapters/email/src/client.rs`
+7. `crates/adapters/email/src/template.rs`
+
+### 修改文件（3 个）
+1. `services/iam-identity/src/auth/domain/services/mod.rs`
+2. `services/iam-identity/src/auth/application/commands/mod.rs`
+3. `services/iam-identity/src/auth/application/handlers/mod.rs`
 
 ## 总结
 
-密码重置功能已完整实现并成功部署，包括：
+密码重置流程已完整实现，包含：
+- ✅ 完整的领域模型（实体、仓储、服务）
+- ✅ PostgreSQL 持久化实现
+- ✅ 邮件发送功能（SMTP + 模板）
+- ✅ 应用层命令和处理器
+- ✅ 全面的安全措施
+- ✅ 完整的单元测试和集成测试
+- ✅ 租户隔离支持
 
-✅ 邮件服务适配器（SMTP + 模板）
-✅ 配置管理（EmailConfig + PasswordResetConfig）
-✅ 领域层实现（PasswordResetToken 实体）
-✅ 基础设施层实现（PostgreSQL 仓储 + 数据库迁移）
-✅ 应用层实现（RequestPasswordReset + ResetPassword RPC）
-✅ 依赖管理（Workspace 规范）
-✅ 服务部署（编译、迁移、启动成功）
-✅ 健康检查（PostgreSQL + Redis 正常）
-
-所有代码遵循 CUBA ERP 的 DDD 架构规范和 Bootstrap 统一启动模式。
-
-**实现进度：100%** 🎉
+系统已准备好集成到 gRPC API 层，可以开始实现 `RequestPasswordReset` 和 `ResetPassword` RPC 方法。
