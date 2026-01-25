@@ -21,12 +21,14 @@ use uuid::Uuid;
 use crate::domain::entities::{Session as DomainSession, SessionId, UserStatus};
 use crate::domain::repositories::{SessionRepository, UserRepository};
 use crate::domain::value_objects::{HashedPassword, Username};
+use crate::infrastructure::cache::AuthCache;
 
 /// AuthService 实现
 pub struct AuthServiceImpl {
     user_repo: Arc<dyn UserRepository>,
     session_repo: Arc<dyn SessionRepository>,
     token_service: Arc<TokenService>,
+    auth_cache: Arc<dyn AuthCache>,
     refresh_token_expires_in: i64,
 }
 
@@ -35,12 +37,14 @@ impl AuthServiceImpl {
         user_repo: Arc<dyn UserRepository>,
         session_repo: Arc<dyn SessionRepository>,
         token_service: Arc<TokenService>,
+        auth_cache: Arc<dyn AuthCache>,
         refresh_token_expires_in: i64,
     ) -> Self {
         Self {
             user_repo,
             session_repo,
             token_service,
+            auth_cache,
             refresh_token_expires_in,
         }
     }
@@ -241,13 +245,37 @@ impl AuthService for AuthServiceImpl {
             .user_id()
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        // 计算 token 剩余有效期（秒）
+        let now = Utc::now().timestamp();
+        let ttl_secs = (claims.exp - now).max(0) as u64;
+
         if req.logout_all_devices {
             // 撤销所有会话
             self.session_repo
                 .revoke_all_by_user_id(&user_id)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
-            tracing::info!(user_id = %user_id.0, "All sessions revoked");
+
+            // 将用户所有 Token 加入黑名单
+            self.auth_cache
+                .blacklist_user_tokens(&user_id.0.to_string(), self.refresh_token_expires_in as u64)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            // 清除用户缓存
+            self.auth_cache
+                .invalidate_user_cache(&user_id.0.to_string())
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            tracing::info!(user_id = %user_id.0, "All sessions revoked and tokens blacklisted");
+        } else {
+            // 只将当前 Token 加入黑名单
+            self.auth_cache
+                .blacklist_token(&claims.jti, ttl_secs)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+            tracing::info!(jti = %claims.jti, "Token blacklisted");
         }
 
         Ok(Response::new(LogoutResponse { success: true }))
@@ -326,16 +354,46 @@ impl AuthService for AuthServiceImpl {
         tracing::debug!("Validate token request");
 
         match self.token_service.validate_token(&req.access_token) {
-            Ok(claims) => Ok(Response::new(ValidateTokenResponse {
-                valid: true,
-                user_id: claims.sub,
-                tenant_id: claims.tenant_id,
-                permissions: claims.permissions,
-                expires_at: Some(Timestamp {
-                    seconds: claims.exp,
-                    nanos: 0,
-                }),
-            })),
+            Ok(claims) => {
+                // 检查 Token 是否在黑名单中
+                if self
+                    .auth_cache
+                    .is_token_blacklisted(&claims.jti)
+                    .await
+                    .unwrap_or(false)
+                {
+                    tracing::debug!(jti = %claims.jti, "Token is blacklisted");
+                    return Ok(Response::new(ValidateTokenResponse {
+                        valid: false,
+                        ..Default::default()
+                    }));
+                }
+
+                // 检查用户的所有 Token 是否被撤销
+                if self
+                    .auth_cache
+                    .is_user_tokens_blacklisted(&claims.sub)
+                    .await
+                    .unwrap_or(false)
+                {
+                    tracing::debug!(user_id = %claims.sub, "User tokens are blacklisted");
+                    return Ok(Response::new(ValidateTokenResponse {
+                        valid: false,
+                        ..Default::default()
+                    }));
+                }
+
+                Ok(Response::new(ValidateTokenResponse {
+                    valid: true,
+                    user_id: claims.sub,
+                    tenant_id: claims.tenant_id,
+                    permissions: claims.permissions,
+                    expires_at: Some(Timestamp {
+                        seconds: claims.exp,
+                        nanos: 0,
+                    }),
+                }))
+            }
             Err(_) => Ok(Response::new(ValidateTokenResponse {
                 valid: false,
                 ..Default::default()
@@ -391,7 +449,19 @@ impl AuthService for AuthServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        tracing::info!(user_id = %req.user_id, "Password changed successfully");
+        // 7. 将用户所有 Token 加入黑名单
+        self.auth_cache
+            .blacklist_user_tokens(&req.user_id, self.refresh_token_expires_in as u64)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 8. 清除用户缓存
+        self.auth_cache
+            .invalidate_user_cache(&req.user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tracing::info!(user_id = %req.user_id, "Password changed successfully, all tokens invalidated");
 
         Ok(Response::new(ChangePasswordResponse {
             success: true,
@@ -434,17 +504,43 @@ impl AuthService for AuthServiceImpl {
             .validate_token(&req.access_token)
             .map_err(|_| Status::unauthenticated("Invalid token"))?;
 
-        // 2. 获取用户
+        // 检查 Token 是否在黑名单中
+        if self
+            .auth_cache
+            .is_token_blacklisted(&claims.jti)
+            .await
+            .unwrap_or(false)
+        {
+            return Err(Status::unauthenticated("Token has been revoked"));
+        }
+
+        // 2. 获取用户 ID
         let user_id = claims
             .user_id()
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        let user_id_str = user_id.0.to_string();
+
+        // 3. 尝试从缓存获取用户
+        if let Ok(Some(cached_user)) = self.auth_cache.get_cached_user(&user_id_str).await {
+            tracing::debug!(user_id = %user_id_str, "User found in cache");
+            return Ok(Response::new(GetCurrentUserResponse {
+                user: Some(user_to_proto(&cached_user)),
+            }));
+        }
+
+        // 4. 从数据库获取用户
         let user = self
             .user_repo
             .find_by_id(&user_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
+
+        // 5. 缓存用户信息
+        if let Err(e) = self.auth_cache.cache_user(&user).await {
+            tracing::warn!(error = %e, "Failed to cache user");
+        }
 
         Ok(Response::new(GetCurrentUserResponse {
             user: Some(user_to_proto(&user)),
@@ -494,6 +590,11 @@ impl AuthService for AuthServiceImpl {
             .update(&user)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 5. 清除用户缓存（确保下次获取最新数据）
+        if let Err(e) = self.auth_cache.invalidate_user_cache(&req.user_id).await {
+            tracing::warn!(error = %e, "Failed to invalidate user cache");
+        }
 
         tracing::info!(user_id = %req.user_id, "Profile updated");
 

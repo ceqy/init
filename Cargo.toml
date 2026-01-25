@@ -62,7 +62,7 @@ figment = { version = "0.10", features = ["toml", "env"] }
 thiserror = { version = "2.0" }
 anyhow = { version = "1.0" }
 
-# Tracing
+# Tracingjx
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
