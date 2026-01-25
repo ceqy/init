@@ -1,0 +1,32 @@
+feat(oauth): 完成 OAuth2 授权服务器领域模型实现
+
+实现内容：
+- 创建 OAuthClient 实体（Client 管理、授权类型、重定向 URI 验证、Scope 管理）
+- 创建 AuthorizationCode 实体（授权码流程、PKCE 验证 S256/plain）
+- 创建 AccessToken 实体（Token 管理、Scope 检查、撤销支持）
+- 创建 RefreshToken 实体（Token 刷新、关联 Access Token）
+- 定义 4 个 Repository 接口（支持租户隔离）
+- 创建 4 个数据库表迁移（启用 Row-Level Security）
+- 添加完整的单元测试覆盖
+
+架构特点：
+- 完全符合 DDD 规范（实体、Repository、聚合根）
+- 支持多租户隔离（所有 Repository 方法强制 tenant_id）
+- 安全性优先（HTTPS 验证、PKCE 支持、Token 撤销）
+- 符合 OAuth 2.0 和 OIDC 规范
+
+数据库特性：
+- 所有表启用 Row-Level Security
+- 租户隔离策略
+- 性能优化索引
+- 自动清理过期数据函数
+
+新增文件：
+- 4 个领域实体
+- 4 个 Repository 接口
+- 4 个数据库迁移
+- 3 个模块组织文件
+
+修改文件：
+- src/oauth/mod.rs
+- OAUTH2_SERVER_SUMMARY.md
