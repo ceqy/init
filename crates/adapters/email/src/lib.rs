@@ -9,8 +9,28 @@ mod client;
 mod template;
 
 pub use client::{EmailClient, EmailMessage};
-pub use cuba_config::EmailConfig;
 pub use template::EmailTemplate;
+
+// 重新导出 EmailConfig
+pub use serde::Deserialize;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EmailConfig {
+    pub smtp_host: String,
+    pub smtp_port: u16,
+    pub username: String,
+    pub password: String,
+    pub from_email: String,
+    pub from_name: String,
+    #[serde(default)]
+    pub use_tls: bool,
+    #[serde(default = "default_timeout_secs")]
+    pub timeout_secs: u64,
+}
+
+fn default_timeout_secs() -> u64 {
+    30
+}
 
 use cuba_errors::AppResult;
 

@@ -1,7 +1,6 @@
 //! 邮件客户端实现
 
-use crate::{EmailSender, EmailTemplate};
-use cuba_config::EmailConfig;
+use crate::{EmailConfig, EmailSender, EmailTemplate};
 use cuba_errors::{AppError, AppResult};
 use lettre::message::{header, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;

@@ -1,13 +1,5 @@
 //! OAuth Client 实体
 
-pub mod access_token;
-pub mod authorization_code;
-pub mod refresh_token;
-
-pub use access_token::AccessToken;
-pub use authorization_code::AuthorizationCode;
-pub use refresh_token::RefreshToken;
-
 use chrono::{DateTime, Utc};
 use cuba_common::{TenantId, UserId};
 use serde::{Deserialize, Serialize};
