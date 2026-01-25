@@ -1,71 +1,201 @@
-//! 密码值对象
+//! Password 值对象
 
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use cuba_errors::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// 哈希后的密码
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HashedPassword(String);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HashedPassword(pub String);
 
 impl HashedPassword {
     /// 从明文密码创建哈希密码
-    pub fn from_plain(password: &str) -> AppResult<Self> {
+    pub fn from_plain(plain_password: &str) -> Result<Self, PasswordError> {
         // 验证密码强度
-        validate_password_strength(password)?;
-
+        Password::validate(plain_password)?;
+        
+        // 使用 Argon2 哈希密码
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
-
-        let hash = argon2
-            .hash_password(password.as_bytes(), &salt)
-            .map_err(|e| AppError::internal(format!("Failed to hash password: {}", e)))?;
-
-        Ok(Self(hash.to_string()))
+        
+        let password_hash = argon2
+            .hash_password(plain_password.as_bytes(), &salt)
+            .map_err(|e| PasswordError::HashingFailed(e.to_string()))?
+            .to_string();
+        
+        Ok(Self(password_hash))
     }
-
-    /// 从已有的哈希值创建
-    pub fn from_hash(hash: impl Into<String>) -> Self {
-        Self(hash.into())
-    }
-
-    /// 验证密码
-    pub fn verify(&self, password: &str) -> AppResult<bool> {
+    
+    /// 验证明文密码是否匹配
+    pub fn verify(&self, plain_password: &str) -> Result<bool, PasswordError> {
         let parsed_hash = PasswordHash::new(&self.0)
-            .map_err(|e| AppError::internal(format!("Invalid password hash: {}", e)))?;
-
+            .map_err(|e| PasswordError::InvalidHash(e.to_string()))?;
+        
         Ok(Argon2::default()
-            .verify_password(password.as_bytes(), &parsed_hash)
+            .verify_password(plain_password.as_bytes(), &parsed_hash)
             .is_ok())
     }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
+    
+    /// 从已有的哈希字符串创建
+    pub fn from_hash(hash: String) -> Self {
+        Self(hash)
     }
 }
 
-/// 验证密码强度
-fn validate_password_strength(password: &str) -> AppResult<()> {
-    if password.len() < 8 {
-        return Err(AppError::validation("Password must be at least 8 characters"));
+impl fmt::Display for HashedPassword {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[REDACTED]")
+    }
+}
+
+/// 明文密码（仅用于验证）
+pub struct Password;
+
+impl Password {
+    /// 验证密码强度
+    pub fn validate(password: &str) -> Result<(), PasswordError> {
+        // 长度检查
+        if password.len() < 8 {
+            return Err(PasswordError::TooShort);
+        }
+        
+        if password.len() > 128 {
+            return Err(PasswordError::TooLong);
+        }
+        
+        // 复杂度检查
+        let has_lowercase = password.chars().any(|c| c.is_lowercase());
+        let has_uppercase = password.chars().any(|c| c.is_uppercase());
+        let has_digit = password.chars().any(|c| c.is_numeric());
+        let has_special = password.chars().any(|c| !c.is_alphanumeric());
+        
+        let complexity_count = [has_lowercase, has_uppercase, has_digit, has_special]
+            .iter()
+            .filter(|&&x| x)
+            .count();
+        
+        if complexity_count < 3 {
+            return Err(PasswordError::TooWeak);
+        }
+        
+        Ok(())
+    }
+}
+
+/// Password 错误
+#[derive(Debug, thiserror::Error)]
+pub enum PasswordError {
+    #[error("Password is too short (minimum 8 characters)")]
+    TooShort,
+    
+    #[error("Password is too long (maximum 128 characters)")]
+    TooLong,
+    
+    #[error("Password is too weak (must contain at least 3 of: lowercase, uppercase, digit, special character)")]
+    TooWeak,
+    
+    #[error("Password hashing failed: {0}")]
+    HashingFailed(String),
+    
+    #[error("Invalid password hash: {0}")]
+    InvalidHash(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_valid_password() {
+        let result = Password::validate("Test1234!");
+        assert!(result.is_ok());
     }
 
-    if password.len() > 128 {
-        return Err(AppError::validation("Password must be at most 128 characters"));
+    #[test]
+    fn test_password_too_short() {
+        let result = Password::validate("Test1!");
+        assert!(matches!(result, Err(PasswordError::TooShort)));
     }
 
-    let has_uppercase = password.chars().any(|c| c.is_uppercase());
-    let has_lowercase = password.chars().any(|c| c.is_lowercase());
-    let has_digit = password.chars().any(|c| c.is_ascii_digit());
-
-    if !has_uppercase || !has_lowercase || !has_digit {
-        return Err(AppError::validation(
-            "Password must contain uppercase, lowercase, and digit",
-        ));
+    #[test]
+    fn test_password_too_long() {
+        let result = Password::validate(&"a".repeat(129));
+        assert!(matches!(result, Err(PasswordError::TooLong)));
     }
 
-    Ok(())
+    #[test]
+    fn test_password_too_weak_no_uppercase() {
+        let result = Password::validate("test1234!");
+        assert!(matches!(result, Err(PasswordError::TooWeak)));
+    }
+
+    #[test]
+    fn test_password_too_weak_no_lowercase() {
+        let result = Password::validate("TEST1234!");
+        assert!(matches!(result, Err(PasswordError::TooWeak)));
+    }
+
+    #[test]
+    fn test_password_too_weak_no_digit() {
+        let result = Password::validate("TestTest!");
+        assert!(matches!(result, Err(PasswordError::TooWeak)));
+    }
+
+    #[test]
+    fn test_password_too_weak_no_special() {
+        let result = Password::validate("Test1234");
+        assert!(matches!(result, Err(PasswordError::TooWeak)));
+    }
+
+    #[test]
+    fn test_password_with_three_types() {
+        // 小写 + 大写 + 数字
+        let result = Password::validate("TestPassword123");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_hashed_password_creation() {
+        let hashed = HashedPassword::from_plain("Test1234!");
+        assert!(hashed.is_ok());
+    }
+
+    #[test]
+    fn test_hashed_password_verify_correct() {
+        let hashed = HashedPassword::from_plain("Test1234!").unwrap();
+        let result = hashed.verify("Test1234!");
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_hashed_password_verify_incorrect() {
+        let hashed = HashedPassword::from_plain("Test1234!").unwrap();
+        let result = hashed.verify("WrongPassword!");
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_hashed_password_display_redacted() {
+        let hashed = HashedPassword::from_plain("Test1234!").unwrap();
+        assert_eq!(format!("{}", hashed), "[REDACTED]");
+    }
+
+    #[test]
+    fn test_password_minimum_length() {
+        let result = Password::validate("Test123!");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_password_maximum_length() {
+        let mut password = "Test123!".to_string();
+        password.push_str(&"a".repeat(120));
+        let result = Password::validate(&password);
+        assert!(result.is_ok());
+    }
 }

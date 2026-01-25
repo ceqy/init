@@ -49,3 +49,10 @@ serde_cbor = { workspace = true }
 
 [build-dependencies]
 tonic-build = { workspace = true }
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "auth_benchmark"
+harness = false
