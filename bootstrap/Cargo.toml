@@ -14,10 +14,15 @@ cuba-auth-core = { workspace = true }
 cuba-ports = { workspace = true }
 cuba-adapter-postgres = { workspace = true }
 cuba-adapter-redis = { workspace = true }
+cuba-adapter-kafka = { workspace = true }
+cuba-adapter-clickhouse = { workspace = true }
 
 # gRPC
 tonic = { workspace = true }
 http = { workspace = true }
+
+# HTTP (健康检查端点)
+axum = { workspace = true }
 
 # 异步运行时
 tokio = { workspace = true }
@@ -29,3 +34,11 @@ tracing = { workspace = true }
 tower = { workspace = true }
 redis = { workspace = true }
 sqlx = { workspace = true }
+clickhouse = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+prost = { workspace = true }
+
+# Metrics
+metrics = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }

@@ -529,6 +529,10 @@ dependencies = [
 name = "cuba-bootstrap"
 version = "0.1.0"
 dependencies = [
+ "axum",
+ "clickhouse",
+ "cuba-adapter-clickhouse",
+ "cuba-adapter-kafka",
  "cuba-adapter-postgres",
  "cuba-adapter-redis",
  "cuba-auth-core",
@@ -537,7 +541,12 @@ dependencies = [
  "cuba-ports",
  "cuba-telemetry",
  "http",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "prost",
  "redis",
+ "serde",
+ "serde_json",
  "sqlx",
  "tokio",
  "tonic",
