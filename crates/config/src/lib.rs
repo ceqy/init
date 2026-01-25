@@ -81,6 +81,43 @@ fn default_log_level() -> String {
     "info".to_string()
 }
 
+/// 邮件配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct EmailConfig {
+    pub smtp_host: String,
+    pub smtp_port: u16,
+    pub username: String,
+    pub password: String,
+    pub from_email: String,
+    pub from_name: String,
+    #[serde(default)]
+    pub use_tls: bool,
+    #[serde(default = "default_timeout_secs")]
+    pub timeout_secs: u64,
+}
+
+fn default_timeout_secs() -> u64 {
+    30
+}
+
+/// 密码重置配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct PasswordResetConfig {
+    #[serde(default = "default_token_expires_minutes")]
+    pub token_expires_minutes: i64,
+    #[serde(default = "default_max_requests_per_hour")]
+    pub max_requests_per_hour: u32,
+    pub reset_link_base_url: String,
+}
+
+fn default_token_expires_minutes() -> i64 {
+    15
+}
+
+fn default_max_requests_per_hour() -> u32 {
+    3
+}
+
 /// 应用配置
 #[derive(Debug, Clone, Deserialize)]
 pub struct AppConfig {
@@ -93,6 +130,8 @@ pub struct AppConfig {
     pub jwt: JwtConfig,
     pub server: ServerConfig,
     pub telemetry: TelemetryConfig,
+    pub email: EmailConfig,
+    pub password_reset: PasswordResetConfig,
 }
 
 impl AppConfig {

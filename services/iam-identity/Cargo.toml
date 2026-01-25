@@ -17,6 +17,7 @@ cuba-cqrs-core = { workspace = true }
 cuba-event-core = { workspace = true }
 cuba-adapter-postgres = { workspace = true }
 cuba-adapter-redis = { workspace = true }
+cuba-adapter-email = { workspace = true }
 cuba-bootstrap = { workspace = true }
 
 tonic = { workspace = true }

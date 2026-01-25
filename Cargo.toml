@@ -14,6 +14,7 @@ members = [
     "crates/adapters/redis",
     "crates/adapters/clickhouse",
     "crates/adapters/kafka",
+    "crates/adapters/email",
     "bootstrap",
     "gateway",
     "services/*",
@@ -82,6 +83,10 @@ data-encoding = { version = "2.5" }
 rand = { version = "0.8" }
 urlencoding = { version = "2.1" }
 
+# Email
+lettre = { version = "0.11", features = ["tokio1-native-tls", "smtp-transport", "builder"] }
+tera = { version = "1.19" }
+
 # Utilities
 uuid = { version = "1.16", features = ["v4", "v7", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
@@ -108,4 +113,5 @@ cuba-adapter-postgres = { path = "crates/adapters/postgres" }
 cuba-adapter-redis = { path = "crates/adapters/redis" }
 cuba-adapter-clickhouse = { path = "crates/adapters/clickhouse" }
 cuba-adapter-kafka = { path = "crates/adapters/kafka" }
+cuba-adapter-email = { path = "crates/adapters/email" }
 cuba-bootstrap = { path = "bootstrap" }

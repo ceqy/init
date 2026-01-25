@@ -18,42 +18,56 @@ use sha2::{Digest, Sha256};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-use crate::auth::domain::entities::{Session as DomainSession, SessionId};
-use crate::auth::domain::repositories::{BackupCodeRepository, SessionRepository};
+use crate::auth::domain::entities::{PasswordResetToken, Session as DomainSession, SessionId};
+use crate::auth::domain::repositories::{
+    BackupCodeRepository, PasswordResetRepository, SessionRepository,
+};
 use crate::auth::domain::services::{BackupCodeService, TotpService};
 use crate::auth::infrastructure::cache::AuthCache;
 use crate::shared::domain::repositories::UserRepository;
-use crate::shared::domain::value_objects::{HashedPassword, Username};
+use crate::shared::domain::value_objects::{Email, HashedPassword, Username};
+use cuba_adapter_email::EmailSender;
+use cuba_config::PasswordResetConfig;
 
 /// AuthService 实现
 pub struct AuthServiceImpl {
     user_repo: Arc<dyn UserRepository>,
     session_repo: Arc<dyn SessionRepository>,
     backup_code_repo: Arc<dyn BackupCodeRepository>,
+    password_reset_repo: Arc<dyn PasswordResetRepository>,
     token_service: Arc<TokenService>,
     totp_service: Arc<TotpService>,
+    email_sender: Arc<dyn EmailSender>,
     auth_cache: Arc<dyn AuthCache>,
     refresh_token_expires_in: i64,
+    password_reset_config: PasswordResetConfig,
 }
 
 impl AuthServiceImpl {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         user_repo: Arc<dyn UserRepository>,
         session_repo: Arc<dyn SessionRepository>,
         backup_code_repo: Arc<dyn BackupCodeRepository>,
+        password_reset_repo: Arc<dyn PasswordResetRepository>,
         token_service: Arc<TokenService>,
         totp_service: Arc<TotpService>,
+        email_sender: Arc<dyn EmailSender>,
         auth_cache: Arc<dyn AuthCache>,
         refresh_token_expires_in: i64,
+        password_reset_config: PasswordResetConfig,
     ) -> Self {
         Self {
             user_repo,
             session_repo,
             backup_code_repo,
+            password_reset_repo,
             token_service,
             totp_service,
+            email_sender,
             auth_cache,
             refresh_token_expires_in,
+            password_reset_config,
         }
     }
 }
@@ -484,8 +498,111 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(email = %req.email, "Request password reset");
 
-        // TODO: 实现密码重置邮件发送
-        Err(Status::unimplemented("Password reset not implemented yet"))
+        // 1. 解析邮箱
+        let email = Email::new(&req.email)
+            .map_err(|e| Status::invalid_argument(format!("Invalid email: {}", e)))?;
+
+        // 2. 查找用户（使用租户 ID）
+        let tenant_id = TenantId::from_uuid(
+            Uuid::parse_str(&req.tenant_id)
+                .map_err(|_| Status::invalid_argument("Invalid tenant ID"))?,
+        );
+
+        let user = self
+            .user_repo
+            .find_by_email(&email, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 如果用户不存在，也返回成功（安全考虑，不泄露用户是否存在）
+        if user.is_none() {
+            tracing::warn!(email = %req.email, "User not found for password reset");
+            return Ok(Response::new(RequestPasswordResetResponse {
+                success: true,
+                message: "If the email exists, a password reset link has been sent.".to_string(),
+            }));
+        }
+
+        let user = user.unwrap();
+
+        // 3. 检查限流（防止滥用）
+        let unused_count = self
+            .password_reset_repo
+            .count_unused_by_user_id(&user.id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if unused_count >= self.password_reset_config.max_requests_per_hour as i64 {
+            tracing::warn!(user_id = %user.id, "Too many password reset requests");
+            return Err(Status::resource_exhausted(
+                "Too many password reset requests. Please try again later.",
+            ));
+        }
+
+        // 4. 生成重置令牌
+        let token = Uuid::new_v4().to_string();
+        let token_hash = sha256_hash(&token);
+
+        // 5. 创建并保存令牌实体
+        let reset_token = PasswordResetToken::new(
+            user.id.clone(),
+            token_hash,
+            self.password_reset_config.token_expires_minutes,
+        );
+
+        self.password_reset_repo
+            .save(&reset_token)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 6. 构建重置链接
+        let reset_link = format!(
+            "{}?token={}",
+            self.password_reset_config.reset_link_base_url, token
+        );
+
+        // 7. 发送邮件
+        let subject = "密码重置请求 - Cuba ERP";
+        let user_name = user.display_name.as_deref().unwrap_or(user.username.as_str());
+        
+        // 构建邮件内容
+        let html_body = format!(
+            r#"<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+<h2>密码重置</h2>
+<p>您好，{}！</p>
+<p>我们收到了您的密码重置请求。请点击下面的链接重置您的密码：</p>
+<p><a href="{}">{}</a></p>
+<p><strong>此链接将在 {} 分钟后失效。</strong></p>
+<p>如果您没有请求重置密码，请忽略此邮件。</p>
+<hr>
+<p><small>此邮件由 Cuba ERP 系统自动发送，请勿回复。</small></p>
+</body>
+</html>"#,
+            user_name, reset_link, reset_link, self.password_reset_config.token_expires_minutes
+        );
+
+        let text_body = format!(
+            "密码重置\n\n您好，{}！\n\n我们收到了您的密码重置请求。请访问以下链接重置您的密码：\n\n{}\n\n此链接将在 {} 分钟后失效。\n\n如果您没有请求重置密码，请忽略此邮件。\n\n---\n此邮件由 Cuba ERP 系统自动发送，请勿回复。",
+            user_name, reset_link, self.password_reset_config.token_expires_minutes
+        );
+
+        self.email_sender
+            .send_html_email(&req.email, subject, &html_body, Some(&text_body))
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, "Failed to send password reset email");
+                Status::internal("Failed to send email")
+            })?;
+
+        tracing::info!(user_id = %user.id, email = %req.email, "Password reset email sent");
+
+        Ok(Response::new(RequestPasswordResetResponse {
+            success: true,
+            message: "If the email exists, a password reset link has been sent.".to_string(),
+        }))
     }
 
     async fn reset_password(
@@ -495,8 +612,99 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(email = %req.email, "Reset password");
 
-        // TODO: 实现密码重置
-        Err(Status::unimplemented("Password reset not implemented yet"))
+        // 1. 计算令牌哈希
+        let token_hash = sha256_hash(&req.reset_token);
+
+        // 2. 查找令牌
+        let token = self
+            .password_reset_repo
+            .find_by_token_hash(&token_hash)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("Invalid or expired reset token"))?;
+
+        // 3. 验证令牌有效性
+        if !token.is_valid() {
+            if token.used {
+                return Err(Status::invalid_argument("Reset token has already been used"));
+            }
+            if token.is_expired() {
+                return Err(Status::invalid_argument("Reset token has expired"));
+            }
+            return Err(Status::invalid_argument("Invalid reset token"));
+        }
+
+        // 4. 获取用户
+        let mut user = self
+            .user_repo
+            .find_by_id(&token.user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("User not found"))?;
+
+        // 5. 验证邮箱匹配（额外的安全检查）
+        if user.email.as_str() != req.email {
+            tracing::warn!(
+                user_id = %user.id,
+                provided_email = %req.email,
+                actual_email = %user.email.as_str(),
+                "Email mismatch in password reset"
+            );
+            return Err(Status::invalid_argument("Invalid reset token"));
+        }
+
+        // 6. 验证新密码强度（基本验证）
+        if req.new_password.len() < 8 {
+            return Err(Status::invalid_argument(
+                "Password must be at least 8 characters long",
+            ));
+        }
+
+        // 7. 哈希新密码
+        let new_password_hash = HashedPassword::from_plain(&req.new_password)
+            .map_err(|e| Status::internal(format!("Failed to hash password: {}", e)))?;
+
+        // 8. 更新密码
+        user.update_password(new_password_hash);
+        self.user_repo
+            .update(&user)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 9. 标记令牌为已使用
+        self.password_reset_repo
+            .mark_as_used(&token.id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 10. 撤销所有会话（安全考虑）
+        self.session_repo
+            .revoke_all_by_user_id(&user.id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 11. 将用户所有 Token 加入黑名单
+        self.auth_cache
+            .blacklist_user_tokens(&user.id.0.to_string(), self.refresh_token_expires_in as u64)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 12. 清除用户缓存
+        self.auth_cache
+            .invalidate_user_cache(&user.id.0.to_string())
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tracing::info!(
+            user_id = %user.id,
+            email = %req.email,
+            "Password reset successful, all sessions revoked"
+        );
+
+        Ok(Response::new(ResetPasswordResponse {
+            success: true,
+            message: "Password has been reset successfully. Please login with your new password.".to_string(),
+        }))
     }
 
     async fn get_active_sessions(

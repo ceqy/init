@@ -17,5 +17,20 @@ refresh_expires_in = 604800
 host = "127.0.0.1"
 port = 50051
 
+[email]
+smtp_host = "localhost"
+smtp_port = 1025
+username = ""
+password = ""
+from_email = "noreply@cuba-erp.local"
+from_name = "Cuba ERP"
+use_tls = false
+timeout_secs = 30
+
+[password_reset]
+token_expires_minutes = 15
+max_requests_per_hour = 3
+reset_link_base_url = "http://localhost:3000/reset-password"
+
 [telemetry]
 log_level = "debug"
