@@ -45,6 +45,9 @@ pub struct User {
     pub lock_reason: Option<String>,
     pub failed_login_count: i32,
     pub last_failed_login_at: Option<DateTime<Utc>>,
+    // 邮箱验证
+    pub email_verified: bool,
+    pub email_verified_at: Option<DateTime<Utc>>,
     pub audit_info: AuditInfo,
 }
 
@@ -75,6 +78,8 @@ impl User {
             lock_reason: None,
             failed_login_count: 0,
             last_failed_login_at: None,
+            email_verified: false,
+            email_verified_at: None,
             audit_info: AuditInfo::default(),
         }
     }
@@ -197,6 +202,23 @@ impl User {
             let remaining = locked_until.timestamp() - Utc::now().timestamp();
             remaining.max(0)
         })
+    }
+
+    // ========================================================
+    // 邮箱验证相关方法
+    // ========================================================
+
+    /// 标记邮箱已验证
+    pub fn mark_email_verified(&mut self) {
+        self.email_verified = true;
+        self.email_verified_at = Some(Utc::now());
+
+        tracing::info!(user_id = %self.id, email = %self.email.0, "Email verified");
+    }
+
+    /// 检查邮箱是否已验证
+    pub fn is_email_verified(&self) -> bool {
+        self.email_verified
     }
 }
 
