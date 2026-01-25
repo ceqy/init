@@ -44,6 +44,26 @@ service AuthService {
 
   // 撤销会话
   rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+
+  // ========== WebAuthn 无密码登录 ==========
+
+  // 开始 WebAuthn 注册
+  rpc StartWebAuthnRegistration(StartWebAuthnRegistrationRequest) returns (StartWebAuthnRegistrationResponse);
+
+  // 完成 WebAuthn 注册
+  rpc FinishWebAuthnRegistration(FinishWebAuthnRegistrationRequest) returns (FinishWebAuthnRegistrationResponse);
+
+  // 开始 WebAuthn 认证
+  rpc StartWebAuthnAuthentication(StartWebAuthnAuthenticationRequest) returns (StartWebAuthnAuthenticationResponse);
+
+  // 完成 WebAuthn 认证
+  rpc FinishWebAuthnAuthentication(FinishWebAuthnAuthenticationRequest) returns (FinishWebAuthnAuthenticationResponse);
+
+  // 列出用户的 WebAuthn 凭证
+  rpc ListWebAuthnCredentials(ListWebAuthnCredentialsRequest) returns (ListWebAuthnCredentialsResponse);
+
+  // 删除 WebAuthn 凭证
+  rpc DeleteWebAuthnCredential(DeleteWebAuthnCredentialRequest) returns (DeleteWebAuthnCredentialResponse);
 }
 
 // ============ 消息定义 ============
@@ -204,6 +224,106 @@ message RevokeSessionRequest {
 // 撤销会话响应
 message RevokeSessionResponse {
   bool success = 1;
+}
+
+// ========== WebAuthn 消息定义 ==========
+
+// 开始 WebAuthn 注册请求
+message StartWebAuthnRegistrationRequest {
+  string user_id = 1;           // 用户 ID
+  string credential_name = 2;   // 凭证名称（如 "YubiKey 5"）
+}
+
+// 开始 WebAuthn 注册响应
+message StartWebAuthnRegistrationResponse {
+  string challenge = 1;         // 挑战（Base64 编码）
+  string rp_id = 2;             // Relying Party ID
+  string rp_name = 3;           // Relying Party 名称
+  string user_id = 4;           // 用户 ID（Base64 编码）
+  string user_name = 5;         // 用户名
+  string user_display_name = 6; // 用户显示名称
+  repeated string exclude_credentials = 7; // 排除的凭证 ID（Base64 编码）
+  string registration_state = 8; // 注册状态（用于完成注册）
+}
+
+// 完成 WebAuthn 注册请求
+message FinishWebAuthnRegistrationRequest {
+  string user_id = 1;           // 用户 ID
+  string credential_name = 2;   // 凭证名称
+  string registration_state = 3; // 注册状态
+  string credential_response = 4; // 凭证响应（JSON 格式）
+}
+
+// 完成 WebAuthn 注册响应
+message FinishWebAuthnRegistrationResponse {
+  bool success = 1;
+  string credential_id = 2;     // 凭证 ID
+  string message = 3;
+}
+
+// 开始 WebAuthn 认证请求
+message StartWebAuthnAuthenticationRequest {
+  string username = 1;          // 用户名或邮箱
+  string tenant_id = 2;         // 租户 ID
+}
+
+// 开始 WebAuthn 认证响应
+message StartWebAuthnAuthenticationResponse {
+  string challenge = 1;         // 挑战（Base64 编码）
+  string rp_id = 2;             // Relying Party ID
+  repeated string allow_credentials = 3; // 允许的凭证 ID（Base64 编码）
+  string authentication_state = 4; // 认证状态（用于完成认证）
+  string user_id = 5;           // 用户 ID（用于客户端）
+}
+
+// 完成 WebAuthn 认证请求
+message FinishWebAuthnAuthenticationRequest {
+  string authentication_state = 1; // 认证状态
+  string credential_response = 2;  // 凭证响应（JSON 格式）
+  string device_info = 3;       // 设备信息
+  string ip_address = 4;        // IP 地址
+}
+
+// 完成 WebAuthn 认证响应
+message FinishWebAuthnAuthenticationResponse {
+  string access_token = 1;      // 访问令牌
+  string refresh_token = 2;     // 刷新令牌
+  int64 expires_in = 3;         // 过期时间（秒）
+  string token_type = 4;        // 令牌类型
+  User user = 5;                // 用户信息
+}
+
+// 列出 WebAuthn 凭证请求
+message ListWebAuthnCredentialsRequest {
+  string user_id = 1;           // 用户 ID
+}
+
+// 列出 WebAuthn 凭证响应
+message ListWebAuthnCredentialsResponse {
+  repeated WebAuthnCredential credentials = 1;
+}
+
+// 删除 WebAuthn 凭证请求
+message DeleteWebAuthnCredentialRequest {
+  string user_id = 1;           // 用户 ID
+  string credential_id = 2;     // 凭证 ID
+}
+
+// 删除 WebAuthn 凭证响应
+message DeleteWebAuthnCredentialResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// WebAuthn 凭证
+message WebAuthnCredential {
+  string id = 1;                // 凭证 ID
+  string name = 2;              // 凭证名称
+  repeated string transports = 3; // 传输方式（usb, nfc, ble, internal）
+  bool backup_eligible = 4;     // 是否可备份
+  bool backup_state = 5;        // 是否已备份
+  google.protobuf.Timestamp created_at = 6;     // 创建时间
+  google.protobuf.Timestamp last_used_at = 7;   // 最后使用时间
 }
 
 // ============ 实体定义 ============

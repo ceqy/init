@@ -83,6 +83,12 @@ data-encoding = { version = "2.5" }
 rand = { version = "0.8" }
 urlencoding = { version = "2.1" }
 
+# WebAuthn
+webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }
+webauthn-rs-proto = { version = "0.5" }
+base64 = { version = "0.22" }
+serde_cbor = { version = "0.11" }
+
 # Email
 lettre = { version = "0.11", features = ["tokio1-native-tls", "smtp-transport", "builder"] }
 tera = { version = "1.19" }

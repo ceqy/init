@@ -16,11 +16,14 @@ mod user;
 use std::sync::Arc;
 
 use auth::api::grpc::{AuthServiceImpl, AuthServiceServer};
-use auth::domain::repositories::{BackupCodeRepository, PasswordResetRepository, SessionRepository};
-use auth::domain::services::TotpService;
+use auth::domain::repositories::{
+    BackupCodeRepository, PasswordResetRepository, SessionRepository, WebAuthnCredentialRepository,
+};
+use auth::domain::services::{TotpService, WebAuthnService};
 use auth::infrastructure::cache::{AuthCache, RedisAuthCache};
 use auth::infrastructure::persistence::{
     PostgresBackupCodeRepository, PostgresPasswordResetRepository, PostgresSessionRepository,
+    PostgresWebAuthnCredentialRepository,
 };
 use cuba_adapter_email::{EmailClient, EmailSender};
 use cuba_bootstrap::{run_with_services, Infrastructure};
@@ -62,6 +65,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Arc::new(PostgresBackupCodeRepository::new(pool.clone()));
         let password_reset_repo: Arc<dyn PasswordResetRepository> =
             Arc::new(PostgresPasswordResetRepository::new(pool.clone()));
+        let webauthn_credential_repo: Arc<dyn WebAuthnCredentialRepository> =
+            Arc::new(PostgresWebAuthnCredentialRepository::new(pool.clone()));
+
+        // 组装 WebAuthn 服务
+        let rp_id = config.server.host.clone();
+        let rp_origin = format!("https://{}", rp_id)
+            .parse()
+            .map_err(|e| cuba_errors::AppError::internal(format!("Invalid RP origin: {}", e)))?;
+        
+        let webauthn_service = Arc::new(
+            WebAuthnService::new(rp_id, rp_origin, webauthn_credential_repo)
+                .map_err(|e| cuba_errors::AppError::internal(format!("Failed to create WebAuthn service: {}", e)))?,
+        );
 
         // 组装 AuthService
         let auth_service = AuthServiceImpl::new(
@@ -71,6 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             password_reset_repo,
             token_service.clone(),
             totp_service,
+            webauthn_service,
             email_sender,
             auth_cache,
             config.jwt.refresh_expires_in as i64,

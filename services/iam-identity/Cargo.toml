@@ -41,5 +41,11 @@ data-encoding = { workspace = true }
 rand = { workspace = true }
 urlencoding = { workspace = true }
 
+# WebAuthn 相关依赖
+webauthn-rs = { workspace = true }
+webauthn-rs-proto = { workspace = true }
+base64 = { workspace = true }
+serde_cbor = { workspace = true }
+
 [build-dependencies]
 tonic-build = { workspace = true }

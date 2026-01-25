@@ -241,6 +241,191 @@ pub struct RevokeSessionResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
 }
+/// 开始 WebAuthn 注册请求
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StartWebAuthnRegistrationRequest {
+    /// 用户 ID
+    #[prost(string, tag = "1")]
+    pub user_id: ::prost::alloc::string::String,
+    /// 凭证名称（如 "YubiKey 5"）
+    #[prost(string, tag = "2")]
+    pub credential_name: ::prost::alloc::string::String,
+}
+/// 开始 WebAuthn 注册响应
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StartWebAuthnRegistrationResponse {
+    /// 挑战（Base64 编码）
+    #[prost(string, tag = "1")]
+    pub challenge: ::prost::alloc::string::String,
+    /// Relying Party ID
+    #[prost(string, tag = "2")]
+    pub rp_id: ::prost::alloc::string::String,
+    /// Relying Party 名称
+    #[prost(string, tag = "3")]
+    pub rp_name: ::prost::alloc::string::String,
+    /// 用户 ID（Base64 编码）
+    #[prost(string, tag = "4")]
+    pub user_id: ::prost::alloc::string::String,
+    /// 用户名
+    #[prost(string, tag = "5")]
+    pub user_name: ::prost::alloc::string::String,
+    /// 用户显示名称
+    #[prost(string, tag = "6")]
+    pub user_display_name: ::prost::alloc::string::String,
+    /// 排除的凭证 ID（Base64 编码）
+    #[prost(string, repeated, tag = "7")]
+    pub exclude_credentials: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// 注册状态（用于完成注册）
+    #[prost(string, tag = "8")]
+    pub registration_state: ::prost::alloc::string::String,
+}
+/// 完成 WebAuthn 注册请求
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FinishWebAuthnRegistrationRequest {
+    /// 用户 ID
+    #[prost(string, tag = "1")]
+    pub user_id: ::prost::alloc::string::String,
+    /// 凭证名称
+    #[prost(string, tag = "2")]
+    pub credential_name: ::prost::alloc::string::String,
+    /// 注册状态
+    #[prost(string, tag = "3")]
+    pub registration_state: ::prost::alloc::string::String,
+    /// 凭证响应（JSON 格式）
+    #[prost(string, tag = "4")]
+    pub credential_response: ::prost::alloc::string::String,
+}
+/// 完成 WebAuthn 注册响应
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FinishWebAuthnRegistrationResponse {
+    #[prost(bool, tag = "1")]
+    pub success: bool,
+    /// 凭证 ID
+    #[prost(string, tag = "2")]
+    pub credential_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub message: ::prost::alloc::string::String,
+}
+/// 开始 WebAuthn 认证请求
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StartWebAuthnAuthenticationRequest {
+    /// 用户名或邮箱
+    #[prost(string, tag = "1")]
+    pub username: ::prost::alloc::string::String,
+    /// 租户 ID
+    #[prost(string, tag = "2")]
+    pub tenant_id: ::prost::alloc::string::String,
+}
+/// 开始 WebAuthn 认证响应
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StartWebAuthnAuthenticationResponse {
+    /// 挑战（Base64 编码）
+    #[prost(string, tag = "1")]
+    pub challenge: ::prost::alloc::string::String,
+    /// Relying Party ID
+    #[prost(string, tag = "2")]
+    pub rp_id: ::prost::alloc::string::String,
+    /// 允许的凭证 ID（Base64 编码）
+    #[prost(string, repeated, tag = "3")]
+    pub allow_credentials: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// 认证状态（用于完成认证）
+    #[prost(string, tag = "4")]
+    pub authentication_state: ::prost::alloc::string::String,
+    /// 用户 ID（用于客户端）
+    #[prost(string, tag = "5")]
+    pub user_id: ::prost::alloc::string::String,
+}
+/// 完成 WebAuthn 认证请求
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FinishWebAuthnAuthenticationRequest {
+    /// 认证状态
+    #[prost(string, tag = "1")]
+    pub authentication_state: ::prost::alloc::string::String,
+    /// 凭证响应（JSON 格式）
+    #[prost(string, tag = "2")]
+    pub credential_response: ::prost::alloc::string::String,
+    /// 设备信息
+    #[prost(string, tag = "3")]
+    pub device_info: ::prost::alloc::string::String,
+    /// IP 地址
+    #[prost(string, tag = "4")]
+    pub ip_address: ::prost::alloc::string::String,
+}
+/// 完成 WebAuthn 认证响应
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FinishWebAuthnAuthenticationResponse {
+    /// 访问令牌
+    #[prost(string, tag = "1")]
+    pub access_token: ::prost::alloc::string::String,
+    /// 刷新令牌
+    #[prost(string, tag = "2")]
+    pub refresh_token: ::prost::alloc::string::String,
+    /// 过期时间（秒）
+    #[prost(int64, tag = "3")]
+    pub expires_in: i64,
+    /// 令牌类型
+    #[prost(string, tag = "4")]
+    pub token_type: ::prost::alloc::string::String,
+    /// 用户信息
+    #[prost(message, optional, tag = "5")]
+    pub user: ::core::option::Option<User>,
+}
+/// 列出 WebAuthn 凭证请求
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListWebAuthnCredentialsRequest {
+    /// 用户 ID
+    #[prost(string, tag = "1")]
+    pub user_id: ::prost::alloc::string::String,
+}
+/// 列出 WebAuthn 凭证响应
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListWebAuthnCredentialsResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub credentials: ::prost::alloc::vec::Vec<WebAuthnCredential>,
+}
+/// 删除 WebAuthn 凭证请求
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DeleteWebAuthnCredentialRequest {
+    /// 用户 ID
+    #[prost(string, tag = "1")]
+    pub user_id: ::prost::alloc::string::String,
+    /// 凭证 ID
+    #[prost(string, tag = "2")]
+    pub credential_id: ::prost::alloc::string::String,
+}
+/// 删除 WebAuthn 凭证响应
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DeleteWebAuthnCredentialResponse {
+    #[prost(bool, tag = "1")]
+    pub success: bool,
+    #[prost(string, tag = "2")]
+    pub message: ::prost::alloc::string::String,
+}
+/// WebAuthn 凭证
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct WebAuthnCredential {
+    /// 凭证 ID
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    /// 凭证名称
+    #[prost(string, tag = "2")]
+    pub name: ::prost::alloc::string::String,
+    /// 传输方式（usb, nfc, ble, internal）
+    #[prost(string, repeated, tag = "3")]
+    pub transports: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// 是否可备份
+    #[prost(bool, tag = "4")]
+    pub backup_eligible: bool,
+    /// 是否已备份
+    #[prost(bool, tag = "5")]
+    pub backup_state: bool,
+    /// 创建时间
+    #[prost(message, optional, tag = "6")]
+    pub created_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// 最后使用时间
+    #[prost(message, optional, tag = "7")]
+    pub last_used_at: ::core::option::Option<::prost_types::Timestamp>,
+}
 /// 用户
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct User {
@@ -408,6 +593,54 @@ pub mod auth_service_server {
             request: tonic::Request<super::RevokeSessionRequest>,
         ) -> std::result::Result<
             tonic::Response<super::RevokeSessionResponse>,
+            tonic::Status,
+        >;
+        /// 开始 WebAuthn 注册
+        async fn start_web_authn_registration(
+            &self,
+            request: tonic::Request<super::StartWebAuthnRegistrationRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::StartWebAuthnRegistrationResponse>,
+            tonic::Status,
+        >;
+        /// 完成 WebAuthn 注册
+        async fn finish_web_authn_registration(
+            &self,
+            request: tonic::Request<super::FinishWebAuthnRegistrationRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::FinishWebAuthnRegistrationResponse>,
+            tonic::Status,
+        >;
+        /// 开始 WebAuthn 认证
+        async fn start_web_authn_authentication(
+            &self,
+            request: tonic::Request<super::StartWebAuthnAuthenticationRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::StartWebAuthnAuthenticationResponse>,
+            tonic::Status,
+        >;
+        /// 完成 WebAuthn 认证
+        async fn finish_web_authn_authentication(
+            &self,
+            request: tonic::Request<super::FinishWebAuthnAuthenticationRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::FinishWebAuthnAuthenticationResponse>,
+            tonic::Status,
+        >;
+        /// 列出用户的 WebAuthn 凭证
+        async fn list_web_authn_credentials(
+            &self,
+            request: tonic::Request<super::ListWebAuthnCredentialsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListWebAuthnCredentialsResponse>,
+            tonic::Status,
+        >;
+        /// 删除 WebAuthn 凭证
+        async fn delete_web_authn_credential(
+            &self,
+            request: tonic::Request<super::DeleteWebAuthnCredentialRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DeleteWebAuthnCredentialResponse>,
             tonic::Status,
         >;
     }
@@ -1012,6 +1245,316 @@ pub mod auth_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = RevokeSessionSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cuba.iam.auth.AuthService/StartWebAuthnRegistration" => {
+                    #[allow(non_camel_case_types)]
+                    struct StartWebAuthnRegistrationSvc<T: AuthService>(pub Arc<T>);
+                    impl<
+                        T: AuthService,
+                    > tonic::server::UnaryService<
+                        super::StartWebAuthnRegistrationRequest,
+                    > for StartWebAuthnRegistrationSvc<T> {
+                        type Response = super::StartWebAuthnRegistrationResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::StartWebAuthnRegistrationRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AuthService>::start_web_authn_registration(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = StartWebAuthnRegistrationSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cuba.iam.auth.AuthService/FinishWebAuthnRegistration" => {
+                    #[allow(non_camel_case_types)]
+                    struct FinishWebAuthnRegistrationSvc<T: AuthService>(pub Arc<T>);
+                    impl<
+                        T: AuthService,
+                    > tonic::server::UnaryService<
+                        super::FinishWebAuthnRegistrationRequest,
+                    > for FinishWebAuthnRegistrationSvc<T> {
+                        type Response = super::FinishWebAuthnRegistrationResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::FinishWebAuthnRegistrationRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AuthService>::finish_web_authn_registration(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = FinishWebAuthnRegistrationSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cuba.iam.auth.AuthService/StartWebAuthnAuthentication" => {
+                    #[allow(non_camel_case_types)]
+                    struct StartWebAuthnAuthenticationSvc<T: AuthService>(pub Arc<T>);
+                    impl<
+                        T: AuthService,
+                    > tonic::server::UnaryService<
+                        super::StartWebAuthnAuthenticationRequest,
+                    > for StartWebAuthnAuthenticationSvc<T> {
+                        type Response = super::StartWebAuthnAuthenticationResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::StartWebAuthnAuthenticationRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AuthService>::start_web_authn_authentication(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = StartWebAuthnAuthenticationSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cuba.iam.auth.AuthService/FinishWebAuthnAuthentication" => {
+                    #[allow(non_camel_case_types)]
+                    struct FinishWebAuthnAuthenticationSvc<T: AuthService>(pub Arc<T>);
+                    impl<
+                        T: AuthService,
+                    > tonic::server::UnaryService<
+                        super::FinishWebAuthnAuthenticationRequest,
+                    > for FinishWebAuthnAuthenticationSvc<T> {
+                        type Response = super::FinishWebAuthnAuthenticationResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::FinishWebAuthnAuthenticationRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AuthService>::finish_web_authn_authentication(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = FinishWebAuthnAuthenticationSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cuba.iam.auth.AuthService/ListWebAuthnCredentials" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListWebAuthnCredentialsSvc<T: AuthService>(pub Arc<T>);
+                    impl<
+                        T: AuthService,
+                    > tonic::server::UnaryService<super::ListWebAuthnCredentialsRequest>
+                    for ListWebAuthnCredentialsSvc<T> {
+                        type Response = super::ListWebAuthnCredentialsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::ListWebAuthnCredentialsRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AuthService>::list_web_authn_credentials(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListWebAuthnCredentialsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cuba.iam.auth.AuthService/DeleteWebAuthnCredential" => {
+                    #[allow(non_camel_case_types)]
+                    struct DeleteWebAuthnCredentialSvc<T: AuthService>(pub Arc<T>);
+                    impl<
+                        T: AuthService,
+                    > tonic::server::UnaryService<super::DeleteWebAuthnCredentialRequest>
+                    for DeleteWebAuthnCredentialSvc<T> {
+                        type Response = super::DeleteWebAuthnCredentialResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::DeleteWebAuthnCredentialRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AuthService>::delete_web_authn_credential(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = DeleteWebAuthnCredentialSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

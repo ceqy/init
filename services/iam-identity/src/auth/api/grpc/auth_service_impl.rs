@@ -20,9 +20,9 @@ use uuid::Uuid;
 
 use crate::auth::domain::entities::{PasswordResetToken, Session as DomainSession, SessionId};
 use crate::auth::domain::repositories::{
-    BackupCodeRepository, PasswordResetRepository, SessionRepository,
+    BackupCodeRepository, PasswordResetRepository, SessionRepository, WebAuthnCredentialRepository,
 };
-use crate::auth::domain::services::{BackupCodeService, TotpService};
+use crate::auth::domain::services::{BackupCodeService, TotpService, WebAuthnService};
 use crate::auth::infrastructure::cache::AuthCache;
 use crate::shared::domain::repositories::UserRepository;
 use crate::shared::domain::value_objects::{Email, HashedPassword, Username};
@@ -37,6 +37,7 @@ pub struct AuthServiceImpl {
     password_reset_repo: Arc<dyn PasswordResetRepository>,
     token_service: Arc<TokenService>,
     totp_service: Arc<TotpService>,
+    webauthn_service: Arc<WebAuthnService>,
     email_sender: Arc<dyn EmailSender>,
     auth_cache: Arc<dyn AuthCache>,
     refresh_token_expires_in: i64,
@@ -52,6 +53,7 @@ impl AuthServiceImpl {
         password_reset_repo: Arc<dyn PasswordResetRepository>,
         token_service: Arc<TokenService>,
         totp_service: Arc<TotpService>,
+        webauthn_service: Arc<WebAuthnService>,
         email_sender: Arc<dyn EmailSender>,
         auth_cache: Arc<dyn AuthCache>,
         refresh_token_expires_in: i64,
@@ -64,6 +66,7 @@ impl AuthServiceImpl {
             password_reset_repo,
             token_service,
             totp_service,
+            webauthn_service,
             email_sender,
             auth_cache,
             refresh_token_expires_in,
@@ -1009,6 +1012,306 @@ impl AuthService for AuthServiceImpl {
         Ok(Response::new(Disable2FaResponse {
             success: true,
             message: "2FA disabled successfully".to_string(),
+        }))
+    }
+
+    // ========== WebAuthn 方法 ==========
+
+    async fn start_web_authn_registration(
+        &self,
+        request: Request<StartWebAuthnRegistrationRequest>,
+    ) -> Result<Response<StartWebAuthnRegistrationResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!(user_id = %req.user_id, credential_name = %req.credential_name, "Start WebAuthn registration");
+
+        // 1. 解析用户 ID
+        let user_id = Uuid::parse_str(&req.user_id)
+            .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
+
+        // 2. 获取用户
+        let user = self
+            .user_repo
+            .find_by_id(&UserId::from_uuid(user_id))
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("User not found"))?;
+
+        // 3. 开始注册流程
+        let (ccr, reg_state) = self
+            .webauthn_service
+            .start_registration(
+                user_id,
+                user.username.as_str(),
+                user.display_name.as_deref().unwrap_or(user.username.as_str()),
+            )
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 4. 序列化注册状态
+        let registration_state = serde_json::to_string(&reg_state)
+            .map_err(|e| Status::internal(format!("Failed to serialize state: {}", e)))?;
+
+        // 5. 转换响应
+        Ok(Response::new(StartWebAuthnRegistrationResponse {
+            challenge: base64::encode(&ccr.public_key.challenge),
+            rp_id: ccr.public_key.rp.id.clone(),
+            rp_name: ccr.public_key.rp.name.clone(),
+            user_id: base64::encode(ccr.public_key.user.id.as_ref()),
+            user_name: ccr.public_key.user.name.clone(),
+            user_display_name: ccr.public_key.user.display_name.clone(),
+            exclude_credentials: ccr
+                .public_key
+                .exclude_credentials
+                .as_ref()
+                .map(|creds| {
+                    creds
+                        .iter()
+                        .map(|c| base64::encode(&c.id))
+                        .collect()
+                })
+                .unwrap_or_default(),
+            registration_state,
+        }))
+    }
+
+    async fn finish_web_authn_registration(
+        &self,
+        request: Request<FinishWebAuthnRegistrationRequest>,
+    ) -> Result<Response<FinishWebAuthnRegistrationResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!(user_id = %req.user_id, credential_name = %req.credential_name, "Finish WebAuthn registration");
+
+        // 1. 解析用户 ID
+        let user_id = Uuid::parse_str(&req.user_id)
+            .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
+
+        // 2. 反序列化注册状态
+        let reg_state: webauthn_rs::prelude::PasskeyRegistration =
+            serde_json::from_str(&req.registration_state)
+                .map_err(|e| Status::invalid_argument(format!("Invalid registration state: {}", e)))?;
+
+        // 3. 反序列化凭证响应
+        let reg: webauthn_rs::prelude::RegisterPublicKeyCredential =
+            serde_json::from_str(&req.credential_response)
+                .map_err(|e| Status::invalid_argument(format!("Invalid credential response: {}", e)))?;
+
+        // 4. 完成注册
+        let credential = self
+            .webauthn_service
+            .finish_registration(user_id, req.credential_name.clone(), &reg, &reg_state)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tracing::info!(user_id = %req.user_id, credential_id = %credential.id, "WebAuthn registration completed");
+
+        Ok(Response::new(FinishWebAuthnRegistrationResponse {
+            success: true,
+            credential_id: credential.id.0.to_string(),
+            message: "WebAuthn credential registered successfully".to_string(),
+        }))
+    }
+
+    async fn start_web_authn_authentication(
+        &self,
+        request: Request<StartWebAuthnAuthenticationRequest>,
+    ) -> Result<Response<StartWebAuthnAuthenticationResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!(username = %req.username, tenant_id = %req.tenant_id, "Start WebAuthn authentication");
+
+        // 1. 解析租户 ID
+        let tenant_id = TenantId::from_uuid(
+            Uuid::parse_str(&req.tenant_id)
+                .map_err(|_| Status::invalid_argument("Invalid tenant ID"))?,
+        );
+
+        // 2. 构建用户名值对象
+        let username = Username::new(&req.username)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+        // 3. 查找用户
+        let user = self
+            .user_repo
+            .find_by_username(&username, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::unauthenticated("Invalid credentials"))?;
+
+        // 4. 检查用户状态
+        if !user.is_active() {
+            return Err(Status::permission_denied("User account is not active"));
+        }
+
+        // 5. 开始认证流程
+        let (rcr, auth_state) = self
+            .webauthn_service
+            .start_authentication(user.id.0)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 6. 序列化认证状态
+        let authentication_state = serde_json::to_string(&auth_state)
+            .map_err(|e| Status::internal(format!("Failed to serialize state: {}", e)))?;
+
+        // 7. 转换响应
+        Ok(Response::new(StartWebAuthnAuthenticationResponse {
+            challenge: base64::encode(&rcr.public_key.challenge),
+            rp_id: rcr.public_key.rp_id.clone(),
+            allow_credentials: rcr
+                .public_key
+                .allow_credentials
+                .iter()
+                .map(|c| base64::encode(&c.id))
+                .collect(),
+            authentication_state,
+            user_id: user.id.0.to_string(),
+        }))
+    }
+
+    async fn finish_web_authn_authentication(
+        &self,
+        request: Request<FinishWebAuthnAuthenticationRequest>,
+    ) -> Result<Response<FinishWebAuthnAuthenticationResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!("Finish WebAuthn authentication");
+
+        // 1. 反序列化认证状态
+        let auth_state: webauthn_rs::prelude::PasskeyAuthentication =
+            serde_json::from_str(&req.authentication_state)
+                .map_err(|e| Status::invalid_argument(format!("Invalid authentication state: {}", e)))?;
+
+        // 2. 反序列化凭证响应
+        let auth: webauthn_rs::prelude::PublicKeyCredential =
+            serde_json::from_str(&req.credential_response)
+                .map_err(|e| Status::invalid_argument(format!("Invalid credential response: {}", e)))?;
+
+        // 3. 完成认证
+        let user_id = self
+            .webauthn_service
+            .finish_authentication(&auth, &auth_state)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 4. 获取用户信息
+        let user = self
+            .user_repo
+            .find_by_id(&UserId::from_uuid(user_id))
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("User not found"))?;
+
+        // 5. 生成令牌
+        let access_token = self
+            .token_service
+            .generate_access_token(&user.id, &user.tenant_id, vec![], user.role_ids.clone())
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let refresh_token = self
+            .token_service
+            .generate_refresh_token(&user.id, &user.tenant_id)
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 6. 创建会话
+        let refresh_token_hash = sha256_hash(&refresh_token);
+        let expires_at = Utc::now() + Duration::seconds(self.refresh_token_expires_in);
+
+        let mut session = DomainSession::new(user.id.clone(), refresh_token_hash, expires_at);
+
+        if !req.device_info.is_empty() {
+            session = session.with_device_info(&req.device_info);
+        }
+        if !req.ip_address.is_empty() {
+            session = session.with_ip_address(&req.ip_address);
+        }
+
+        self.session_repo
+            .save(&session)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 7. 更新用户最后登录时间
+        let mut updated_user = user.clone();
+        updated_user.record_login();
+        let _ = self.user_repo.update(&updated_user).await;
+
+        tracing::info!(user_id = %user.id.0, "WebAuthn authentication successful");
+
+        Ok(Response::new(FinishWebAuthnAuthenticationResponse {
+            access_token,
+            refresh_token,
+            expires_in: self.token_service.access_token_expires_in(),
+            token_type: "Bearer".to_string(),
+            user: Some(user_to_proto(&user)),
+        }))
+    }
+
+    async fn list_web_authn_credentials(
+        &self,
+        request: Request<ListWebAuthnCredentialsRequest>,
+    ) -> Result<Response<ListWebAuthnCredentialsResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!(user_id = %req.user_id, "List WebAuthn credentials");
+
+        // 1. 解析用户 ID
+        let user_id = Uuid::parse_str(&req.user_id)
+            .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
+
+        // 2. 获取凭证列表
+        let credentials = self
+            .webauthn_service
+            .list_credentials(user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 3. 转换为 Proto 格式
+        let proto_credentials: Vec<WebAuthnCredential> = credentials
+            .into_iter()
+            .map(|c| WebAuthnCredential {
+                id: c.id.0.to_string(),
+                name: c.name,
+                transports: c.transports,
+                backup_eligible: c.backup_eligible,
+                backup_state: c.backup_state,
+                created_at: Some(Timestamp {
+                    seconds: c.created_at.timestamp(),
+                    nanos: c.created_at.timestamp_subsec_nanos() as i32,
+                }),
+                last_used_at: c.last_used_at.map(|dt| Timestamp {
+                    seconds: dt.timestamp(),
+                    nanos: dt.timestamp_subsec_nanos() as i32,
+                }),
+            })
+            .collect();
+
+        Ok(Response::new(ListWebAuthnCredentialsResponse {
+            credentials: proto_credentials,
+        }))
+    }
+
+    async fn delete_web_authn_credential(
+        &self,
+        request: Request<DeleteWebAuthnCredentialRequest>,
+    ) -> Result<Response<DeleteWebAuthnCredentialResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!(user_id = %req.user_id, credential_id = %req.credential_id, "Delete WebAuthn credential");
+
+        // 1. 解析 IDs
+        let user_id = Uuid::parse_str(&req.user_id)
+            .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
+
+        let credential_id = Uuid::parse_str(&req.credential_id)
+            .map_err(|_| Status::invalid_argument("Invalid credential ID"))?;
+
+        // 2. 删除凭证
+        self.webauthn_service
+            .delete_credential(user_id, credential_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tracing::info!(user_id = %req.user_id, credential_id = %req.credential_id, "WebAuthn credential deleted");
+
+        Ok(Response::new(DeleteWebAuthnCredentialResponse {
+            success: true,
+            message: "Credential deleted successfully".to_string(),
         }))
     }
 }
