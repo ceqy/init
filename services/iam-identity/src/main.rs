@@ -1,22 +1,28 @@
-//! IAM Auth Service - 认证服务入口
+//! IAM Identity Service - 身份服务入口
 //!
 //! 使用 cuba-bootstrap 统一启动模式
 
 mod api;
 mod application;
+mod auth;
 mod config;
 mod domain;
 mod error;
 mod infrastructure;
+mod oauth;
+mod shared;
+mod user;
 
 use std::sync::Arc;
 
-use api::grpc::{AuthServiceImpl, AuthServiceServer};
+use auth::api::grpc::{AuthServiceImpl, AuthServiceServer};
+use auth::domain::repositories::SessionRepository;
+use auth::infrastructure::cache::{AuthCache, RedisAuthCache};
+use auth::infrastructure::persistence::PostgresSessionRepository;
 use cuba_bootstrap::{run, Infrastructure};
 use cuba_ports::CachePort;
-use domain::repositories::{SessionRepository, UserRepository};
-use infrastructure::cache::{AuthCache, RedisAuthCache};
-use infrastructure::persistence::{PostgresSessionRepository, PostgresUserRepository};
+use shared::domain::repositories::UserRepository;
+use shared::infrastructure::persistence::PostgresUserRepository;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

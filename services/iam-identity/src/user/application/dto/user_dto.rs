@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::domain::entities::User;
+use crate::shared::domain::entities::User;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserDto {

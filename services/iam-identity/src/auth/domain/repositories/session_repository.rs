@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use cuba_common::UserId;
 use cuba_errors::AppResult;
 
-use crate::domain::entities::{Session, SessionId};
+use crate::auth::domain::entities::{Session, SessionId};
 
 #[async_trait]
 pub trait SessionRepository: Send + Sync {

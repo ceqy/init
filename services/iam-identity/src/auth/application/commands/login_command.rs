@@ -2,7 +2,7 @@
 
 use cuba_cqrs_core::Command;
 
-use crate::application::dto::TokenPair;
+use crate::auth::application::dto::TokenPair;
 
 /// 登录命令
 #[derive(Debug, Clone)]

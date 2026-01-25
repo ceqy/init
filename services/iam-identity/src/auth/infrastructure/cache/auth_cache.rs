@@ -8,7 +8,7 @@ use cuba_ports::CachePort;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::domain::entities::User;
+use crate::shared::domain::entities::User;
 
 /// Token 黑名单 key 前缀
 const TOKEN_BLACKLIST_PREFIX: &str = "auth:blacklist:";

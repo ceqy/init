@@ -2,7 +2,7 @@
 
 use cuba_errors::AppResult;
 
-use crate::domain::value_objects::HashedPassword;
+use crate::shared::domain::value_objects::HashedPassword;
 
 /// 密码服务
 pub struct PasswordService;

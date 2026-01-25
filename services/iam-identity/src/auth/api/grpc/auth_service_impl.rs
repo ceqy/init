@@ -18,10 +18,11 @@ use sha2::{Digest, Sha256};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-use crate::domain::entities::{Session as DomainSession, SessionId, UserStatus};
-use crate::domain::repositories::{SessionRepository, UserRepository};
-use crate::domain::value_objects::{HashedPassword, Username};
-use crate::infrastructure::cache::AuthCache;
+use crate::auth::domain::entities::{Session as DomainSession, SessionId};
+use crate::auth::domain::repositories::SessionRepository;
+use crate::auth::infrastructure::cache::AuthCache;
+use crate::shared::domain::repositories::UserRepository;
+use crate::shared::domain::value_objects::{HashedPassword, Username};
 
 /// AuthService 实现
 pub struct AuthServiceImpl {
@@ -58,8 +59,8 @@ fn sha256_hash(input: &str) -> String {
 }
 
 /// 将 Domain User 转换为 Proto User
-fn user_to_proto(user: &crate::domain::entities::User) -> User {
-    User {
+fn user_to_proto(user: &crate::shared::domain::entities::User) -> proto::User {
+    proto::User {
         id: user.id.0.to_string(),
         username: user.username.as_str().to_string(),
         email: user.email.as_str().to_string(),
@@ -76,7 +77,7 @@ fn user_to_proto(user: &crate::domain::entities::User) -> User {
             seconds: dt.timestamp(),
             nanos: dt.timestamp_subsec_nanos() as i32,
         }),
-        audit_info: Some(AuditInfo {
+        audit_info: Some(proto::AuditInfo {
             created_at: Some(Timestamp {
                 seconds: user.audit_info.created_at.timestamp(),
                 nanos: user.audit_info.created_at.timestamp_subsec_nanos() as i32,
@@ -102,8 +103,8 @@ fn user_to_proto(user: &crate::domain::entities::User) -> User {
 }
 
 /// 将 Domain Session 转换为 Proto Session
-fn session_to_proto(session: &DomainSession, is_current: bool) -> Session {
-    Session {
+fn session_to_proto(session: &DomainSession, is_current: bool) -> proto::Session {
+    proto::Session {
         id: session.id.0.to_string(),
         user_id: session.user_id.0.to_string(),
         device_info: session.device_info.clone().unwrap_or_default(),
