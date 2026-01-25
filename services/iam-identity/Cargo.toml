@@ -34,5 +34,11 @@ sha2 = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 
+# 2FA 相关依赖
+totp-rs = { workspace = true }
+data-encoding = { workspace = true }
+rand = { workspace = true }
+urlencoding = { workspace = true }
+
 [build-dependencies]
 tonic-build = { workspace = true }

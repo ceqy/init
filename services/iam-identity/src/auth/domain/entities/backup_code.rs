@@ -1,0 +1,101 @@
+//! 备份码实体
+
+use chrono::{DateTime, Utc};
+use cuba_common::UserId;
+use cuba_domain_core::Entity;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+/// 备份码 ID
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BackupCodeId(pub Uuid);
+
+impl BackupCodeId {
+    pub fn new() -> Self {
+        Self(Uuid::now_v7())
+    }
+
+    pub fn from_uuid(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+}
+
+impl Default for BackupCodeId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// 备份码实体
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BackupCode {
+    pub id: BackupCodeId,
+    pub user_id: UserId,
+    pub code_hash: String,
+    pub used: bool,
+    pub used_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+impl BackupCode {
+    pub fn new(user_id: UserId, code_hash: String) -> Self {
+        Self {
+            id: BackupCodeId::new(),
+            user_id,
+            code_hash,
+            used: false,
+            used_at: None,
+            created_at: Utc::now(),
+        }
+    }
+
+    /// 标记为已使用
+    pub fn mark_as_used(&mut self) {
+        self.used = true;
+        self.used_at = Some(Utc::now());
+    }
+
+    /// 是否可用
+    pub fn is_available(&self) -> bool {
+        !self.used
+    }
+}
+
+impl Entity for BackupCode {
+    type Id = BackupCodeId;
+
+    fn id(&self) -> &Self::Id {
+        &self.id
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_backup_code() {
+        let user_id = UserId::from_uuid(Uuid::new_v4());
+        let code_hash = "test_hash".to_string();
+        
+        let backup_code = BackupCode::new(user_id.clone(), code_hash.clone());
+        
+        assert_eq!(backup_code.user_id, user_id);
+        assert_eq!(backup_code.code_hash, code_hash);
+        assert!(!backup_code.used);
+        assert!(backup_code.used_at.is_none());
+        assert!(backup_code.is_available());
+    }
+
+    #[test]
+    fn test_mark_as_used() {
+        let user_id = UserId::from_uuid(Uuid::new_v4());
+        let mut backup_code = BackupCode::new(user_id, "test_hash".to_string());
+        
+        backup_code.mark_as_used();
+        
+        assert!(backup_code.used);
+        assert!(backup_code.used_at.is_some());
+        assert!(!backup_code.is_available());
+    }
+}

@@ -147,7 +147,7 @@ pub struct ResetPasswordResponse {
     #[prost(string, tag = "2")]
     pub message: ::prost::alloc::string::String,
 }
-/// 请求重置密码请求
+/// 启用 2FA 请求
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Enable2FaRequest {
     #[prost(string, tag = "1")]
@@ -155,31 +155,42 @@ pub struct Enable2FaRequest {
     /// TOTP, SMS, EMAIL
     #[prost(string, tag = "2")]
     pub method: ::prost::alloc::string::String,
+    /// 验证码（可选，用于确认启用）
+    #[prost(string, tag = "3")]
+    pub verification_code: ::prost::alloc::string::String,
 }
 /// 启用 2FA 响应
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Enable2FaResponse {
+    /// TOTP secret（Base32 编码）
     #[prost(string, tag = "1")]
     pub secret: ::prost::alloc::string::String,
+    /// QR 码 URL
     #[prost(string, tag = "2")]
     pub qr_code_url: ::prost::alloc::string::String,
+    /// 备份码（仅首次返回）
     #[prost(string, repeated, tag = "3")]
     pub backup_codes: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// 是否已启用（需要验证码确认）
+    #[prost(bool, tag = "4")]
+    pub enabled: bool,
 }
 /// 禁用 2FA 请求
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Disable2FaRequest {
     #[prost(string, tag = "1")]
     pub user_id: ::prost::alloc::string::String,
-    /// 验证码
+    /// 密码验证
     #[prost(string, tag = "2")]
-    pub code: ::prost::alloc::string::String,
+    pub password: ::prost::alloc::string::String,
 }
 /// 禁用 2FA 响应
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Disable2FaResponse {
     #[prost(bool, tag = "1")]
     pub success: bool,
+    #[prost(string, tag = "2")]
+    pub message: ::prost::alloc::string::String,
 }
 /// 验证 2FA 请求
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -200,6 +211,9 @@ pub struct Verify2FaResponse {
     pub access_token: ::prost::alloc::string::String,
     #[prost(string, tag = "3")]
     pub refresh_token: ::prost::alloc::string::String,
+    /// 过期时间（秒）
+    #[prost(int64, tag = "4")]
+    pub expires_in: i64,
 }
 /// 获取活跃会话请求
 #[derive(Clone, PartialEq, ::prost::Message)]

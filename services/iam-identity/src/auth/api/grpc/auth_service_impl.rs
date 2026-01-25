@@ -19,7 +19,8 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 use crate::auth::domain::entities::{Session as DomainSession, SessionId};
-use crate::auth::domain::repositories::SessionRepository;
+use crate::auth::domain::repositories::{BackupCodeRepository, SessionRepository};
+use crate::auth::domain::services::{BackupCodeService, TotpService};
 use crate::auth::infrastructure::cache::AuthCache;
 use crate::shared::domain::repositories::UserRepository;
 use crate::shared::domain::value_objects::{HashedPassword, Username};
@@ -28,7 +29,9 @@ use crate::shared::domain::value_objects::{HashedPassword, Username};
 pub struct AuthServiceImpl {
     user_repo: Arc<dyn UserRepository>,
     session_repo: Arc<dyn SessionRepository>,
+    backup_code_repo: Arc<dyn BackupCodeRepository>,
     token_service: Arc<TokenService>,
+    totp_service: Arc<TotpService>,
     auth_cache: Arc<dyn AuthCache>,
     refresh_token_expires_in: i64,
 }
@@ -37,14 +40,18 @@ impl AuthServiceImpl {
     pub fn new(
         user_repo: Arc<dyn UserRepository>,
         session_repo: Arc<dyn SessionRepository>,
+        backup_code_repo: Arc<dyn BackupCodeRepository>,
         token_service: Arc<TokenService>,
+        totp_service: Arc<TotpService>,
         auth_cache: Arc<dyn AuthCache>,
         refresh_token_expires_in: i64,
     ) -> Self {
         Self {
             user_repo,
             session_repo,
+            backup_code_repo,
             token_service,
+            totp_service,
             auth_cache,
             refresh_token_expires_in,
         }
@@ -492,39 +499,6 @@ impl AuthService for AuthServiceImpl {
         Err(Status::unimplemented("Password reset not implemented yet"))
     }
 
-    async fn enable2_fa(
-        &self,
-        request: Request<Enable2FaRequest>,
-    ) -> Result<Response<Enable2FaResponse>, Status> {
-        let req = request.into_inner();
-        tracing::info!(user_id = %req.user_id, method = %req.method, "Enable 2FA request");
-
-        // TODO: 实现 2FA
-        Err(Status::unimplemented("2FA not implemented yet"))
-    }
-
-    async fn disable2_fa(
-        &self,
-        request: Request<Disable2FaRequest>,
-    ) -> Result<Response<Disable2FaResponse>, Status> {
-        let req = request.into_inner();
-        tracing::info!(user_id = %req.user_id, "Disable 2FA request");
-
-        // TODO: 实现 2FA
-        Err(Status::unimplemented("2FA not implemented yet"))
-    }
-
-    async fn verify2_fa(
-        &self,
-        request: Request<Verify2FaRequest>,
-    ) -> Result<Response<Verify2FaResponse>, Status> {
-        let req = request.into_inner();
-        tracing::info!(user_id = %req.user_id, "Verify 2FA request");
-
-        // TODO: 实现 2FA
-        Err(Status::unimplemented("2FA not implemented yet"))
-    }
-
     async fn get_active_sessions(
         &self,
         request: Request<GetActiveSessionsRequest>,
@@ -590,5 +564,243 @@ impl AuthService for AuthServiceImpl {
         tracing::info!(session_id = %req.session_id, "Session revoked");
 
         Ok(Response::new(RevokeSessionResponse { success: true }))
+    }
+
+    async fn enable2_fa(
+        &self,
+        request: Request<Enable2FaRequest>,
+    ) -> Result<Response<Enable2FaResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!(user_id = %req.user_id, method = %req.method, "Enable 2FA request");
+
+        // 1. 解析用户 ID
+        let user_id = UserId::from_string(&req.user_id)
+            .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
+
+        // 2. 获取用户
+        let mut user = self
+            .user_repo
+            .find_by_id(&user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("User not found"))?;
+
+        // 3. 检查是否已启用
+        if user.two_factor_enabled {
+            return Err(Status::already_exists("2FA already enabled"));
+        }
+
+        // 4. 生成 TOTP secret
+        let secret = self
+            .totp_service
+            .generate_secret()
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 5. 生成 QR 码 URL
+        let qr_code_url = self
+            .totp_service
+            .generate_qr_code_url(user.username.as_str(), &secret)
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 6. 如果提供了验证码，验证并启用
+        if !req.verification_code.is_empty() {
+            let valid = self
+                .totp_service
+                .verify_code(user.username.as_str(), &secret, &req.verification_code)
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            if !valid {
+                return Err(Status::invalid_argument("Invalid verification code"));
+            }
+
+            // 7. 生成备份码
+            let backup_codes = BackupCodeService::generate_codes();
+            let backup_code_entities: Vec<crate::auth::domain::entities::BackupCode> = backup_codes
+                .iter()
+                .map(|code| {
+                    let hash = BackupCodeService::hash_code(code);
+                    crate::auth::domain::entities::BackupCode::new(user_id.clone(), hash)
+                })
+                .collect();
+
+            // 8. 保存备份码
+            self.backup_code_repo
+                .save_batch(&backup_code_entities)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            // 9. 启用 2FA
+            user.enable_2fa(secret.clone());
+            self.user_repo
+                .update(&user)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            tracing::info!(user_id = %req.user_id, "2FA enabled successfully");
+
+            return Ok(Response::new(Enable2FaResponse {
+                secret,
+                qr_code_url,
+                backup_codes,
+                enabled: true,
+            }));
+        }
+
+        // 如果没有提供验证码，只返回 QR 码（第一步）
+        Ok(Response::new(Enable2FaResponse {
+            secret,
+            qr_code_url,
+            backup_codes: vec![],
+            enabled: false,
+        }))
+    }
+
+    async fn verify2_fa(
+        &self,
+        request: Request<Verify2FaRequest>,
+    ) -> Result<Response<Verify2FaResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!(user_id = %req.user_id, "Verify 2FA request");
+
+        // 1. 解析用户 ID
+        let user_id = UserId::from_string(&req.user_id)
+            .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
+
+        // 2. 获取用户
+        let user = self
+            .user_repo
+            .find_by_id(&user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("User not found"))?;
+
+        // 3. 检查是否启用 2FA
+        if !user.two_factor_enabled {
+            return Err(Status::failed_precondition("2FA not enabled"));
+        }
+
+        let secret = user
+            .two_factor_secret
+            .as_ref()
+            .ok_or_else(|| Status::internal("2FA secret not found"))?;
+
+        // 4. 验证 TOTP 码
+        let totp_valid = self
+            .totp_service
+            .verify_code(user.username.as_str(), secret, &req.code)
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if totp_valid {
+            // TOTP 验证成功，生成令牌
+            let access_token = self
+                .token_service
+                .generate_access_token(&user.id, &user.tenant_id, vec![], user.role_ids.clone())
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            let refresh_token = self
+                .token_service
+                .generate_refresh_token(&user.id, &user.tenant_id)
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            tracing::info!(user_id = %req.user_id, "2FA verified with TOTP");
+
+            return Ok(Response::new(Verify2FaResponse {
+                success: true,
+                access_token,
+                refresh_token,
+                expires_in: self.token_service.access_token_expires_in(),
+            }));
+        }
+
+        // 5. TOTP 验证失败，尝试备份码
+        let backup_codes = self
+            .backup_code_repo
+            .find_available_by_user_id(&user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        for mut backup_code in backup_codes {
+            if BackupCodeService::verify_code(&req.code, &backup_code.code_hash) {
+                // 备份码验证成功
+                backup_code.mark_as_used();
+                self.backup_code_repo
+                    .update(&backup_code)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                // 生成令牌
+                let access_token = self
+                    .token_service
+                    .generate_access_token(&user.id, &user.tenant_id, vec![], user.role_ids.clone())
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                let refresh_token = self
+                    .token_service
+                    .generate_refresh_token(&user.id, &user.tenant_id)
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                tracing::info!(user_id = %req.user_id, "2FA verified with backup code");
+
+                return Ok(Response::new(Verify2FaResponse {
+                    success: true,
+                    access_token,
+                    refresh_token,
+                    expires_in: self.token_service.access_token_expires_in(),
+                }));
+            }
+        }
+
+        // 验证失败
+        Err(Status::unauthenticated("Invalid 2FA code"))
+    }
+
+    async fn disable2_fa(
+        &self,
+        request: Request<Disable2FaRequest>,
+    ) -> Result<Response<Disable2FaResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!(user_id = %req.user_id, "Disable 2FA request");
+
+        // 1. 解析用户 ID
+        let user_id = UserId::from_string(&req.user_id)
+            .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
+
+        // 2. 获取用户
+        let mut user = self
+            .user_repo
+            .find_by_id(&user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("User not found"))?;
+
+        // 3. 验证密码
+        let valid = user
+            .password_hash
+            .verify(&req.password)
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if !valid {
+            return Err(Status::unauthenticated("Invalid password"));
+        }
+
+        // 4. 禁用 2FA
+        user.disable_2fa();
+        self.user_repo
+            .update(&user)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 5. 删除所有备份码
+        self.backup_code_repo
+            .delete_by_user_id(&user_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tracing::info!(user_id = %req.user_id, "2FA disabled successfully");
+
+        Ok(Response::new(Disable2FaResponse {
+            success: true,
+            message: "2FA disabled successfully".to_string(),
+        }))
     }
 }

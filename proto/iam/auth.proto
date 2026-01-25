@@ -143,28 +143,31 @@ message ResetPasswordResponse {
   string message = 2;
 }
 
-// 请求重置密码请求
+// 启用 2FA 请求
 message Enable2FARequest {
   string user_id = 1;
   string method = 2;  // TOTP, SMS, EMAIL
+  string verification_code = 3;  // 验证码（可选，用于确认启用）
 }
 
 // 启用 2FA 响应
 message Enable2FAResponse {
-  string secret = 1;
-  string qr_code_url = 2;
-  repeated string backup_codes = 3;
+  string secret = 1;              // TOTP secret（Base32 编码）
+  string qr_code_url = 2;         // QR 码 URL
+  repeated string backup_codes = 3; // 备份码（仅首次返回）
+  bool enabled = 4;               // 是否已启用（需要验证码确认）
 }
 
 // 禁用 2FA 请求
 message Disable2FARequest {
   string user_id = 1;
-  string code = 2;  // 验证码
+  string password = 2;  // 密码验证
 }
 
 // 禁用 2FA 响应
 message Disable2FAResponse {
   bool success = 1;
+  string message = 2;
 }
 
 // 验证 2FA 请求
@@ -179,6 +182,7 @@ message Verify2FAResponse {
   bool success = 1;
   string access_token = 2;
   string refresh_token = 3;
+  int64 expires_in = 4;           // 过期时间（秒）
 }
 
 // 获取活跃会话请求

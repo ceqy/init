@@ -16,9 +16,10 @@ mod user;
 use std::sync::Arc;
 
 use auth::api::grpc::{AuthServiceImpl, AuthServiceServer};
-use auth::domain::repositories::SessionRepository;
+use auth::domain::repositories::{BackupCodeRepository, SessionRepository};
+use auth::domain::services::TotpService;
 use auth::infrastructure::cache::{AuthCache, RedisAuthCache};
-use auth::infrastructure::persistence::PostgresSessionRepository;
+use auth::infrastructure::persistence::{PostgresBackupCodeRepository, PostgresSessionRepository};
 use cuba_bootstrap::{run_with_services, Infrastructure};
 use cuba_ports::CachePort;
 use shared::domain::repositories::UserRepository;
@@ -38,17 +39,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let cache: Arc<dyn CachePort> = Arc::new(infra.redis_cache());
         let auth_cache: Arc<dyn AuthCache> = Arc::new(RedisAuthCache::new(cache));
 
+        // 组装 TOTP 服务
+        let totp_service = Arc::new(TotpService::new("Cuba ERP".to_string()));
+
         // 组装 Repositories（依赖 domain trait）
         let user_repo: Arc<dyn UserRepository> =
             Arc::new(PostgresUserRepository::new(pool.clone()));
         let session_repo: Arc<dyn SessionRepository> =
             Arc::new(PostgresSessionRepository::new(pool.clone()));
+        let backup_code_repo: Arc<dyn BackupCodeRepository> =
+            Arc::new(PostgresBackupCodeRepository::new(pool.clone()));
 
         // 组装 AuthService
         let auth_service = AuthServiceImpl::new(
             user_repo.clone(),
             session_repo,
+            backup_code_repo,
             token_service.clone(),
+            totp_service,
             auth_cache,
             config.jwt.refresh_expires_in as i64,
         );
