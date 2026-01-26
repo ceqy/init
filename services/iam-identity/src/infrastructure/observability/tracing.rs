@@ -216,8 +216,5 @@ pub fn log_slow_api_request(method: &str, duration_ms: f64) {
 
 /// 记录调试信息
 pub fn log_debug(message: &str, context: &[(&str, &str)]) {
-    let mut event = debug!(message);
-    for (key, value) in context {
-        event = event.field(key, value);
-    }
+    debug!(?context, "{}", message);
 }

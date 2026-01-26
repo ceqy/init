@@ -43,6 +43,7 @@ pub enum LoginResult {
 pub enum LoginFailureReason {
     InvalidCredentials,
     AccountLocked,
+    AccountDisabled,
     AccountInactive,
     TwoFactorRequired,
     TwoFactorFailed,
@@ -58,6 +59,7 @@ impl std::fmt::Display for LoginFailureReason {
         match self {
             Self::InvalidCredentials => write!(f, "Invalid credentials"),
             Self::AccountLocked => write!(f, "Account locked"),
+            Self::AccountDisabled => write!(f, "Account disabled"),
             Self::AccountInactive => write!(f, "Account inactive"),
             Self::TwoFactorRequired => write!(f, "Two-factor authentication required"),
             Self::TwoFactorFailed => write!(f, "Two-factor authentication failed"),
@@ -127,6 +129,7 @@ impl DeviceInfo {
             browser,
             browser_version,
             is_mobile,
+            device_fingerprint: None,
         }
     }
 

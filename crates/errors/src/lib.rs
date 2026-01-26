@@ -16,6 +16,9 @@ pub enum AppError {
 
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
+    
+    #[error("Unauthenticated: {0}")]
+    Unauthenticated(String),
 
     #[error("Forbidden: {0}")]
     Forbidden(String),
@@ -31,6 +34,12 @@ pub enum AppError {
 
     #[error("External service error: {0}")]
     ExternalService(String),
+    
+    #[error("Failed precondition: {0}")]
+    FailedPrecondition(String),
+    
+    #[error("Resource exhausted: {0}")]
+    ResourceExhausted(String),
 }
 
 impl AppError {
@@ -65,6 +74,18 @@ impl AppError {
     pub fn external_service(msg: impl Into<String>) -> Self {
         Self::ExternalService(msg.into())
     }
+    
+    pub fn unauthenticated(msg: impl Into<String>) -> Self {
+        Self::Unauthenticated(msg.into())
+    }
+    
+    pub fn failed_precondition(msg: impl Into<String>) -> Self {
+        Self::FailedPrecondition(msg.into())
+    }
+    
+    pub fn resource_exhausted(msg: impl Into<String>) -> Self {
+        Self::ResourceExhausted(msg.into())
+    }
 
     /// 转换为 HTTP 状态码
     pub fn status_code(&self) -> u16 {
@@ -77,6 +98,9 @@ impl AppError {
             Self::Internal(_) => 500,
             Self::Database(_) => 500,
             Self::ExternalService(_) => 502,
+            Self::Unauthenticated(_) => 401,
+            Self::FailedPrecondition(_) => 412,
+            Self::ResourceExhausted(_) => 429,
         }
     }
 
@@ -91,6 +115,9 @@ impl AppError {
             Self::Internal(_) => tonic::Code::Internal,
             Self::Database(_) => tonic::Code::Internal,
             Self::ExternalService(_) => tonic::Code::Unavailable,
+            Self::Unauthenticated(_) => tonic::Code::Unauthenticated,
+            Self::FailedPrecondition(_) => tonic::Code::FailedPrecondition,
+            Self::ResourceExhausted(_) => tonic::Code::ResourceExhausted,
         }
     }
 
@@ -117,6 +144,9 @@ impl AppError {
             Self::ExternalService(_) => {
                 "https://api.cuba-erp.com/problems/external-service".to_string()
             }
+            Self::Unauthenticated(_) => "https://api.cuba-erp.com/problems/unauthenticated".to_string(),
+            Self::FailedPrecondition(_) => "https://api.cuba-erp.com/problems/failed-precondition".to_string(),
+            Self::ResourceExhausted(_) => "https://api.cuba-erp.com/problems/resource-exhausted".to_string(),
         }
     }
 
@@ -130,6 +160,9 @@ impl AppError {
             Self::Internal(_) => "Internal Server Error".to_string(),
             Self::Database(_) => "Database Error".to_string(),
             Self::ExternalService(_) => "External Service Error".to_string(),
+            Self::Unauthenticated(_) => "Unauthenticated".to_string(),
+            Self::FailedPrecondition(_) => "Failed Precondition".to_string(),
+            Self::ResourceExhausted(_) => "Resource Exhausted".to_string(),
         }
     }
 }

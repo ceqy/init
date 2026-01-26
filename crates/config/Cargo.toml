@@ -7,5 +7,6 @@ license.workspace = true
 
 [dependencies]
 figment = { workspace = true }
+secrecy = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
 thiserror = { workspace = true }

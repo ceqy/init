@@ -7,7 +7,7 @@ use sqlx::PgPool;
 
 use crate::shared::domain::entities::{Tenant, TenantStatus};
 use crate::shared::domain::repositories::TenantRepository;
-use crate::shared::domain::value_objects::TenantSettings;
+
 
 pub struct PostgresTenantRepository {
     pool: PgPool,
@@ -150,19 +150,19 @@ impl TenantRepository for PostgresTenantRepository {
         page_size: i32,
     ) -> AppResult<(Vec<Tenant>, i64)> {
         let offset = (page - 1) * page_size;
-        let mut conditions = vec!["1=1"];
+        let mut conditions = vec!["1=1".to_string()];
         let mut bind_idx = 1;
 
         let status_str;
         let search_pattern;
 
         if status.is_some() {
-            conditions.push(&format!("status = ${}", bind_idx));
+            conditions.push(format!("status = ${}", bind_idx));
             bind_idx += 1;
         }
 
         if search.is_some() {
-            conditions.push(&format!("(name ILIKE ${} OR display_name ILIKE ${})", bind_idx, bind_idx));
+            conditions.push(format!("(name ILIKE ${} OR display_name ILIKE ${})", bind_idx, bind_idx));
             bind_idx += 1;
         }
 

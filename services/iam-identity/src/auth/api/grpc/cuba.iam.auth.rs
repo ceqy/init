@@ -138,6 +138,8 @@ pub struct ResetPasswordRequest {
     pub reset_token: ::prost::alloc::string::String,
     #[prost(string, tag = "3")]
     pub new_password: ::prost::alloc::string::String,
+    #[prost(string, tag = "4")]
+    pub tenant_id: ::prost::alloc::string::String,
 }
 /// 重置密码响应
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -201,6 +203,8 @@ pub struct Verify2FaRequest {
     pub code: ::prost::alloc::string::String,
     #[prost(string, tag = "3")]
     pub session_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "4")]
+    pub tenant_id: ::prost::alloc::string::String,
 }
 /// 验证 2FA 响应
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -350,6 +354,9 @@ pub struct FinishWebAuthnAuthenticationRequest {
     /// IP 地址
     #[prost(string, tag = "4")]
     pub ip_address: ::prost::alloc::string::String,
+    /// 租户 ID
+    #[prost(string, tag = "5")]
+    pub tenant_id: ::prost::alloc::string::String,
 }
 /// 完成 WebAuthn 认证响应
 #[derive(Clone, PartialEq, ::prost::Message)]

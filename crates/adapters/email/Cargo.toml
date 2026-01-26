@@ -27,5 +27,8 @@ serde_json = { workspace = true }
 # 日志
 tracing = { workspace = true }
 
+# Secrets
+secrecy = { version = "0.8", features = ["serde"] }
+
 # 错误处理
 thiserror = { workspace = true }

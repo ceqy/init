@@ -27,7 +27,9 @@ impl UserRepository for PostgresUserRepository {
             r#"
             SELECT id, username, email, password_hash, display_name, phone, avatar_url,
                    tenant_id, role_ids, status, language, timezone, two_factor_enabled,
-                   two_factor_secret, last_login_at, created_at, created_by, updated_at, updated_by
+                   two_factor_secret, last_login_at, email_verified, email_verified_at,
+                   failed_login_count, locked_until, last_password_change_at,
+                   created_at, created_by, updated_at, updated_by
             FROM users
             WHERE id = $1 AND tenant_id = $2
             "#,
@@ -46,7 +48,9 @@ impl UserRepository for PostgresUserRepository {
             r#"
             SELECT id, username, email, password_hash, display_name, phone, avatar_url,
                    tenant_id, role_ids, status, language, timezone, two_factor_enabled,
-                   two_factor_secret, last_login_at, created_at, created_by, updated_at, updated_by
+                   two_factor_secret, last_login_at, email_verified, email_verified_at,
+                   failed_login_count, locked_until, last_password_change_at,
+                   created_at, created_by, updated_at, updated_by
             FROM users
             WHERE username = $1 AND tenant_id = $2
             "#,
@@ -65,7 +69,9 @@ impl UserRepository for PostgresUserRepository {
             r#"
             SELECT id, username, email, password_hash, display_name, phone, avatar_url,
                    tenant_id, role_ids, status, language, timezone, two_factor_enabled,
-                   two_factor_secret, last_login_at, created_at, created_by, updated_at, updated_by
+                   two_factor_secret, last_login_at, email_verified, email_verified_at,
+                   failed_login_count, locked_until, last_password_change_at,
+                   created_at, created_by, updated_at, updated_by
             FROM users
             WHERE email = $1 AND tenant_id = $2
             "#,
@@ -84,8 +90,10 @@ impl UserRepository for PostgresUserRepository {
             r#"
             INSERT INTO users (id, username, email, password_hash, display_name, phone, avatar_url,
                               tenant_id, role_ids, status, language, timezone, two_factor_enabled,
-                              two_factor_secret, last_login_at, created_at, created_by, updated_at, updated_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                              two_factor_secret, last_login_at, email_verified, email_verified_at,
+                              failed_login_count, locked_until, last_password_change_at,
+                              created_at, created_by, updated_at, updated_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
             "#,
         )
         .bind(user.id.0)
@@ -103,6 +111,11 @@ impl UserRepository for PostgresUserRepository {
         .bind(user.two_factor_enabled)
         .bind(&user.two_factor_secret)
         .bind(user.last_login_at)
+        .bind(user.email_verified)
+        .bind(user.email_verified_at)
+        .bind(user.failed_login_count)
+        .bind(user.locked_until)
+        .bind(user.last_password_change_at)
         .bind(user.audit_info.created_at)
         .bind(user.audit_info.created_by.as_ref().map(|u| u.0))
         .bind(user.audit_info.updated_at)
@@ -121,7 +134,8 @@ impl UserRepository for PostgresUserRepository {
                 username = $2, email = $3, password_hash = $4, display_name = $5, phone = $6,
                 avatar_url = $7, role_ids = $8, status = $9, language = $10, timezone = $11,
                 two_factor_enabled = $12, two_factor_secret = $13, last_login_at = $14,
-                updated_at = $15, updated_by = $16
+                email_verified = $15, email_verified_at = $16, failed_login_count = $17,
+                locked_until = $18, last_password_change_at = $19, updated_at = $20, updated_by = $21
             WHERE id = $1
             "#,
         )
@@ -139,6 +153,11 @@ impl UserRepository for PostgresUserRepository {
         .bind(user.two_factor_enabled)
         .bind(&user.two_factor_secret)
         .bind(user.last_login_at)
+        .bind(user.email_verified)
+        .bind(user.email_verified_at)
+        .bind(user.failed_login_count)
+        .bind(user.locked_until)
+        .bind(user.last_password_change_at)
         .bind(user.audit_info.updated_at)
         .bind(user.audit_info.updated_by.as_ref().map(|u| u.0))
         .execute(&self.pool)
@@ -188,8 +207,8 @@ impl UserRepository for PostgresUserRepository {
     async fn list(
         &self,
         tenant_id: &TenantId,
-        status: Option<&str>,
-        search: Option<&str>,
+        _status: Option<&str>,
+        _search: Option<&str>,
         _role_ids: &[String],
         page: i32,
         page_size: i32,
@@ -210,7 +229,9 @@ impl UserRepository for PostgresUserRepository {
             r#"
             SELECT id, username, email, password_hash, display_name, phone, avatar_url,
                    tenant_id, role_ids, status, language, timezone, two_factor_enabled,
-                   two_factor_secret, last_login_at, created_at, created_by, updated_at, updated_by
+                   two_factor_secret, last_login_at, email_verified, email_verified_at,
+                   failed_login_count, locked_until, last_password_change_at,
+                   created_at, created_by, updated_at, updated_by
             FROM users
             WHERE tenant_id = $1
             ORDER BY created_at DESC
@@ -259,6 +280,11 @@ struct UserRow {
     two_factor_enabled: bool,
     two_factor_secret: Option<String>,
     last_login_at: Option<chrono::DateTime<chrono::Utc>>,
+    email_verified: bool,
+    email_verified_at: Option<chrono::DateTime<chrono::Utc>>,
+    failed_login_count: i32,
+    locked_until: Option<chrono::DateTime<chrono::Utc>>,
+    last_password_change_at: Option<chrono::DateTime<chrono::Utc>>,
     created_at: chrono::DateTime<chrono::Utc>,
     created_by: Option<Uuid>,
     updated_at: chrono::DateTime<chrono::Utc>,
@@ -288,6 +314,15 @@ impl UserRow {
             two_factor_enabled: self.two_factor_enabled,
             two_factor_secret: self.two_factor_secret,
             last_login_at: self.last_login_at,
+            email_verified: self.email_verified,
+            email_verified_at: self.email_verified_at,
+            phone_verified: false, // Default to false for now
+            phone_verified_at: None, // Default to None for now
+            failed_login_count: self.failed_login_count,
+            locked_until: self.locked_until,
+            lock_reason: None, // Missing from DB row, maybe added later?
+            last_failed_login_at: None, // Missing from DB row
+            last_password_change_at: self.last_password_change_at,
             audit_info: cuba_common::AuditInfo {
                 created_at: self.created_at,
                 created_by: self.created_by.map(UserId::from_uuid),

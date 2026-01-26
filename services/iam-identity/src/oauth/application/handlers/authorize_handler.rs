@@ -45,7 +45,7 @@ impl CommandHandler<AuthorizeCommand> for AuthorizeHandler {
                 &user_id,
                 &tenant_id,
                 command.redirect_uri,
-                command.scope,
+                command.scope.split_whitespace().map(|s| s.to_string()).collect(),
                 command.code_challenge,
                 command.code_challenge_method,
             )

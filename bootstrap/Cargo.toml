@@ -42,3 +42,6 @@ prost = { workspace = true }
 # Metrics
 metrics = { workspace = true }
 metrics-exporter-prometheus = { workspace = true }
+
+# Secrets
+secrecy = { version = "0.8", features = ["serde"] }

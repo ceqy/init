@@ -2,7 +2,8 @@
 
 use async_trait::async_trait;
 use cuba_adapter_redis::RedisCache;
-use cuba_errors::{AppError, AppResult};
+use cuba_errors::AppResult;
+use cuba_ports::CachePort;
 
 use crate::auth::domain::services::LoginAttemptCache;
 
@@ -21,7 +22,7 @@ impl RedisLoginAttemptCache {
 impl LoginAttemptCache for RedisLoginAttemptCache {
     async fn increment(&self, key: &str, ttl_seconds: i64) -> AppResult<i32> {
         // 使用 Redis INCR 命令
-        let value_str = self.cache.get(key).await?;
+        let value_str: Option<String> = self.cache.get(key).await?;
         
         let new_value = if let Some(v) = value_str {
             let current: i32 = v.parse().unwrap_or(0);
@@ -32,14 +33,14 @@ impl LoginAttemptCache for RedisLoginAttemptCache {
 
         // 设置新值和 TTL
         self.cache
-            .set(key, &new_value.to_string(), Some(ttl_seconds as usize))
+            .set(key, &new_value.to_string(), Some(std::time::Duration::from_secs(ttl_seconds as u64)))
             .await?;
 
         Ok(new_value)
     }
 
     async fn get(&self, key: &str) -> AppResult<i32> {
-        let value = self.cache.get(key).await?;
+        let value: Option<String> = self.cache.get(key).await?;
         
         Ok(value
             .and_then(|v| v.parse().ok())
@@ -50,7 +51,7 @@ impl LoginAttemptCache for RedisLoginAttemptCache {
         self.cache.delete(key).await
     }
 
-    async fn ttl(&self, key: &str) -> AppResult<Option<i64>> {
+    async fn ttl(&self, _key: &str) -> AppResult<Option<i64>> {
         // Redis TTL 命令
         // 这里需要扩展 RedisCache 以支持 TTL 查询
         // 简化实现：返回 None

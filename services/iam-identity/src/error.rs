@@ -1,6 +1,7 @@
 //! 服务错误定义
 
 use cuba_errors::AppError;
+use crate::shared::domain::value_objects::UsernameError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -32,6 +33,13 @@ pub enum AuthError {
     #[error("Password too weak")]
     PasswordTooWeak,
 }
+
+impl From<UsernameError> for AppError {
+    fn from(error: UsernameError) -> Self {
+        AppError::validation(error.to_string())
+    }
+}
+
 
 impl From<AuthError> for AppError {
     fn from(err: AuthError) -> Self {

@@ -5,6 +5,7 @@ use cuba_errors::{AppError, AppResult};
 use lettre::message::{header, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
+use secrecy::ExposeSecret;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, info};
@@ -43,7 +44,7 @@ impl EmailClient {
     fn build_transport(&self) -> AppResult<SmtpTransport> {
         let credentials = Credentials::new(
             self.config.username.clone(),
-            self.config.password.clone(),
+            self.config.password.expose_secret().clone(),
         );
 
         let transport = if self.config.use_tls {
@@ -205,7 +206,7 @@ mod tests {
             smtp_host: "smtp.example.com".to_string(),
             smtp_port: 587,
             username: "user@example.com".to_string(),
-            password: "password".to_string(),
+            password: secrecy::Secret::new("password".to_string()),
             from_email: "noreply@example.com".to_string(),
             from_name: "Test".to_string(),
             use_tls: true,

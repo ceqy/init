@@ -43,6 +43,8 @@ impl AuthorizationCodeRepository for PostgresAuthorizationCodeRepository {
     async fn save(&self, authorization_code: &AuthorizationCode) -> AppResult<()> {
         debug!("Saving authorization code");
 
+        let scopes_str = authorization_code.scopes.join(" ");
+
         sqlx::query(
             r#"
             INSERT INTO authorization_codes (code, tenant_id, client_id, user_id, redirect_uri,
@@ -56,7 +58,7 @@ impl AuthorizationCodeRepository for PostgresAuthorizationCodeRepository {
         .bind(authorization_code.client_id.0)
         .bind(authorization_code.user_id.0)
         .bind(&authorization_code.redirect_uri)
-        .bind(&authorization_code.scope)
+        .bind(scopes_str)
         .bind(&authorization_code.code_challenge)
         .bind(&authorization_code.code_challenge_method)
         .bind(authorization_code.used)
@@ -162,7 +164,7 @@ impl From<AuthorizationCodeRow> for AuthorizationCode {
             client_id: OAuthClientId::from_uuid(row.client_id),
             user_id: UserId::from_uuid(row.user_id),
             redirect_uri: row.redirect_uri,
-            scope: row.scope,
+            scopes: row.scope.split_whitespace().map(|s| s.to_string()).collect(),
             code_challenge: row.code_challenge,
             code_challenge_method: row.code_challenge_method,
             used: row.used,

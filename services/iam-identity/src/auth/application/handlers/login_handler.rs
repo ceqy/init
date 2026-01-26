@@ -75,6 +75,7 @@ impl LoginHandler {
             country: None,
             city: None,
             is_suspicious,
+            suspicious_reason: None,
             created_at: Utc::now(),
         };
         

@@ -78,7 +78,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
                 Some(req.client_secret)
             },
             public_client: req.public_client,
-            tenant_id,
+            tenant_id: tenant_id.clone(),
         };
 
         let (client_id, client_secret) = self
@@ -91,7 +91,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
             .client_repo
             .find_by_id(
                 &OAuthClientId::from_string(&client_id).unwrap(),
-                &TenantId::from_string(&tenant_id).unwrap(),
+                &TenantId::from_string(&tenant_id.clone()).unwrap(),
             )
             .await
             .map_err(|e| Status::internal(e.to_string()))?
@@ -104,7 +104,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
                 id: client.id.0.to_string(),
                 name: client.name,
                 redirect_uris: client.redirect_uris,
-                grant_types: client.grant_types,
+                grant_types: client.grant_types.iter().map(|g| g.to_string()).collect(),
                 scopes: client.scopes,
                 public_client: client.public_client,
                 tenant_id: client.tenant_id.0.to_string(),
@@ -141,7 +141,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
                 id: client.id.0.to_string(),
                 name: client.name,
                 redirect_uris: client.redirect_uris,
-                grant_types: client.grant_types,
+                grant_types: client.grant_types.iter().map(|g| g.to_string()).collect(),
                 scopes: client.scopes,
                 public_client: client.public_client,
                 tenant_id: client.tenant_id.0.to_string(),
@@ -175,7 +175,19 @@ impl OAuthServiceTrait for OAuthServiceImpl {
 
         client.name = req.name;
         client.redirect_uris = req.redirect_uris;
-        client.grant_types = req.grant_types;
+        if !req.grant_types.is_empty() {
+             use crate::oauth::domain::entities::GrantType;
+             client.grant_types = req.grant_types.iter().map(|s| {
+                 match s.as_str() {
+                    "authorization_code" => GrantType::AuthorizationCode,
+                    "client_credentials" => GrantType::ClientCredentials,
+                    "refresh_token" => GrantType::RefreshToken,
+                    "implicit" => GrantType::Implicit,
+                    "password" => GrantType::Password,
+                    _ => GrantType::AuthorizationCode, // Fallback or Error
+                 }
+             }).collect();
+        }
         client.scopes = req.scopes;
         client.updated_at = chrono::Utc::now();
 
@@ -189,7 +201,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
                 id: client.id.0.to_string(),
                 name: client.name,
                 redirect_uris: client.redirect_uris,
-                grant_types: client.grant_types,
+                grant_types: client.grant_types.iter().map(|g| g.to_string()).collect(),
                 scopes: client.scopes,
                 public_client: client.public_client,
                 tenant_id: client.tenant_id.0.to_string(),
@@ -257,7 +269,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
                 id: client.id.0.to_string(),
                 name: client.name,
                 redirect_uris: client.redirect_uris,
-                grant_types: client.grant_types,
+                grant_types: client.grant_types.iter().map(|g| g.to_string()).collect(),
                 scopes: client.scopes,
                 public_client: client.public_client,
                 tenant_id: client.tenant_id.0.to_string(),
@@ -458,13 +470,13 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         if let Some(token) = token {
             Ok(Response::new(IntrospectTokenResponse {
                 active: true,
-                scope: token.scope,
+                scope: token.scopes.join(" "),
                 client_id: token.client_id.0.to_string(),
                 username: "".to_string(),
                 token_type: "Bearer".to_string(),
                 exp: token.expires_at.timestamp(),
                 iat: token.created_at.timestamp(),
-                sub: token.user_id.0.to_string(),
+                sub: token.user_id.map(|u| u.0.to_string()).unwrap_or_default(),
             }))
         } else {
             Ok(Response::new(IntrospectTokenResponse {

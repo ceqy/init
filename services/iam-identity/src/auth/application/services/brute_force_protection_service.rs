@@ -57,8 +57,8 @@ impl BruteForceProtectionService {
     pub async fn is_locked(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<bool> {
         // 1. 检查缓存
         let cache_key = format!("account_lock:{}", user_id);
-        if let Some(locked) = self.cache.get::<bool>(&cache_key).await? {
-            return Ok(locked);
+        if let Some(locked) = self.cache.get(&cache_key).await? {
+            return Ok(locked == "true");
         }
 
         // 2. 检查数据库
@@ -69,7 +69,7 @@ impl BruteForceProtectionService {
         
         // 缓存结果
         if is_locked {
-            self.cache.set(&cache_key, &true, 300).await?;
+            self.cache.set(&cache_key, "true", Some(std::time::Duration::from_secs(300))).await?;
         }
 
         Ok(is_locked)
@@ -98,7 +98,7 @@ impl BruteForceProtectionService {
 
             // 更新缓存
             let cache_key = format!("account_lock:{}", user_id);
-            self.cache.set(&cache_key, &true, (self.config.lockout_duration_minutes * 60) as usize).await?;
+            self.cache.set(&cache_key, "true", Some(std::time::Duration::from_secs(self.config.lockout_duration_minutes as u64 * 60))).await?;
         }
 
         Ok(())

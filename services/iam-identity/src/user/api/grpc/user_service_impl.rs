@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use tracing::info;
 
-use cuba_auth_core::TokenService;
+use cuba_auth_core::{Claims, TokenService};
 use cuba_common::{TenantId, UserId};
 use cuba_cqrs_core::CommandHandler;
 
@@ -23,22 +23,8 @@ use crate::shared::domain::entities::{User, UserStatus};
 use crate::shared::domain::repositories::UserRepository;
 use crate::shared::domain::value_objects::{Email, HashedPassword, Username};
 
-// 导入生成的 proto 代码
-pub mod proto {
-    include!("cuba.iam.user.rs");
-}
-
-use proto::{
-    user_service_server::UserService, ActivateUserRequest, ActivateUserResponse,
-    AssignRolesRequest, AssignRolesResponse, DeactivateUserRequest, DeactivateUserResponse,
-    DeleteUserRequest, GetCurrentUserRequest, GetCurrentUserResponse, GetUserRequest,
-    GetUserResponse, GetUserRolesRequest, GetUserRolesResponse, ListUsersRequest,
-    ListUsersResponse, LockUserRequest, LockUserResponse, RegisterRequest, RegisterResponse,
-    RemoveRolesRequest, RemoveRolesResponse, SendEmailVerificationRequest,
-    SendEmailVerificationResponse, SendPhoneVerificationRequest, SendPhoneVerificationResponse,
-    UnlockUserRequest, UnlockUserResponse, UpdateProfileRequest, UpdateProfileResponse,
-    UpdateUserRequest, UpdateUserResponse, VerifyEmailRequest, VerifyEmailResponse,
-    VerifyPhoneRequest, VerifyPhoneResponse,
+use super::proto::{
+    self, user_service_server::UserService, *,
 };
 
 /// UserService 实现
@@ -112,6 +98,20 @@ impl UserServiceImpl {
                     .unwrap_or_default(),
             }),
         }
+    }
+
+    /// 从请求 metadata 中验证 token 并获取 claims
+    fn validate_request_token<T>(&self, request: &Request<T>) -> Result<Claims, Status> {
+        let token = request
+            .metadata()
+            .get("authorization")
+            .and_then(|t| t.to_str().ok())
+            .and_then(|s| s.strip_prefix("Bearer "))
+            .ok_or_else(|| Status::unauthenticated("Missing or invalid token"))?;
+
+        self.token_service
+            .validate_token(token)
+            .map_err(|_| Status::unauthenticated("Invalid token"))
     }
 }
 
@@ -194,6 +194,10 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<GetUserRequest>,
     ) -> Result<Response<GetUserResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let req = request.into_inner();
 
         let user_id = UserId::from_string(&req.user_id)
@@ -201,7 +205,7 @@ impl UserService for UserServiceImpl {
 
         let user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -227,9 +231,12 @@ impl UserService for UserServiceImpl {
         let user_id = UserId::from_string(&claims.sub)
             .map_err(|e| Status::internal(format!("Invalid user_id in token: {}", e)))?;
 
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -244,6 +251,10 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<UpdateUserRequest>,
     ) -> Result<Response<UpdateUserResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let req = request.into_inner();
 
         let user_id = UserId::from_string(&req.user_id)
@@ -251,7 +262,7 @@ impl UserService for UserServiceImpl {
 
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -312,14 +323,22 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<UpdateProfileRequest>,
     ) -> Result<Response<UpdateProfileResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
+        // 验证用户只能更新自己的资料
         let req = request.into_inner();
+        if claims.sub != req.user_id {
+            return Err(Status::permission_denied("Cannot update other user's profile"));
+        }
 
         let user_id = UserId::from_string(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -365,13 +384,17 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<DeleteUserRequest>,
     ) -> Result<Response<()>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let req = request.into_inner();
 
         let user_id = UserId::from_string(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         self.user_repo
-            .delete(&user_id)
+            .delete(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -385,17 +408,16 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<ListUsersRequest>,
     ) -> Result<Response<ListUsersResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let req = request.into_inner();
 
-        // 解析租户 ID
-        let tenant_id = if !req.tenant_id.is_empty() {
-            Some(
-                TenantId::from_string(&req.tenant_id)
-                    .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?,
-            )
-        } else {
-            None
-        };
+        // 覆盖请求中的 tenant_id (或验证必须匹配)
+        if !req.tenant_id.is_empty() && req.tenant_id != tenant_id.0.to_string() {
+              // 简单实现：忽略请求中的 tenant_id，强制使用 token 中的
+        }
 
         // 解析状态
         let status = if !req.status.is_empty() {
@@ -423,7 +445,7 @@ impl UserService for UserServiceImpl {
         let (users, total) = self
             .user_repo
             .list(
-                tenant_id.as_ref(),
+                &tenant_id,
                 status,
                 search,
                 &req.role_ids,
@@ -453,6 +475,10 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<ActivateUserRequest>,
     ) -> Result<Response<ActivateUserResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let req = request.into_inner();
 
         let user_id = UserId::from_string(&req.user_id)
@@ -460,7 +486,7 @@ impl UserService for UserServiceImpl {
 
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -482,6 +508,10 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<DeactivateUserRequest>,
     ) -> Result<Response<DeactivateUserResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let req = request.into_inner();
 
         let user_id = UserId::from_string(&req.user_id)
@@ -489,7 +519,7 @@ impl UserService for UserServiceImpl {
 
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -513,6 +543,10 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<LockUserRequest>,
     ) -> Result<Response<LockUserResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let req = request.into_inner();
 
         let user_id = UserId::from_string(&req.user_id)
@@ -520,7 +554,7 @@ impl UserService for UserServiceImpl {
 
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -544,6 +578,10 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<UnlockUserRequest>,
     ) -> Result<Response<UnlockUserResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let req = request.into_inner();
 
         let user_id = UserId::from_string(&req.user_id)
@@ -551,7 +589,7 @@ impl UserService for UserServiceImpl {
 
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -575,6 +613,10 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<AssignRolesRequest>,
     ) -> Result<Response<AssignRolesResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let req = request.into_inner();
 
         let user_id = UserId::from_string(&req.user_id)
@@ -582,7 +624,7 @@ impl UserService for UserServiceImpl {
 
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -606,6 +648,10 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<RemoveRolesRequest>,
     ) -> Result<Response<RemoveRolesResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
         let req = request.into_inner();
 
         let user_id = UserId::from_string(&req.user_id)
@@ -613,7 +659,7 @@ impl UserService for UserServiceImpl {
 
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -646,16 +692,16 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<SendEmailVerificationRequest>,
     ) -> Result<Response<SendEmailVerificationResponse>, Status> {
-        let req = request.into_inner();
-        info!("Sending email verification for user: {}", req.user_id);
-
-        // 从 metadata 中获取 tenant_id
+        // 从 metadata 中获取 tenant_id - 必须在 into_inner 之前
         let tenant_id = request
             .metadata()
             .get("tenant-id")
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
             .to_string();
+        
+        let req = request.into_inner();
+        info!("Sending email verification for user: {}", req.user_id);
 
         if tenant_id.is_empty() {
             return Err(Status::invalid_argument("tenant_id is required in metadata"));
@@ -686,16 +732,16 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<VerifyEmailRequest>,
     ) -> Result<Response<VerifyEmailResponse>, Status> {
-        let req = request.into_inner();
-        info!("Verifying email for user: {}", req.user_id);
-
-        // 从 metadata 中获取 tenant_id
+        // 从 metadata 中获取 tenant_id - 必须在 into_inner 之前
         let tenant_id = request
             .metadata()
             .get("tenant-id")
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
             .to_string();
+        
+        let req = request.into_inner();
+        info!("Verifying email for user: {}", req.user_id);
 
         if tenant_id.is_empty() {
             return Err(Status::invalid_argument("tenant_id is required in metadata"));
@@ -726,16 +772,16 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<SendPhoneVerificationRequest>,
     ) -> Result<Response<SendPhoneVerificationResponse>, Status> {
-        let req = request.into_inner();
-        info!("Sending phone verification for user: {}", req.user_id);
-
-        // 从 metadata 中获取 tenant_id
+        // 从 metadata 中获取 tenant_id - 必须在 into_inner 之前
         let tenant_id = request
             .metadata()
             .get("tenant-id")
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
             .to_string();
+        
+        let req = request.into_inner();
+        info!("Sending phone verification for user: {}", req.user_id);
 
         if tenant_id.is_empty() {
             return Err(Status::invalid_argument("tenant_id is required in metadata"));
@@ -766,16 +812,16 @@ impl UserService for UserServiceImpl {
         &self,
         request: Request<VerifyPhoneRequest>,
     ) -> Result<Response<VerifyPhoneResponse>, Status> {
-        let req = request.into_inner();
-        info!("Verifying phone for user: {}", req.user_id);
-
-        // 从 metadata 中获取 tenant_id
+        // 从 metadata 中获取 tenant_id - 必须在 into_inner 之前
         let tenant_id = request
             .metadata()
             .get("tenant-id")
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
             .to_string();
+        
+        let req = request.into_inner();
+        info!("Verifying phone for user: {}", req.user_id);
 
         if tenant_id.is_empty() {
             return Err(Status::invalid_argument("tenant_id is required in metadata"));

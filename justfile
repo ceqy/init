@@ -4,9 +4,19 @@
 default:
     @just --list
 
-# 开发环境启动
+# 开发环境启动 - Gateway
 dev:
-    cargo run --package gateway
+    cargo run --package cuba-gateway
+
+# 启动 IAM Identity 服务
+iam:
+    cd services/iam-identity && cargo run --package iam-identity
+
+# 启动所有服务（需要多终端或后台运行）
+start-all:
+    @echo "请在两个终端分别运行："
+    @echo "  终端1: just dev      # Gateway (HTTP :8080)"
+    @echo "  终端2: just iam      # IAM Identity (gRPC :50051)"
 
 # 构建所有
 build:

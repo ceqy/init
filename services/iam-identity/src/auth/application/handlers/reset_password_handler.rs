@@ -71,11 +71,10 @@ impl CommandHandler<ResetPasswordCommand> for ResetPasswordHandler {
 
         // 7. 更新密码
         self.password_service
-            .change_password(&mut user, &new_password)
-            .await?;
+            .change_password(&mut user, new_password.as_str())?;
 
         // 8. 保存用户
-        self.user_repo.update(&user, &tenant_id).await?;
+        self.user_repo.update(&user).await?;
 
         // 9. 撤销该用户的所有密码重置令牌
         self.password_reset_service

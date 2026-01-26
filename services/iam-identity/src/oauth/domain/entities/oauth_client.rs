@@ -25,6 +25,12 @@ impl Default for OAuthClientId {
     }
 }
 
+impl OAuthClientId {
+    pub fn from_string(s: &str) -> Result<Self, uuid::Error> {
+        Ok(Self(Uuid::parse_str(s)?))
+    }
+}
+
 impl std::fmt::Display for OAuthClientId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
@@ -85,6 +91,12 @@ pub struct OAuthClient {
     pub redirect_uris: Vec<String>,
     /// 允许的 Scope 列表
     pub allowed_scopes: Vec<String>,
+    /// Scopes (别名，与 allowed_scopes 相同)
+    #[serde(default)]
+    pub scopes: Vec<String>,
+    /// 是否是公开客户端
+    #[serde(default)]
+    pub public_client: bool,
     /// Access Token 有效期（秒）
     pub access_token_lifetime: i64,
     /// Refresh Token 有效期（秒）
@@ -132,6 +144,8 @@ impl OAuthClient {
             Self::validate_redirect_uri(uri)?;
         }
 
+        let is_public = matches!(client_type, OAuthClientType::Public);
+        
         Ok(Self {
             id: OAuthClientId::new(),
             tenant_id,
@@ -143,6 +157,8 @@ impl OAuthClient {
             grant_types: vec![GrantType::AuthorizationCode],
             redirect_uris,
             allowed_scopes: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
+            scopes: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
+            public_client: is_public,
             access_token_lifetime: 3600,      // 1 hour
             refresh_token_lifetime: 2592000,  // 30 days
             require_pkce: true,

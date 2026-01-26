@@ -11,7 +11,8 @@ pub async fn set_tenant_context(conn: &mut PgConnection, tenant_id: &TenantId) -
         tenant_id.0
     ))
     .execute(conn)
-    .await?;
+    .await
+    .map_err(|e| cuba_errors::AppError::database(e.to_string()))?;
 
     Ok(())
 }
@@ -25,7 +26,7 @@ pub async fn with_tenant_context<F, T>(
 where
     F: FnOnce(&mut PgConnection) -> futures::future::BoxFuture<'_, AppResult<T>>,
 {
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin().await.map_err(|e| cuba_errors::AppError::database(e.to_string()))?;
 
     // 设置租户上下文
     set_tenant_context(&mut *tx, tenant_id).await?;
@@ -33,7 +34,7 @@ where
     // 执行操作
     let result = f(&mut *tx).await?;
 
-    tx.commit().await?;
+    tx.commit().await.map_err(|e| cuba_errors::AppError::database(e.to_string()))?;
 
     Ok(result)
 }

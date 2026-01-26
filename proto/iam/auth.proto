@@ -155,6 +155,7 @@ message ResetPasswordRequest {
   string email = 1;
   string reset_token = 2;
   string new_password = 3;
+  string tenant_id = 4;
 }
 
 // 重置密码响应
@@ -195,6 +196,7 @@ message Verify2FARequest {
   string user_id = 1;
   string code = 2;
   string session_id = 3;
+  string tenant_id = 4;
 }
 
 // 验证 2FA 响应
@@ -282,6 +284,7 @@ message FinishWebAuthnAuthenticationRequest {
   string credential_response = 2;  // 凭证响应（JSON 格式）
   string device_info = 3;       // 设备信息
   string ip_address = 4;        // IP 地址
+  string tenant_id = 5;         // 租户 ID
 }
 
 // 完成 WebAuthn 认证响应

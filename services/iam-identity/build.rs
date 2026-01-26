@@ -3,6 +3,7 @@ fn main() {
     tonic_build::configure()
         .build_server(true)
         .build_client(false)
+        .file_descriptor_set_path("src/auth/api/grpc/auth_descriptor.bin")
         .out_dir("src/auth/api/grpc")
         .compile_protos(&["../../proto/iam/auth.proto"], &["../../proto"])
         .expect("Failed to compile auth.proto");
@@ -11,6 +12,7 @@ fn main() {
     tonic_build::configure()
         .build_server(true)
         .build_client(false)
+        .file_descriptor_set_path("src/user/api/grpc/user_descriptor.bin")
         .out_dir("src/user/api/grpc")
         .compile_protos(&["../../proto/iam/user.proto"], &["../../proto"])
         .expect("Failed to compile user.proto");
@@ -19,6 +21,7 @@ fn main() {
     tonic_build::configure()
         .build_server(true)
         .build_client(false)
+        .file_descriptor_set_path("src/oauth/api/grpc/oauth_descriptor.bin")
         .out_dir("src/oauth/api/grpc")
         .compile_protos(&["../../proto/iam/oauth.proto"], &["../../proto"])
         .expect("Failed to compile oauth.proto");

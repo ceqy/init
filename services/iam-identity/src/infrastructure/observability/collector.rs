@@ -2,7 +2,6 @@
 //!
 //! 定期采集和更新业务指标
 
-use std::sync::Arc;
 use std::time::Duration;
 use sqlx::PgPool;
 use tracing::{debug, error};
@@ -163,10 +162,7 @@ impl MetricsCollector {
 
 impl Default for MetricsCollector {
     fn default() -> Self {
-        // 默认每 30 秒采集一次
-        Self::new(
-            PgPool::connect("").unwrap(), // 需要实际的连接
-            Duration::from_secs(30),
-        )
+        // 默认实现不支持异步连接，直接 panic 或返回 todo
+        todo!("Default implementation not supported for async connection");
     }
 }

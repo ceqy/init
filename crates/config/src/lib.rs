@@ -1,11 +1,14 @@
 //! cuba-config - 配置加载库
 
+
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
 use serde::Deserialize;
 use thiserror::Error;
+
+use secrecy::Secret;
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -16,7 +19,7 @@ pub enum ConfigError {
 /// 数据库配置
 #[derive(Debug, Clone, Deserialize)]
 pub struct DatabaseConfig {
-    pub url: String,
+    pub url: Secret<String>,
     #[serde(default = "default_max_connections")]
     pub max_connections: u32,
 }
@@ -28,7 +31,7 @@ fn default_max_connections() -> u32 {
 /// Redis 配置
 #[derive(Debug, Clone, Deserialize)]
 pub struct RedisConfig {
-    pub url: String,
+    pub url: Secret<String>,
 }
 
 /// Kafka 配置
@@ -40,14 +43,14 @@ pub struct KafkaConfig {
 /// ClickHouse 配置
 #[derive(Debug, Clone, Deserialize)]
 pub struct ClickHouseConfig {
-    pub url: String,
+    pub url: Secret<String>,
     pub database: String,
 }
 
 /// JWT 配置
 #[derive(Debug, Clone, Deserialize)]
 pub struct JwtConfig {
-    pub secret: String,
+    pub secret: Secret<String>,
     #[serde(default = "default_expires_in")]
     pub expires_in: u64,
     #[serde(default = "default_refresh_expires_in")]
@@ -87,7 +90,7 @@ pub struct EmailConfig {
     pub smtp_host: String,
     pub smtp_port: u16,
     pub username: String,
-    pub password: String,
+    pub password: Secret<String>,
     pub from_email: String,
     pub from_name: String,
     #[serde(default)]
@@ -118,6 +121,13 @@ fn default_max_requests_per_hour() -> u32 {
     3
 }
 
+/// WebAuthn 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct WebAuthnConfig {
+    pub rp_id: String,
+    pub rp_origin: String,
+}
+
 /// 应用配置
 #[derive(Debug, Clone, Deserialize)]
 pub struct AppConfig {
@@ -132,6 +142,7 @@ pub struct AppConfig {
     pub telemetry: TelemetryConfig,
     pub email: EmailConfig,
     pub password_reset: PasswordResetConfig,
+    pub webauthn: WebAuthnConfig,
 }
 
 impl AppConfig {
@@ -158,3 +169,6 @@ impl AppConfig {
         self.app_env == "development"
     }
 }
+
+#[cfg(test)]
+mod tests;

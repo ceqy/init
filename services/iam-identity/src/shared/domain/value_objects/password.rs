@@ -43,6 +43,11 @@ impl HashedPassword {
     pub fn from_hash(hash: String) -> Self {
         Self(hash)
     }
+    
+    /// 获取字符串引用
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl fmt::Display for HashedPassword {
@@ -52,9 +57,20 @@ impl fmt::Display for HashedPassword {
 }
 
 /// 明文密码（仅用于验证）
-pub struct Password;
+pub struct Password(String);
 
 impl Password {
+    /// 创建新的 Password（验证后）
+    pub fn new(password: impl Into<String>) -> Result<Self, PasswordError> {
+        let password = password.into();
+        Self::validate(&password)?;
+        Ok(Self(password))
+    }
+    
+    /// 获取字符串引用
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
     /// 验证密码强度
     pub fn validate(password: &str) -> Result<(), PasswordError> {
         // 长度检查
@@ -102,6 +118,12 @@ pub enum PasswordError {
     
     #[error("Invalid password hash: {0}")]
     InvalidHash(String),
+}
+
+impl From<PasswordError> for cuba_errors::AppError {
+    fn from(err: PasswordError) -> Self {
+        cuba_errors::AppError::validation(err.to_string())
+    }
 }
 
 #[cfg(test)]

@@ -709,6 +709,7 @@ dependencies = [
  "cuba-config",
  "cuba-errors",
  "lettre",
+ "secrecy",
  "serde",
  "serde_json",
  "tera",
@@ -793,6 +794,7 @@ dependencies = [
  "metrics-exporter-prometheus",
  "prost",
  "redis",
+ "secrecy",
  "serde",
  "serde_json",
  "sqlx",
@@ -817,6 +819,7 @@ name = "cuba-config"
 version = "0.1.0"
 dependencies = [
  "figment",
+ "secrecy",
  "serde",
  "thiserror 2.0.18",
 ]
@@ -873,13 +876,17 @@ dependencies = [
  "cuba-config",
  "cuba-errors",
  "cuba-telemetry",
+ "prost",
+ "prost-types",
  "serde",
  "serde_json",
  "tokio",
  "tonic",
+ "tonic-build",
  "tower",
  "tower-http",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -1583,9 +1590,13 @@ dependencies = [
  "cuba-ports",
  "cuba-telemetry",
  "data-encoding",
+ "futures",
+ "hex",
+ "metrics",
  "prost",
  "prost-types",
  "rand 0.8.5",
+ "secrecy",
  "serde",
  "serde_cbor",
  "serde_json",
@@ -1595,8 +1606,10 @@ dependencies = [
  "tokio",
  "tonic",
  "tonic-build",
+ "tonic-reflection",
  "totp-rs",
  "tracing",
+ "url",
  "urlencoding",
  "uuid",
  "webauthn-rs",
@@ -3072,6 +3085,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "secrecy"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
+dependencies = [
+ "serde",
+ "zeroize",
+]
+
+[[package]]
 name = "security-framework"
 version = "3.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3947,6 +3970,19 @@ dependencies = [
  "prost-types",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tonic-reflection"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9687bd5bfeafebdded2356950f278bba8226f0b32109537c4253406e09aafe1"
+dependencies = [
+ "prost",
+ "prost-types",
+ "tokio",
+ "tokio-stream",
+ "tonic",
 ]
 
 [[package]]

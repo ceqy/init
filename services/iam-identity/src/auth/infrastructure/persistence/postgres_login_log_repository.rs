@@ -170,10 +170,10 @@ impl LoginLogRepository for PostgresLoginLogRepository {
     async fn list(
         &self,
         tenant_id: &TenantId,
-        user_id: Option<&UserId>,
-        result: Option<LoginResult>,
-        start_time: Option<DateTime<Utc>>,
-        end_time: Option<DateTime<Utc>>,
+        _user_id: Option<&UserId>,
+        _result: Option<LoginResult>,
+        _start_time: Option<DateTime<Utc>>,
+        _end_time: Option<DateTime<Utc>>,
         page: i32,
         page_size: i32,
     ) -> AppResult<(Vec<LoginLog>, i64)> {
@@ -241,8 +241,11 @@ impl From<LoginLogRow> for LoginLog {
             user_agent: row.user_agent,
             device_info: DeviceInfo {
                 device_type: row.device_type.unwrap_or_default(),
-                os: row.device_os.unwrap_or_default(),
-                browser: row.browser.unwrap_or_default(),
+                os: row.device_os.clone().unwrap_or_default(),
+                browser: row.browser.clone().unwrap_or_default(),
+                browser_version: None, // TODO: Store version
+                os_version: None, // TODO: Store version
+                is_mobile: false, // TODO: Detect from user agent or store
                 device_fingerprint: None,
             },
             result: match row.result.as_str() {
@@ -258,6 +261,7 @@ impl From<LoginLogRow> for LoginLog {
             country: row.country,
             city: row.city,
             is_suspicious: false,
+            suspicious_reason: None,
             created_at: row.created_at,
         }
     }

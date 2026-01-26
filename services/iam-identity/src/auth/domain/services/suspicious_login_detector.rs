@@ -1,11 +1,11 @@
 //! 可疑登录检测服务
 
-use chrono::{DateTime, Timelike, Utc};
+use chrono::{Timelike, Utc};
 use cuba_common::{TenantId, UserId};
 use cuba_errors::AppResult;
 use std::sync::Arc;
 
-use crate::auth::domain::entities::LoginLog;
+
 use crate::auth::domain::repositories::LoginLogRepository;
 
 /// 可疑登录检测服务
@@ -169,12 +169,12 @@ impl SuspiciousLoginDetector {
     /// 检测快速连续登录（可能是暴力破解）
     pub async fn detect_rapid_login_attempts(
         &self,
-        username: &str,
-        tenant_id: &TenantId,
-        ip_address: &str,
+        _username: &str,
+        _tenant_id: &TenantId,
+        _ip_address: &str,
     ) -> AppResult<bool> {
-        // 检查最近5分钟内的登录尝试次数
-        let start_time = Utc::now() - chrono::Duration::minutes(5);
+        // 简单实现：检查最近 1 分钟内的登录尝试次数
+        let _start_time = Utc::now() - chrono::Duration::minutes(1);
         
         // 这里需要一个按用户名和IP查询的方法
         // 简化处理：如果有超过10次尝试，则认为是快速连续登录

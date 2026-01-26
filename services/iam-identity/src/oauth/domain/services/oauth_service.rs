@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use chrono::{Duration, Utc};
+use tracing::debug;
+use base64::{Engine as _, engine::general_purpose};
 use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use rand::Rng;
 use sha2::{Digest, Sha256};
-use tracing::{debug, warn};
 
-use crate::oauth::domain::entities::{AccessToken, AuthorizationCode, OAuthClient, OAuthClientId, RefreshToken};
+use crate::oauth::domain::entities::{AccessToken, AuthorizationCode, OAuthClientId, RefreshToken};
 use crate::oauth::domain::repositories::{
     AccessTokenRepository, AuthorizationCodeRepository, OAuthClientRepository, RefreshTokenRepository,
 };
@@ -40,7 +40,7 @@ impl OAuthService {
         user_id: &UserId,
         tenant_id: &TenantId,
         redirect_uri: String,
-        scope: String,
+        scopes: Vec<String>,
         code_challenge: Option<String>,
         code_challenge_method: Option<String>,
     ) -> AppResult<String> {
@@ -59,11 +59,11 @@ impl OAuthService {
         let code = Self::generate_code();
         let authorization_code = AuthorizationCode::new(
             code.clone(),
-            tenant_id.clone(),
             client_id.clone(),
             user_id.clone(),
+            tenant_id.clone(),
             redirect_uri,
-            scope,
+            scopes,
             code_challenge,
             code_challenge_method,
         );
@@ -121,19 +121,21 @@ impl OAuthService {
 
         let access_token_entity = AccessToken::new(
             access_token.clone(),
-            tenant_id.clone(),
             client_id.clone(),
-            authorization_code.user_id.clone(),
-            authorization_code.scope.clone(),
+            Some(authorization_code.user_id.clone()),
+            tenant_id.clone(),
+            authorization_code.scopes.clone(),
+            3600, // 1 hour
         );
 
         let refresh_token_entity = RefreshToken::new(
             refresh_token.clone(),
-            tenant_id.clone(),
+            access_token.clone(),
             client_id.clone(),
             authorization_code.user_id,
-            access_token.clone(),
-            authorization_code.scope,
+            tenant_id.clone(),
+            authorization_code.scopes,
+            2592000, // 30 days
         );
 
         self.access_token_repo.save(&access_token_entity).await?;
@@ -183,19 +185,21 @@ impl OAuthService {
 
         let access_token_entity = AccessToken::new(
             new_access_token.clone(),
-            tenant_id.clone(),
             client_id.clone(),
-            refresh_token_entity.user_id.clone(),
-            refresh_token_entity.scope.clone(),
+            Some(refresh_token_entity.user_id.clone()),
+            tenant_id.clone(),
+            refresh_token_entity.scopes.clone(),
+            3600, // 1 hour
         );
 
         let new_refresh_token_entity = RefreshToken::new(
             new_refresh_token.clone(),
-            tenant_id.clone(),
-            client_id.clone(),
-            refresh_token_entity.user_id,
             new_access_token.clone(),
-            refresh_token_entity.scope,
+            client_id.clone(),
+            refresh_token_entity.user_id.clone(),
+            tenant_id.clone(),
+            refresh_token_entity.scopes.clone(),
+            2592000, // 30 days
         );
 
         refresh_token_entity.revoke();
@@ -257,14 +261,14 @@ impl OAuthService {
 
     fn generate_code() -> String {
         let mut rng = rand::thread_rng();
-        let bytes: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
-        base64::encode_config(&bytes, base64::URL_SAFE_NO_PAD)
+        let bytes: Vec<u8> = (0..32).map(|_| rng.r#gen()).collect();
+        general_purpose::URL_SAFE_NO_PAD.encode(&bytes)
     }
 
     fn generate_token() -> String {
         let mut rng = rand::thread_rng();
-        let bytes: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
-        base64::encode_config(&bytes, base64::URL_SAFE_NO_PAD)
+        let bytes: Vec<u8> = (0..32).map(|_| rng.r#gen()).collect();
+        general_purpose::URL_SAFE_NO_PAD.encode(&bytes)
     }
 
     fn verify_pkce(challenge: &str, verifier: &str, method: &Option<String>) -> bool {
@@ -273,7 +277,7 @@ impl OAuthService {
                 let mut hasher = Sha256::new();
                 hasher.update(verifier.as_bytes());
                 let result = hasher.finalize();
-                let computed = base64::encode_config(&result, base64::URL_SAFE_NO_PAD);
+                let computed = general_purpose::URL_SAFE_NO_PAD.encode(&result);
                 computed == challenge
             }
             Some("plain") | None => verifier == challenge,

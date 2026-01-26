@@ -1,12 +1,10 @@
 //! PostgreSQL 密码重置令牌仓储实现
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::{debug, warn};
-use uuid::Uuid;
 
 use crate::auth::domain::entities::{PasswordResetToken, PasswordResetTokenId};
 use crate::auth::domain::repositories::PasswordResetRepository;
@@ -81,6 +79,7 @@ impl PasswordResetRepository for PostgresPasswordResetRepository {
         Ok(row.map(|r| PasswordResetToken {
             id: PasswordResetTokenId::from_uuid(r.id),
             user_id: UserId::from_uuid(r.user_id),
+            tenant_id: tenant_id.clone(),
             token_hash: r.token_hash,
             expires_at: r.expires_at,
             used: r.used,
@@ -119,6 +118,7 @@ impl PasswordResetRepository for PostgresPasswordResetRepository {
         Ok(row.map(|r| PasswordResetToken {
             id: PasswordResetTokenId::from_uuid(r.id),
             user_id: UserId::from_uuid(r.user_id),
+            tenant_id: tenant_id.clone(),
             token_hash: r.token_hash,
             expires_at: r.expires_at,
             used: r.used,

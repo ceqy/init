@@ -1,4 +1,8 @@
 app_env = "development"
 
 [telemetry]
-log_level = "debug"
+log_level = "info"  # 改为 info 级别，减少 DEBUG 日志
+
+[webauthn]
+rp_id = "localhost"
+rp_origin = "http://localhost:3000"

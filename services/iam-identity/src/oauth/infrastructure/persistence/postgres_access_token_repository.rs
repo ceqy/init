@@ -43,6 +43,8 @@ impl AccessTokenRepository for PostgresAccessTokenRepository {
     async fn save(&self, token: &AccessToken) -> AppResult<()> {
         debug!("Saving access token");
 
+        let scopes_str = token.scopes.join(" ");
+
         sqlx::query(
             r#"
             INSERT INTO access_tokens (token, tenant_id, client_id, user_id, scope,
@@ -53,8 +55,8 @@ impl AccessTokenRepository for PostgresAccessTokenRepository {
         .bind(&token.token)
         .bind(token.tenant_id.0)
         .bind(token.client_id.0)
-        .bind(token.user_id.0)
-        .bind(&token.scope)
+        .bind(token.user_id.as_ref().map(|u| u.0))
+        .bind(scopes_str)
         .bind(token.revoked)
         .bind(token.expires_at)
         .bind(token.created_at)
@@ -159,7 +161,7 @@ struct AccessTokenRow {
     token: String,
     tenant_id: Uuid,
     client_id: Uuid,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     scope: String,
     revoked: bool,
     expires_at: chrono::DateTime<chrono::Utc>,
@@ -172,8 +174,8 @@ impl From<AccessTokenRow> for AccessToken {
             token: row.token,
             tenant_id: TenantId::from_uuid(row.tenant_id),
             client_id: OAuthClientId::from_uuid(row.client_id),
-            user_id: UserId::from_uuid(row.user_id),
-            scope: row.scope,
+            user_id: row.user_id.map(UserId::from_uuid),
+            scopes: row.scope.split_whitespace().map(|s| s.to_string()).collect(),
             revoked: row.revoked,
             expires_at: row.expires_at,
             created_at: row.created_at,

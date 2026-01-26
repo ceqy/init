@@ -1,7 +1,7 @@
 //! 登录尝试追踪服务
 
 use cuba_common::TenantId;
-use cuba_errors::{AppError, AppResult};
+use cuba_errors::AppResult;
 use std::sync::Arc;
 
 /// 登录尝试追踪服务

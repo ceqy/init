@@ -7,7 +7,7 @@ pub struct GatewayConfig {
     pub host: String,
     pub port: u16,
     pub jwt_secret: String,
-    pub iam_auth_addr: String,
+    pub iam_endpoint: String,
 }
 
 impl GatewayConfig {
@@ -20,7 +20,7 @@ impl GatewayConfig {
                 .unwrap_or(8080),
             jwt_secret: env::var("JWT_SECRET")
                 .unwrap_or_else(|_| "your-super-secret-key".to_string()),
-            iam_auth_addr: env::var("IAM_AUTH_GRPC_ADDR")
+            iam_endpoint: env::var("IAM_ENDPOINT")
                 .unwrap_or_else(|_| "http://127.0.0.1:50051".to_string()),
         }
     }

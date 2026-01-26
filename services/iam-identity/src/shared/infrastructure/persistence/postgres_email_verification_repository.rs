@@ -1,12 +1,11 @@
 //! PostgreSQL 邮箱验证仓储实现
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::{debug, warn};
-use uuid::Uuid;
+
 
 use crate::shared::domain::entities::{
     EmailVerification, EmailVerificationId, EmailVerificationStatus,

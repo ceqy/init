@@ -13,13 +13,14 @@ pub use template::EmailTemplate;
 
 // 重新导出 EmailConfig
 pub use serde::Deserialize;
+use secrecy::Secret;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct EmailConfig {
     pub smtp_host: String,
     pub smtp_port: u16,
     pub username: String,
-    pub password: String,
+    pub password: Secret<String>,
     pub from_email: String,
     pub from_name: String,
     #[serde(default)]

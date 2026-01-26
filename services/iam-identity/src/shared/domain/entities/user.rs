@@ -22,6 +22,17 @@ impl Default for UserStatus {
     }
 }
 
+impl std::fmt::Display for UserStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UserStatus::Active => write!(f, "Active"),
+            UserStatus::Inactive => write!(f, "Inactive"),
+            UserStatus::Locked => write!(f, "Locked"),
+            UserStatus::PendingVerification => write!(f, "PendingVerification"),
+        }
+    }
+}
+
 /// 用户实体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -48,6 +59,10 @@ pub struct User {
     // 邮箱验证
     pub email_verified: bool,
     pub email_verified_at: Option<DateTime<Utc>>,
+    // 手机验证
+    pub phone_verified: bool,
+    pub phone_verified_at: Option<DateTime<Utc>>,
+    pub last_password_change_at: Option<DateTime<Utc>>,
     pub audit_info: AuditInfo,
 }
 
@@ -80,6 +95,9 @@ impl User {
             last_failed_login_at: None,
             email_verified: false,
             email_verified_at: None,
+            phone_verified: false,
+            phone_verified_at: None,
+            last_password_change_at: Some(Utc::now()),
             audit_info: AuditInfo::default(),
         }
     }
@@ -116,6 +134,7 @@ impl User {
 
     pub fn update_password(&mut self, password_hash: HashedPassword) {
         self.password_hash = password_hash;
+        self.last_password_change_at = Some(Utc::now());
     }
 
     pub fn add_role(&mut self, role_id: String) {

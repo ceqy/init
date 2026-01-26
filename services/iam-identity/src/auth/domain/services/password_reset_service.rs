@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use chrono::Utc;
+
 use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use rand::Rng;
@@ -79,7 +79,7 @@ impl PasswordResetService {
         }
 
         // 4. 生成随机令牌（32 字节 = 64 个十六进制字符）
-        let token_bytes: [u8; 32] = rand::thread_rng().gen();
+        let token_bytes: [u8; 32] = rand::thread_rng().r#gen();
         let token_string = hex::encode(token_bytes);
 
         // 5. 计算令牌哈希（存储哈希而不是原始令牌）
@@ -88,7 +88,7 @@ impl PasswordResetService {
         let token_hash = hex::encode(hasher.finalize());
 
         // 6. 创建令牌实体
-        let reset_token = PasswordResetToken::new(user.id.clone(), token_hash, expires_in_minutes);
+        let reset_token = PasswordResetToken::new(user.id.clone(), user.tenant_id.clone(), token_hash, expires_in_minutes);
 
         // 7. 保存令牌
         self.password_reset_repo.save(&reset_token).await?;

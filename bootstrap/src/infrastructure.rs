@@ -13,6 +13,7 @@ use cuba_auth_core::TokenService;
 use cuba_config::AppConfig;
 use cuba_errors::AppResult;
 use redis::aio::ConnectionManager;
+use secrecy::ExposeSecret;
 use sqlx::PgPool;
 use tracing::info;
 
@@ -53,7 +54,7 @@ impl Infrastructure {
         let retry_config = RetryConfig::default();
 
         // 1. 创建 PostgreSQL 连接池（必需，带重试）
-        let pg_config = PostgresConfig::new(&config.database.url)
+        let pg_config = PostgresConfig::new(config.database.url.expose_secret())
             .with_max_connections(config.database.max_connections);
         let postgres_pool = with_retry(&retry_config, "PostgreSQL connection", || {
             let cfg = pg_config.clone();
@@ -65,7 +66,7 @@ impl Infrastructure {
         // 2. 创建 Redis 连接（必需，带重试）
         let redis_url = config.redis.url.clone();
         let redis_conn = with_retry(&retry_config, "Redis connection", || {
-            let url = redis_url.clone();
+            let url = redis_url.expose_secret().clone();
             async move { create_connection_manager(&url).await }
         })
         .await?;
@@ -73,7 +74,7 @@ impl Infrastructure {
 
         // 3. 创建 TokenService
         let token_service = Arc::new(TokenService::new(
-            &config.jwt.secret,
+            config.jwt.secret.expose_secret(),
             config.jwt.expires_in as i64,
             config.jwt.refresh_expires_in as i64,
         ));
@@ -98,7 +99,7 @@ impl Infrastructure {
 
         // 5. 创建 ClickHouse 客户端（可选，不重试，因为是同步创建）
         let clickhouse_client = if let Some(ch_config) = &config.clickhouse {
-            let ch_adapter_config = ClickHouseConfig::new(&ch_config.url, &ch_config.database);
+            let ch_adapter_config = ClickHouseConfig::new(ch_config.url.expose_secret(), &ch_config.database);
             match create_clickhouse_client(&ch_adapter_config) {
                 Ok(client) => {
                     info!("ClickHouse client created");

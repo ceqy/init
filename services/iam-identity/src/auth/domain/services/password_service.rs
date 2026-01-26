@@ -17,6 +17,13 @@ impl PasswordService {
     pub fn verify_password(password: &str, hash: &HashedPassword) -> AppResult<bool> {
         hash.verify(password).map_err(Into::into)
     }
+
+    /// 修改用户密码
+    pub fn change_password(&self, user: &mut crate::shared::domain::entities::User, new_password: &str) -> AppResult<()> {
+        let hashed = Self::hash_password(new_password)?;
+        user.update_password(hashed);
+        Ok(())
+    }
 }
 
 #[cfg(test)]

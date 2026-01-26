@@ -150,7 +150,7 @@ impl EmailVerificationService {
             .ok_or_else(|| AppError::not_found("User not found"))?;
 
         user.email_verified = true;
-        self.user_repo.update(&user, tenant_id).await?;
+        self.user_repo.update(&user).await?;
 
         info!(
             user_id = %user_id,

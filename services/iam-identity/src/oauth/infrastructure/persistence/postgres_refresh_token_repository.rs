@@ -43,6 +43,8 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
     async fn save(&self, token: &RefreshToken) -> AppResult<()> {
         debug!("Saving refresh token");
 
+        let scopes_str = token.scopes.join(" ");
+
         sqlx::query(
             r#"
             INSERT INTO refresh_tokens (token, tenant_id, client_id, user_id, access_token,
@@ -55,7 +57,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         .bind(token.client_id.0)
         .bind(token.user_id.0)
         .bind(&token.access_token)
-        .bind(&token.scope)
+        .bind(scopes_str)
         .bind(token.revoked)
         .bind(token.expires_at)
         .bind(token.created_at)
@@ -194,7 +196,7 @@ impl From<RefreshTokenRow> for RefreshToken {
             client_id: OAuthClientId::from_uuid(row.client_id),
             user_id: UserId::from_uuid(row.user_id),
             access_token: row.access_token,
-            scope: row.scope,
+            scopes: row.scope.split_whitespace().map(|s| s.to_string()).collect(),
             revoked: row.revoked,
             expires_at: row.expires_at,
             created_at: row.created_at,

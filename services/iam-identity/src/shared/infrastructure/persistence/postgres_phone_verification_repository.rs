@@ -5,7 +5,6 @@ use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::{debug, warn};
-use uuid::Uuid;
 
 use crate::shared::domain::entities::{
     PhoneVerification, PhoneVerificationId, PhoneVerificationStatus,

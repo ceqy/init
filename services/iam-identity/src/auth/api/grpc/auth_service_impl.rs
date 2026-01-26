@@ -1,33 +1,30 @@
 //! AuthService gRPC 实现
 
-#[allow(clippy::all)]
-mod proto {
-    include!("cuba.iam.auth.rs");
-}
-
-pub use proto::auth_service_server::{AuthService, AuthServiceServer};
-pub use proto::*;
-
 use std::sync::Arc;
 
 use chrono::{Duration, Utc};
-use cuba_auth_core::TokenService;
+use cuba_auth_core::{Claims, TokenService};
 use cuba_common::{TenantId, UserId};
 use prost_types::Timestamp;
 use sha2::{Digest, Sha256};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
+use base64::{engine::general_purpose, Engine as _};
 
 use crate::auth::domain::entities::{PasswordResetToken, Session as DomainSession, SessionId};
 use crate::auth::domain::repositories::{
-    BackupCodeRepository, PasswordResetRepository, SessionRepository, WebAuthnCredentialRepository,
+    BackupCodeRepository, PasswordResetRepository, SessionRepository,
 };
 use crate::auth::domain::services::{BackupCodeService, TotpService, WebAuthnService};
 use crate::auth::infrastructure::cache::AuthCache;
 use crate::shared::domain::repositories::UserRepository;
 use crate::shared::domain::value_objects::{Email, HashedPassword, Username};
 use cuba_adapter_email::EmailSender;
-use cuba_config::PasswordResetConfig;
+
+use super::proto::{self, auth_service_server::AuthService};
+use super::proto::*;
+
+
 
 /// AuthService 实现
 pub struct AuthServiceImpl {
@@ -41,7 +38,7 @@ pub struct AuthServiceImpl {
     email_sender: Arc<dyn EmailSender>,
     auth_cache: Arc<dyn AuthCache>,
     refresh_token_expires_in: i64,
-    password_reset_config: PasswordResetConfig,
+    password_reset_config: cuba_config::PasswordResetConfig,
 }
 
 impl AuthServiceImpl {
@@ -57,7 +54,7 @@ impl AuthServiceImpl {
         email_sender: Arc<dyn EmailSender>,
         auth_cache: Arc<dyn AuthCache>,
         refresh_token_expires_in: i64,
-        password_reset_config: PasswordResetConfig,
+        password_reset_config: cuba_config::PasswordResetConfig,
     ) -> Self {
         Self {
             user_repo,
@@ -72,6 +69,34 @@ impl AuthServiceImpl {
             refresh_token_expires_in,
             password_reset_config,
         }
+    }
+
+    /// 从请求 metadata 中验证 token 并获取 claims
+    fn validate_request_token<T>(&self, request: &Request<T>) -> Result<Claims, Status> {
+        let token = request
+            .metadata()
+            .get("authorization")
+            .and_then(|t| t.to_str().ok())
+            .and_then(|s| s.strip_prefix("Bearer "))
+            .ok_or_else(|| Status::unauthenticated("Missing or invalid token"))?;
+
+        self.token_service
+            .validate_token(token)
+            .map_err(|_| Status::unauthenticated("Invalid token"))
+    }
+
+    /// 从请求 metadata 中提取 tenant_id
+    fn extract_tenant_id<T>(request: &Request<T>) -> Result<TenantId, Status> {
+        let tenant_id_str = request
+            .metadata()
+            .get("tenant-id")
+            .and_then(|t| t.to_str().ok())
+            .ok_or_else(|| Status::invalid_argument("Missing tenant-id in metadata"))?;
+
+        let uuid = Uuid::parse_str(tenant_id_str)
+            .map_err(|_| Status::invalid_argument("Invalid tenant ID format"))?;
+
+        Ok(TenantId::from_uuid(uuid))
     }
 }
 
@@ -221,7 +246,12 @@ impl AuthService for AuthServiceImpl {
         let refresh_token_hash = sha256_hash(&refresh_token);
         let expires_at = Utc::now() + Duration::seconds(self.refresh_token_expires_in);
 
-        let mut session = DomainSession::new(user.id.clone(), refresh_token_hash, expires_at);
+        let mut session = DomainSession::new(
+            user.id.clone(),
+            user.tenant_id.clone(),
+            refresh_token_hash,
+            expires_at,
+        );
 
         if !req.device_info.is_empty() {
             session = session.with_device_info(&req.device_info);
@@ -274,10 +304,13 @@ impl AuthService for AuthServiceImpl {
         let now = Utc::now().timestamp();
         let ttl_secs = (claims.exp - now).max(0) as u64;
 
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID in token"))?;
+
         if req.logout_all_devices {
             // 撤销所有会话
             self.session_repo
-                .revoke_all_by_user_id(&user_id)
+                .revoke_all_by_user_id(&user_id, &tenant_id)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -320,10 +353,12 @@ impl AuthService for AuthServiceImpl {
             .map_err(|_| Status::unauthenticated("Invalid refresh token"))?;
 
         // 2. 计算 token hash 并查找 session
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID in token"))?;
         let token_hash = sha256_hash(&req.refresh_token);
         let session = self
             .session_repo
-            .find_by_refresh_token_hash(&token_hash)
+            .find_by_refresh_token_hash(&token_hash, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::unauthenticated("Session not found"))?;
@@ -336,7 +371,7 @@ impl AuthService for AuthServiceImpl {
         // 4. 获取用户信息
         let user = self
             .user_repo
-            .find_by_id(&session.user_id)
+            .find_by_id(&session.user_id, &session.tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -430,8 +465,15 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<ChangePasswordRequest>,
     ) -> Result<Response<ChangePasswordResponse>, Status> {
+        // 验证调用者权限 (必须是本人或有相应权限，这里简单校验本人)
+        let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Change password request");
+        if claims.sub != req.user_id {
+            return Err(Status::permission_denied("Cannot change other user's password"));
+        }
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         // 1. 解析用户 ID
         let user_id = UserId::from_uuid(
@@ -442,7 +484,7 @@ impl AuthService for AuthServiceImpl {
         // 2. 获取用户
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -470,7 +512,7 @@ impl AuthService for AuthServiceImpl {
 
         // 6. 撤销所有会话（安全考虑）
         self.session_repo
-            .revoke_all_by_user_id(&user_id)
+            .revoke_all_by_user_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -531,7 +573,7 @@ impl AuthService for AuthServiceImpl {
         // 3. 检查限流（防止滥用）
         let unused_count = self
             .password_reset_repo
-            .count_unused_by_user_id(&user.id)
+            .count_unused_by_user_id(&user.id, &user.tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -549,6 +591,7 @@ impl AuthService for AuthServiceImpl {
         // 5. 创建并保存令牌实体
         let reset_token = PasswordResetToken::new(
             user.id.clone(),
+            user.tenant_id.clone(),
             token_hash,
             self.password_reset_config.token_expires_minutes,
         );
@@ -612,6 +655,8 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<ResetPasswordRequest>,
     ) -> Result<Response<ResetPasswordResponse>, Status> {
+        // 从 metadata 获取 tenant_id（在 into_inner 之前）
+        let tenant_id = Self::extract_tenant_id(&request)?;
         let req = request.into_inner();
         tracing::info!(email = %req.email, "Reset password");
 
@@ -621,7 +666,7 @@ impl AuthService for AuthServiceImpl {
         // 2. 查找令牌
         let token = self
             .password_reset_repo
-            .find_by_token_hash(&token_hash)
+            .find_by_token_hash(&token_hash, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("Invalid or expired reset token"))?;
@@ -640,7 +685,7 @@ impl AuthService for AuthServiceImpl {
         // 4. 获取用户
         let mut user = self
             .user_repo
-            .find_by_id(&token.user_id)
+            .find_by_id(&token.user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -676,13 +721,13 @@ impl AuthService for AuthServiceImpl {
 
         // 9. 标记令牌为已使用
         self.password_reset_repo
-            .mark_as_used(&token.id)
+            .mark_as_used(&token.id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 10. 撤销所有会话（安全考虑）
         self.session_repo
-            .revoke_all_by_user_id(&user.id)
+            .revoke_all_by_user_id(&user.id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -714,8 +759,15 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<GetActiveSessionsRequest>,
     ) -> Result<Response<GetActiveSessionsResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Get active sessions request");
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
+        if claims.sub != req.user_id {
+             return Err(Status::permission_denied("Cannot view other user's sessions"));
+        }
 
         let user_id = UserId::from_uuid(
             Uuid::parse_str(&req.user_id)
@@ -724,7 +776,7 @@ impl AuthService for AuthServiceImpl {
 
         let sessions = self
             .session_repo
-            .find_active_by_user_id(&user_id)
+            .find_active_by_user_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -742,8 +794,11 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<RevokeSessionRequest>,
     ) -> Result<Response<RevokeSessionResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, session_id = %req.session_id, "Revoke session request");
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let session_id = SessionId(
             Uuid::parse_str(&req.session_id)
@@ -753,7 +808,7 @@ impl AuthService for AuthServiceImpl {
         // 获取并验证会话属于该用户
         let session = self
             .session_repo
-            .find_by_id(&session_id)
+            .find_by_id(&session_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("Session not found"))?;
@@ -781,8 +836,15 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<Enable2FaRequest>,
     ) -> Result<Response<Enable2FaResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, method = %req.method, "Enable 2FA request");
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
+        if claims.sub != req.user_id {
+             return Err(Status::permission_denied("Cannot enable 2FA for other user"));
+        }
 
         // 1. 解析用户 ID
         let user_id = UserId::from_string(&req.user_id)
@@ -791,7 +853,7 @@ impl AuthService for AuthServiceImpl {
         // 2. 获取用户
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -830,7 +892,7 @@ impl AuthService for AuthServiceImpl {
                 .iter()
                 .map(|code| {
                     let hash = BackupCodeService::hash_code(code);
-                    crate::auth::domain::entities::BackupCode::new(user_id.clone(), hash)
+                    crate::auth::domain::entities::BackupCode::new(user_id.clone(), tenant_id.clone(), hash)
                 })
                 .collect();
 
@@ -870,6 +932,8 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<Verify2FaRequest>,
     ) -> Result<Response<Verify2FaResponse>, Status> {
+        // 从 metadata 获取 tenant_id（在 into_inner 之前）
+        let tenant_id = Self::extract_tenant_id(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Verify 2FA request");
 
@@ -880,7 +944,7 @@ impl AuthService for AuthServiceImpl {
         // 2. 获取用户
         let user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -926,7 +990,7 @@ impl AuthService for AuthServiceImpl {
         // 5. TOTP 验证失败，尝试备份码
         let backup_codes = self
             .backup_code_repo
-            .find_available_by_user_id(&user_id)
+            .find_available_by_user_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -969,8 +1033,15 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<Disable2FaRequest>,
     ) -> Result<Response<Disable2FaResponse>, Status> {
+        let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Disable 2FA request");
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
+
+        if claims.sub != req.user_id {
+             return Err(Status::permission_denied("Cannot disable 2FA for other user"));
+        }
 
         // 1. 解析用户 ID
         let user_id = UserId::from_string(&req.user_id)
@@ -979,7 +1050,7 @@ impl AuthService for AuthServiceImpl {
         // 2. 获取用户
         let mut user = self
             .user_repo
-            .find_by_id(&user_id)
+            .find_by_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -1003,7 +1074,7 @@ impl AuthService for AuthServiceImpl {
 
         // 5. 删除所有备份码
         self.backup_code_repo
-            .delete_by_user_id(&user_id)
+            .delete_by_user_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1021,28 +1092,37 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<StartWebAuthnRegistrationRequest>,
     ) -> Result<Response<StartWebAuthnRegistrationResponse>, Status> {
+        // 1. 验证 token
+        let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, credential_name = %req.credential_name, "Start WebAuthn registration");
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
-        // 1. 解析用户 ID
+        if claims.sub != req.user_id {
+             return Err(Status::permission_denied("Cannot register credential for other user"));
+        }
+
+        // 2. 解析用户 ID
         let user_id = Uuid::parse_str(&req.user_id)
             .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
 
-        // 2. 获取用户
+        // 3. 获取用户
         let user = self
             .user_repo
-            .find_by_id(&UserId::from_uuid(user_id))
+            .find_by_id(&UserId::from_uuid(user_id), &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
 
-        // 3. 开始注册流程
+        // 4. 开始注册流程
         let (ccr, reg_state) = self
             .webauthn_service
             .start_registration(
                 user_id,
                 user.username.as_str(),
                 user.display_name.as_deref().unwrap_or(user.username.as_str()),
+                &tenant_id,
             )
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -1053,10 +1133,10 @@ impl AuthService for AuthServiceImpl {
 
         // 5. 转换响应
         Ok(Response::new(StartWebAuthnRegistrationResponse {
-            challenge: base64::encode(&ccr.public_key.challenge),
+            challenge: general_purpose::STANDARD.encode(&ccr.public_key.challenge),
             rp_id: ccr.public_key.rp.id.clone(),
             rp_name: ccr.public_key.rp.name.clone(),
-            user_id: base64::encode(ccr.public_key.user.id.as_ref()),
+            user_id: general_purpose::STANDARD.encode(ccr.public_key.user.id.as_ref()),
             user_name: ccr.public_key.user.name.clone(),
             user_display_name: ccr.public_key.user.display_name.clone(),
             exclude_credentials: ccr
@@ -1066,7 +1146,7 @@ impl AuthService for AuthServiceImpl {
                 .map(|creds| {
                     creds
                         .iter()
-                        .map(|c| base64::encode(&c.id))
+                        .map(|c| general_purpose::STANDARD.encode(&c.id))
                         .collect()
                 })
                 .unwrap_or_default(),
@@ -1078,27 +1158,35 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<FinishWebAuthnRegistrationRequest>,
     ) -> Result<Response<FinishWebAuthnRegistrationResponse>, Status> {
+        // 1. 验证 token
+        let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, credential_name = %req.credential_name, "Finish WebAuthn registration");
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
-        // 1. 解析用户 ID
+        if claims.sub != req.user_id {
+             return Err(Status::permission_denied("Cannot register credential for other user"));
+        }
+
+        // 2. 解析用户 ID
         let user_id = Uuid::parse_str(&req.user_id)
             .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
 
-        // 2. 反序列化注册状态
+        // 3. 反序列化注册状态
         let reg_state: webauthn_rs::prelude::PasskeyRegistration =
             serde_json::from_str(&req.registration_state)
                 .map_err(|e| Status::invalid_argument(format!("Invalid registration state: {}", e)))?;
 
-        // 3. 反序列化凭证响应
+        // 4. 反序列化凭证响应
         let reg: webauthn_rs::prelude::RegisterPublicKeyCredential =
             serde_json::from_str(&req.credential_response)
                 .map_err(|e| Status::invalid_argument(format!("Invalid credential response: {}", e)))?;
 
-        // 4. 完成注册
+        // 5. 完成注册
         let credential = self
             .webauthn_service
-            .finish_registration(user_id, req.credential_name.clone(), &reg, &reg_state)
+            .finish_registration(user_id, req.credential_name.clone(), &reg, &reg_state, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1144,7 +1232,7 @@ impl AuthService for AuthServiceImpl {
         // 5. 开始认证流程
         let (rcr, auth_state) = self
             .webauthn_service
-            .start_authentication(user.id.0)
+            .start_authentication(user.id.0, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1154,13 +1242,13 @@ impl AuthService for AuthServiceImpl {
 
         // 7. 转换响应
         Ok(Response::new(StartWebAuthnAuthenticationResponse {
-            challenge: base64::encode(&rcr.public_key.challenge),
+            challenge: general_purpose::STANDARD.encode(&rcr.public_key.challenge),
             rp_id: rcr.public_key.rp_id.clone(),
             allow_credentials: rcr
                 .public_key
                 .allow_credentials
                 .iter()
-                .map(|c| base64::encode(&c.id))
+                .map(|c| general_purpose::STANDARD.encode(&c.id))
                 .collect(),
             authentication_state,
             user_id: user.id.0.to_string(),
@@ -1171,8 +1259,11 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<FinishWebAuthnAuthenticationRequest>,
     ) -> Result<Response<FinishWebAuthnAuthenticationResponse>, Status> {
-        let req = request.into_inner();
         tracing::info!("Finish WebAuthn authentication");
+
+        // 从 metadata 获取 tenant_id（在 into_inner 之前）
+        let tenant_id = Self::extract_tenant_id(&request)?;
+        let req = request.into_inner();
 
         // 1. 反序列化认证状态
         let auth_state: webauthn_rs::prelude::PasskeyAuthentication =
@@ -1187,14 +1278,14 @@ impl AuthService for AuthServiceImpl {
         // 3. 完成认证
         let user_id = self
             .webauthn_service
-            .finish_authentication(&auth, &auth_state)
+            .finish_authentication(&auth, &auth_state, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 4. 获取用户信息
         let user = self
             .user_repo
-            .find_by_id(&UserId::from_uuid(user_id))
+            .find_by_id(&UserId::from_uuid(user_id), &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("User not found"))?;
@@ -1214,7 +1305,12 @@ impl AuthService for AuthServiceImpl {
         let refresh_token_hash = sha256_hash(&refresh_token);
         let expires_at = Utc::now() + Duration::seconds(self.refresh_token_expires_in);
 
-        let mut session = DomainSession::new(user.id.clone(), refresh_token_hash, expires_at);
+        let mut session = DomainSession::new(
+            user.id.clone(),
+            user.tenant_id.clone(),
+            refresh_token_hash,
+            expires_at
+        );
 
         if !req.device_info.is_empty() {
             session = session.with_device_info(&req.device_info);
@@ -1248,17 +1344,25 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<ListWebAuthnCredentialsRequest>,
     ) -> Result<Response<ListWebAuthnCredentialsResponse>, Status> {
+        // 1. 验证 token
+        let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "List WebAuthn credentials");
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
-        // 1. 解析用户 ID
+        if claims.sub != req.user_id {
+             return Err(Status::permission_denied("Cannot list credentials for other user"));
+        }
+
+        // 2. 解析用户 ID
         let user_id = Uuid::parse_str(&req.user_id)
             .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
 
-        // 2. 获取凭证列表
+        // 3. 获取凭证列表
         let credentials = self
             .webauthn_service
-            .list_credentials(user_id)
+            .list_credentials(user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1291,19 +1395,27 @@ impl AuthService for AuthServiceImpl {
         &self,
         request: Request<DeleteWebAuthnCredentialRequest>,
     ) -> Result<Response<DeleteWebAuthnCredentialResponse>, Status> {
+        // 1. 验证 token
+        let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, credential_id = %req.credential_id, "Delete WebAuthn credential");
+        let tenant_id = TenantId::from_string(&claims.tenant_id)
+            .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
-        // 1. 解析 IDs
+        if claims.sub != req.user_id {
+             return Err(Status::permission_denied("Cannot delete credential for other user"));
+        }
+
+        // 2. 解析 IDs
         let user_id = Uuid::parse_str(&req.user_id)
             .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
 
         let credential_id = Uuid::parse_str(&req.credential_id)
             .map_err(|_| Status::invalid_argument("Invalid credential ID"))?;
 
-        // 2. 删除凭证
+        // 3. 删除凭证
         self.webauthn_service
-            .delete_credential(user_id, credential_id)
+            .delete_credential(user_id, credential_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 

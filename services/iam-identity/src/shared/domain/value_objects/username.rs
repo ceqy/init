@@ -43,6 +43,11 @@ impl Username {
         
         Ok(())
     }
+    
+    /// 获取字符串引用
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl fmt::Display for Username {

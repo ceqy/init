@@ -34,3 +34,7 @@ reset_link_base_url = "http://localhost:3000/reset-password"
 
 [telemetry]
 log_level = "debug"
+
+[webauthn]
+rp_id = "localhost"
+rp_origin = "http://localhost:3000"

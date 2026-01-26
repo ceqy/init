@@ -39,6 +39,11 @@ impl Email {
     pub fn local_part(&self) -> Option<&str> {
         self.0.split('@').next()
     }
+    
+    /// 获取字符串引用
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl fmt::Display for Email {

@@ -25,14 +25,33 @@ use auth::infrastructure::persistence::{
     PostgresBackupCodeRepository, PostgresPasswordResetRepository, PostgresSessionRepository,
     PostgresWebAuthnCredentialRepository,
 };
+use async_trait::async_trait;
 use cuba_adapter_email::{EmailClient, EmailSender};
 use cuba_bootstrap::{run_with_services, Infrastructure};
 use cuba_config::PasswordResetConfig;
 use cuba_ports::CachePort;
-use shared::domain::repositories::UserRepository;
-use shared::infrastructure::persistence::PostgresUserRepository;
+use shared::application::handlers::{
+    SendEmailVerificationHandler, SendPhoneVerificationHandler, VerifyEmailHandler,
+    VerifyPhoneHandler,
+};
+use shared::domain::repositories::{EmailVerificationRepository, PhoneVerificationRepository, UserRepository};
+use shared::domain::services::{EmailVerificationService, PhoneVerificationService, SmsSender};
+use shared::infrastructure::persistence::{
+    PostgresEmailVerificationRepository, PostgresPhoneVerificationRepository, PostgresUserRepository,
+};
 use tonic::transport::Server;
+use tonic_reflection::server::Builder as ReflectionBuilder;
 use user::api::grpc::{proto::user_service_server::UserServiceServer, UserServiceImpl};
+
+// Temporary NoOpSmsSender implementation for compilation
+struct NoOpSmsSender;
+
+#[async_trait]
+impl SmsSender for NoOpSmsSender {
+    async fn send_verification_code(&self, _phone: &str, _code: &str) -> cuba_errors::AppResult<()> {
+        Ok(())
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -50,7 +69,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let totp_service = Arc::new(TotpService::new("Cuba ERP".to_string()));
 
         // 组装邮件客户端
-        let email_client = Arc::new(EmailClient::new(config.email.clone()));
+        let email_config = cuba_adapter_email::EmailConfig {
+            smtp_host: config.email.smtp_host.clone(),
+            smtp_port: config.email.smtp_port,
+            username: config.email.username.clone(),
+            password: config.email.password.clone(),
+            from_email: config.email.from_email.clone(),
+            from_name: config.email.from_name.clone(),
+            use_tls: config.email.use_tls,
+            timeout_secs: config.email.timeout_secs,
+        };
+        let email_client = Arc::new(EmailClient::new(email_config));
         let email_sender: Arc<dyn EmailSender> = email_client;
 
         // 密码重置配置
@@ -69,8 +98,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Arc::new(PostgresWebAuthnCredentialRepository::new(pool.clone()));
 
         // 组装 WebAuthn 服务
-        let rp_id = config.server.host.clone();
-        let rp_origin = format!("https://{}", rp_id)
+        let rp_id = config.webauthn.rp_id.clone();
+        let rp_origin = config.webauthn.rp_origin
             .parse()
             .map_err(|e| cuba_errors::AppError::internal(format!("Invalid RP origin: {}", e)))?;
         
@@ -88,23 +117,72 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             token_service.clone(),
             totp_service,
             webauthn_service,
-            email_sender,
+            email_sender.clone(),
             auth_cache,
             config.jwt.refresh_expires_in as i64,
             password_reset_config,
         );
 
         // 组装 UserService
-        let user_service = UserServiceImpl::new(user_repo, token_service);
+        // 组装 User 相关的 Repositories 和 Services
+        let email_verification_repo: Arc<dyn EmailVerificationRepository> =
+            Arc::new(PostgresEmailVerificationRepository::new(pool.clone()));
+        let phone_verification_repo: Arc<dyn PhoneVerificationRepository> =
+            Arc::new(PostgresPhoneVerificationRepository::new(pool.clone()));
+
+        let email_verification_service = Arc::new(EmailVerificationService::new(
+            email_verification_repo.clone(),
+            user_repo.clone(),
+            email_sender.clone(),
+        ));
+
+        let sms_sender = Arc::new(NoOpSmsSender);
+        let phone_verification_service = Arc::new(PhoneVerificationService::new(
+             phone_verification_repo.clone(),
+             user_repo.clone(),
+             sms_sender,
+        ));
+        
+        // Handlers
+        let send_email_verification_handler = Arc::new(SendEmailVerificationHandler::new(
+            email_verification_service.clone(),
+        ));
+        let verify_email_handler = Arc::new(VerifyEmailHandler::new(
+            email_verification_service.clone(),
+        ));
+        let send_phone_verification_handler = Arc::new(SendPhoneVerificationHandler::new(
+            phone_verification_service.clone(),
+        ));
+        let verify_phone_handler = Arc::new(VerifyPhoneHandler::new(
+            phone_verification_service.clone(),
+        ));
+
+        // 组装 UserService
+        let user_service = UserServiceImpl::new(
+            user_repo, 
+            token_service,
+            send_email_verification_handler,
+            verify_email_handler,
+            send_phone_verification_handler,
+            verify_phone_handler,
+        );
 
         // 注册多个服务并启动
         let addr = format!("{}:{}", config.server.host, config.server.port)
             .parse()
             .map_err(|e| cuba_errors::AppError::internal(format!("Invalid address: {}", e)))?;
 
+        // 构建反射服务
+        let reflection_service = ReflectionBuilder::configure()
+            .register_encoded_file_descriptor_set(auth::api::grpc::proto::FILE_DESCRIPTOR_SET)
+            .register_encoded_file_descriptor_set(user::api::grpc::proto::FILE_DESCRIPTOR_SET)
+            .build_v1()
+            .map_err(|e| cuba_errors::AppError::internal(format!("Failed to build reflection service: {}", e)))?;
+
         server
             .add_service(AuthServiceServer::new(auth_service))
             .add_service(UserServiceServer::new(user_service))
+            .add_service(reflection_service)
             .serve_with_shutdown(addr, cuba_bootstrap::shutdown_signal())
             .await
             .map_err(|e| cuba_errors::AppError::internal(format!("Server error: {}", e)))?;
