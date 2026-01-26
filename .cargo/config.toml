@@ -1,0 +1,20 @@
+# OpenSSL 配置（macOS）
+[env]
+OPENSSL_DIR = "/opt/homebrew/Cellar/openssl@3/3.6.0"
+
+# Cargo 镜像源配置（中国大陆加速）
+[source.crates-io]
+replace-with = 'rsproxy-sparse'
+
+[source.rsproxy]
+registry = "https://rsproxy.cn/crates.io-index"
+
+[source.rsproxy-sparse]
+registry = "sparse+https://rsproxy.cn/index/"
+
+[registries.rsproxy]
+index = "https://rsproxy.cn/crates.io-index"
+
+# 网络配置
+[net]
+git-fetch-with-cli = true
