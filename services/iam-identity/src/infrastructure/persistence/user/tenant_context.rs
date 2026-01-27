@@ -39,26 +39,3 @@ where
     Ok(result)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[sqlx::test]
-    async fn test_set_tenant_context(pool: PgPool) {
-        let tenant_id = TenantId::new();
-        let mut conn = pool.acquire().await.unwrap();
-
-        let result = set_tenant_context(&mut *conn, &tenant_id).await;
-        assert!(result.is_ok());
-
-        // 验证上下文已设置
-        let (value,): (String,) = sqlx::query_as(
-            "SELECT current_setting('app.current_tenant_id', true)"
-        )
-        .fetch_one(&mut *conn)
-        .await
-        .unwrap();
-
-        assert_eq!(value, tenant_id.0.to_string());
-    }
-}

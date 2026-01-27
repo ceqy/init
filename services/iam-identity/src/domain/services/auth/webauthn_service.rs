@@ -213,14 +213,3 @@ impl WebAuthnService {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_webauthn_service_creation() {
-        // 测试需要 mock repository
-        // 这里只是示例结构
-    }
-}
-

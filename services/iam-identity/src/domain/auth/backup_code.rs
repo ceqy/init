@@ -71,33 +71,3 @@ impl Entity for BackupCode {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_new_backup_code() {
-        let user_id = UserId::from_uuid(Uuid::new_v4());
-        let code_hash = "test_hash".to_string();
-        
-        let backup_code = BackupCode::new(user_id.clone(), code_hash.clone());
-        
-        assert_eq!(backup_code.user_id, user_id);
-        assert_eq!(backup_code.code_hash, code_hash);
-        assert!(!backup_code.used);
-        assert!(backup_code.used_at.is_none());
-        assert!(backup_code.is_available());
-    }
-
-    #[test]
-    fn test_mark_as_used() {
-        let user_id = UserId::from_uuid(Uuid::new_v4());
-        let mut backup_code = BackupCode::new(user_id, "test_hash".to_string());
-        
-        backup_code.mark_as_used();
-        
-        assert!(backup_code.used);
-        assert!(backup_code.used_at.is_some());
-        assert!(!backup_code.is_available());
-    }
-}

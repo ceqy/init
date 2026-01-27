@@ -1,10 +1,13 @@
 fn main() {
+    // 创建统一的输出目录
+    std::fs::create_dir_all("src/api/grpc/proto_gen").ok();
+
     // 编译 auth.proto
     tonic_build::configure()
         .build_server(true)
         .build_client(false)
-        .file_descriptor_set_path("src/auth/api/grpc/auth_descriptor.bin")
-        .out_dir("src/auth/api/grpc")
+        .file_descriptor_set_path("src/api/grpc/proto_gen/auth_descriptor.bin")
+        .out_dir("src/api/grpc/proto_gen")
         .compile_protos(&["../../proto/iam/auth.proto"], &["../../proto"])
         .expect("Failed to compile auth.proto");
 
@@ -12,8 +15,8 @@ fn main() {
     tonic_build::configure()
         .build_server(true)
         .build_client(false)
-        .file_descriptor_set_path("src/user/api/grpc/user_descriptor.bin")
-        .out_dir("src/user/api/grpc")
+        .file_descriptor_set_path("src/api/grpc/proto_gen/user_descriptor.bin")
+        .out_dir("src/api/grpc/proto_gen")
         .compile_protos(&["../../proto/iam/user.proto"], &["../../proto"])
         .expect("Failed to compile user.proto");
 
@@ -21,8 +24,8 @@ fn main() {
     tonic_build::configure()
         .build_server(true)
         .build_client(false)
-        .file_descriptor_set_path("src/oauth/api/grpc/oauth_descriptor.bin")
-        .out_dir("src/oauth/api/grpc")
+        .file_descriptor_set_path("src/api/grpc/proto_gen/oauth_descriptor.bin")
+        .out_dir("src/api/grpc/proto_gen")
         .compile_protos(&["../../proto/iam/oauth.proto"], &["../../proto"])
         .expect("Failed to compile oauth.proto");
 

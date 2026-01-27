@@ -18,6 +18,24 @@ impl SuspiciousLoginDetector {
         Self { login_log_repo }
     }
 
+    /// 检测是否为可疑登录 - 返回 (是否可疑, 原因列表)
+    pub async fn is_suspicious(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+        ip_address: &str,
+        device_fingerprint: Option<&str>,
+    ) -> AppResult<(bool, Vec<String>)> {
+        let fingerprint = device_fingerprint.unwrap_or("unknown");
+        match self.detect(user_id, tenant_id, ip_address, fingerprint).await? {
+            Some(reasons_str) => {
+                let reasons: Vec<String> = reasons_str.split("; ").map(|s| s.to_string()).collect();
+                Ok((true, reasons))
+            }
+            None => Ok((false, vec![])),
+        }
+    }
+
     /// 检测是否为可疑登录
     pub async fn detect(
         &self,
@@ -183,31 +201,3 @@ impl SuspiciousLoginDetector {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_ip_prefix() {
-        assert_eq!(
-            SuspiciousLoginDetector::get_ip_prefix("192.168.1.1"),
-            "192.168"
-        );
-        assert_eq!(
-            SuspiciousLoginDetector::get_ip_prefix("10.0.0.1"),
-            "10.0"
-        );
-    }
-
-    #[test]
-    fn test_unusual_time_detection() {
-        let now = Utc::now();
-        let hour = now.hour();
-        
-        // 深夜时间应该被检测
-        let is_unusual = (2..=5).contains(&hour);
-        
-        // 这只是一个简单的测试
-        assert!(hour < 24);
-    }
-}

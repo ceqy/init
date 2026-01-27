@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
 //! IAM Identity Service Library
 //!
 //! 统一的单体模块化架构：

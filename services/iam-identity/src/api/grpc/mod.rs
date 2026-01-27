@@ -4,21 +4,21 @@ pub mod auth_service;
 pub mod oauth_service;
 pub mod user_service;
 
-// Proto 模块保留在原位置
+// Proto 生成的代码模块
 pub mod auth_proto {
-    include!("../../auth/api/grpc/cuba.iam.auth.rs");
+    include!("proto_gen/cuba.iam.auth.rs");
     pub const FILE_DESCRIPTOR_SET: &[u8] =
-        include_bytes!("../../auth/api/grpc/auth_descriptor.bin");
+        include_bytes!("proto_gen/auth_descriptor.bin");
 }
 
 pub mod user_proto {
-    include!("../../user/api/grpc/cuba.iam.user.rs");
+    include!("proto_gen/cuba.iam.user.rs");
     pub const FILE_DESCRIPTOR_SET: &[u8] =
-        include_bytes!("../../user/api/grpc/user_descriptor.bin");
+        include_bytes!("proto_gen/user_descriptor.bin");
 }
 
 pub mod oauth_proto {
-    include!("../../oauth/api/grpc/cuba.iam.oauth.rs");
+    include!("proto_gen/cuba.iam.oauth.rs");
     pub const FILE_DESCRIPTOR_SET: &[u8] =
-        include_bytes!("../../oauth/api/grpc/oauth_descriptor.bin");
+        include_bytes!("proto_gen/oauth_descriptor.bin");
 }

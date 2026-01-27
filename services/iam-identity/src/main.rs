@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
 //! IAM Identity Service - 身份服务入口
 //!
 //! 使用 cuba-bootstrap 统一启动模式
@@ -19,7 +22,7 @@ use api::grpc::{
     oauth_proto::o_auth_service_server::OAuthServiceServer,
     user_proto::user_service_server::UserServiceServer,
 };
-use application::handlers::auth::{LoginHandler, RequestPasswordResetHandler, ResetPasswordHandler};
+// Auth handlers are used indirectly via the service - keeping module export
 use application::handlers::oauth::{AuthorizeHandler, CreateClientHandler, TokenHandler};
 use application::handlers::user::{
     SendEmailVerificationHandler, SendPhoneVerificationHandler, VerifyEmailHandler,
@@ -50,7 +53,7 @@ use infrastructure::persistence::user::{
 use async_trait::async_trait;
 use cuba_adapter_email::{EmailClient, EmailSender};
 use cuba_bootstrap::{run_with_services, Infrastructure};
-use cuba_config::PasswordResetConfig;
+
 use cuba_ports::CachePort;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder as ReflectionBuilder;
