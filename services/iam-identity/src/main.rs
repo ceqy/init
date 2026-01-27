@@ -2,52 +2,58 @@
 //!
 //! 使用 cuba-bootstrap 统一启动模式
 
-mod auth;
+mod api;
+mod application;
 mod config;
+mod domain;
 mod error;
-mod oauth;
-mod shared;
-mod user;
+mod infrastructure;
 
 use std::sync::Arc;
 
-use auth::api::grpc::{AuthServiceImpl, AuthServiceServer};
-use auth::domain::repositories::{
+use api::grpc::{
+    auth_service::AuthServiceImpl,
+    oauth_service::OAuthServiceImpl,
+    user_service::UserServiceImpl,
+    auth_proto::auth_service_server::AuthServiceServer,
+    oauth_proto::o_auth_service_server::OAuthServiceServer,
+    user_proto::user_service_server::UserServiceServer,
+};
+use application::handlers::auth::{LoginHandler, RequestPasswordResetHandler, ResetPasswordHandler};
+use application::handlers::oauth::{AuthorizeHandler, CreateClientHandler, TokenHandler};
+use application::handlers::user::{
+    SendEmailVerificationHandler, SendPhoneVerificationHandler, VerifyEmailHandler,
+    VerifyPhoneHandler,
+};
+use domain::repositories::auth::{
     BackupCodeRepository, PasswordResetRepository, SessionRepository, WebAuthnCredentialRepository,
 };
-use auth::domain::services::{TotpService, WebAuthnService};
-use auth::infrastructure::cache::{AuthCache, RedisAuthCache};
-use auth::infrastructure::persistence::{
+use domain::repositories::oauth::{
+    AccessTokenRepository, AuthorizationCodeRepository, OAuthClientRepository, RefreshTokenRepository,
+};
+use domain::repositories::user::{EmailVerificationRepository, PhoneVerificationRepository, UserRepository};
+use domain::services::auth::{TotpService, WebAuthnService};
+use domain::services::oauth::OAuthService;
+use domain::services::user::{EmailVerificationService, PhoneVerificationService, SmsSender};
+use infrastructure::cache::{AuthCache, RedisAuthCache};
+use infrastructure::persistence::auth::{
     PostgresBackupCodeRepository, PostgresPasswordResetRepository, PostgresSessionRepository,
     PostgresWebAuthnCredentialRepository,
+};
+use infrastructure::persistence::oauth::{
+    PostgresAccessTokenRepository, PostgresAuthorizationCodeRepository, PostgresOAuthClientRepository,
+    PostgresRefreshTokenRepository,
+};
+use infrastructure::persistence::user::{
+    PostgresEmailVerificationRepository, PostgresPhoneVerificationRepository, PostgresUserRepository,
 };
 use async_trait::async_trait;
 use cuba_adapter_email::{EmailClient, EmailSender};
 use cuba_bootstrap::{run_with_services, Infrastructure};
 use cuba_config::PasswordResetConfig;
 use cuba_ports::CachePort;
-use oauth::api::grpc::{OAuthServiceImpl, OAuthServiceServer};
-use oauth::application::handlers::{AuthorizeHandler, CreateClientHandler, TokenHandler};
-use oauth::domain::repositories::{
-    AccessTokenRepository, AuthorizationCodeRepository, OAuthClientRepository, RefreshTokenRepository,
-};
-use oauth::domain::services::OAuthService;
-use oauth::infrastructure::persistence::{
-    PostgresAccessTokenRepository, PostgresAuthorizationCodeRepository, PostgresOAuthClientRepository,
-    PostgresRefreshTokenRepository,
-};
-use shared::application::handlers::{
-    SendEmailVerificationHandler, SendPhoneVerificationHandler, VerifyEmailHandler,
-    VerifyPhoneHandler,
-};
-use shared::domain::repositories::{EmailVerificationRepository, PhoneVerificationRepository, UserRepository};
-use shared::domain::services::{EmailVerificationService, PhoneVerificationService, SmsSender};
-use shared::infrastructure::persistence::{
-    PostgresEmailVerificationRepository, PostgresPhoneVerificationRepository, PostgresUserRepository,
-};
 use tonic::transport::Server;
 use tonic_reflection::server::Builder as ReflectionBuilder;
-use user::api::grpc::{proto::user_service_server::UserServiceServer, UserServiceImpl};
 
 // Temporary NoOpSmsSender implementation for compilation
 struct NoOpSmsSender;
@@ -208,9 +214,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // 构建反射服务
         let reflection_service = ReflectionBuilder::configure()
-            .register_encoded_file_descriptor_set(auth::api::grpc::proto::FILE_DESCRIPTOR_SET)
-            .register_encoded_file_descriptor_set(user::api::grpc::proto::FILE_DESCRIPTOR_SET)
-            .register_encoded_file_descriptor_set(oauth::api::grpc::proto::FILE_DESCRIPTOR_SET)
+            .register_encoded_file_descriptor_set(api::grpc::auth_proto::FILE_DESCRIPTOR_SET)
+            .register_encoded_file_descriptor_set(api::grpc::user_proto::FILE_DESCRIPTOR_SET)
+            .register_encoded_file_descriptor_set(api::grpc::oauth_proto::FILE_DESCRIPTOR_SET)
             .build_v1()
             .map_err(|e| cuba_errors::AppError::internal(format!("Failed to build reflection service: {}", e)))?;
 
