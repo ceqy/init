@@ -80,6 +80,7 @@ impl Claims {
 }
 
 /// Token 服务
+#[derive(Clone)]
 pub struct TokenService {
     encoding_key: EncodingKey,
     decoding_key: DecodingKey,

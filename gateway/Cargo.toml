@@ -11,6 +11,7 @@ cuba-errors = { workspace = true }
 cuba-telemetry = { workspace = true }
 cuba-auth-core = { workspace = true }
 cuba-bootstrap = { workspace = true }
+cuba-common = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
 tower = { workspace = true }

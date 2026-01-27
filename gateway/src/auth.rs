@@ -3,14 +3,14 @@
 use axum::{
     extract::{Json, State},
     http::StatusCode,
-    routing::{get, post},
+    routing::post,
     Router,
 };
+use crate::middleware::AuthClaims;
+use crate::grpc::{self, GrpcClients};
 use serde::{Deserialize, Serialize};
 use tonic::{metadata::MetadataValue, Request};
-use tracing::{error, info};
-
-use crate::grpc::{self, GrpcClients};
+use tracing::{error, info, debug};
 
 pub fn auth_routes() -> Router<GrpcClients> {
     Router::new()
@@ -18,7 +18,6 @@ pub fn auth_routes() -> Router<GrpcClients> {
         .route("/api/auth/logout", post(logout))
         .route("/api/auth/refresh", post(refresh_token))
         .route("/api/auth/register", post(register))
-        .route("/api/auth/me", get(get_current_user))
 }
 
 #[derive(Debug, Deserialize)]
@@ -259,13 +258,59 @@ pub struct UserResponse {
     pub display_name: Option<String>,
 }
 
-async fn get_current_user(
-    State(_clients): State<GrpcClients>,
+/// 获取当前用户信息
+///
+/// 需要认证（使用 AuthClaims 提取器）
+pub async fn get_current_user(
+    State(clients): State<GrpcClients>,
+    AuthClaims(claims): AuthClaims,
 ) -> Result<Json<UserResponse>, (StatusCode, String)> {
-    // TODO: 从 Authorization header 中提取 token 并验证
-    // TODO: 调用 user service 获取用户信息
-    Err((
-        StatusCode::NOT_IMPLEMENTED,
-        "Not implemented yet".to_string(),
-    ))
+    debug!(
+        user_id = %claims.sub,
+        "Getting current user information"
+    );
+
+    let mut grpc_req = Request::new(grpc::user::GetUserRequest {
+        user_id: claims.sub.clone(),
+    });
+
+    // 添加 tenant-id metadata
+    grpc_req.metadata_mut().insert(
+        "tenant-id",
+        MetadataValue::try_from(&claims.tenant_id).map_err(|e| {
+            error!("Failed to create metadata: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string())
+        })?,
+    );
+
+    let mut client = clients.user.clone();
+    let response = client.get_user(grpc_req).await.map_err(|e| {
+        error!("gRPC get_user failed: {}", e);
+        let status = match e.code() {
+            tonic::Code::NotFound => StatusCode::NOT_FOUND,
+            tonic::Code::Unauthenticated => StatusCode::UNAUTHORIZED,
+            tonic::Code::PermissionDenied => StatusCode::FORBIDDEN,
+            tonic::Code::InvalidArgument => StatusCode::BAD_REQUEST,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        (status, e.message().to_string())
+    })?;
+
+    let resp = response.into_inner();
+
+    let user = resp.user.ok_or_else(|| {
+        error!("User not found in response");
+        (StatusCode::NOT_FOUND, "User not found".to_string())
+    })?;
+
+    Ok(Json(UserResponse {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        display_name: if user.display_name.is_empty() {
+            None
+        } else {
+            Some(user.display_name)
+        },
+    }))
 }

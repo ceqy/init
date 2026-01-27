@@ -873,6 +873,7 @@ dependencies = [
  "axum",
  "cuba-auth-core",
  "cuba-bootstrap",
+ "cuba-common",
  "cuba-config",
  "cuba-errors",
  "cuba-telemetry",
