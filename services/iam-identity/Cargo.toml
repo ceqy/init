@@ -59,6 +59,9 @@ criterion = "0.5"
 secrecy.workspace = true
 url = "2.5.8"
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+redis = { workspace = true }
+reqwest = { version = "0.12", features = ["json"] }
+futures = { workspace = true }
 
 [[bench]]
 name = "auth_benchmark"
