@@ -1,3 +1,7 @@
 //! 缓存实现
 
-// 动态导出所有 cache 实现
+pub mod auth_cache;
+pub mod login_attempt_cache;
+
+pub use auth_cache::*;
+pub use login_attempt_cache::*;

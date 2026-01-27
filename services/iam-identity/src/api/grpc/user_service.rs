@@ -11,7 +11,7 @@ use cuba_auth_core::{Claims, TokenService};
 use cuba_common::{TenantId, UserId};
 use cuba_cqrs_core::CommandHandler;
 
-use crate::shared::application::commands::{
+use crate::application::commands::{
     SendEmailVerificationCommand, SendPhoneVerificationCommand, VerifyEmailCommand,
     VerifyPhoneCommand,
 };
@@ -23,7 +23,7 @@ use crate::domain::user::{User, UserStatus};
 use crate::domain::repositories::user::UserRepository;
 use crate::domain::value_objects::{Email, HashedPassword, Username};
 
-use super::proto::{
+use super::user_proto::{
     self, user_service_server::UserService, *,
 };
 

@@ -21,8 +21,8 @@ use crate::domain::repositories::user::UserRepository;
 use crate::domain::value_objects::{Email, HashedPassword, Username};
 use cuba_adapter_email::EmailSender;
 
-use super::proto::{self, auth_service_server::AuthService};
-use super::proto::*;
+use super::auth_proto::{self, auth_service_server::AuthService};
+use super::auth_proto::*;
 
 
 

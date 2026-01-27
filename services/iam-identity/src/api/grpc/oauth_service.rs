@@ -14,7 +14,7 @@ use crate::domain::oauth::OAuthClientId;
 use crate::domain::repositories::oauth::OAuthClientRepository;
 use crate::domain::services::oauth::OAuthService;
 
-use super::proto::{
+use super::oauth_proto::{
     o_auth_service_server::OAuthService as OAuthServiceTrait, AuthorizeRequest, AuthorizeResponse,
     CreateClientRequest, CreateClientResponse, DeleteClientRequest, GetClientRequest,
     GetClientResponse, IntrospectTokenRequest, IntrospectTokenResponse, ListClientsRequest,

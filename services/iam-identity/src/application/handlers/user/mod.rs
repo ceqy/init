@@ -1,6 +1,11 @@
 //! 用户处理器
 
-// 检查是否有文件
-use std::fs;
+pub mod send_email_verification_handler;
+pub mod send_phone_verification_handler;
+pub mod verify_email_handler;
+pub mod verify_phone_handler;
 
-// 动态导出所有处理器
+pub use send_email_verification_handler::*;
+pub use send_phone_verification_handler::*;
+pub use verify_email_handler::*;
+pub use verify_phone_handler::*;
