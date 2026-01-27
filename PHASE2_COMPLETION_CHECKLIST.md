@@ -60,15 +60,15 @@
 ## ⏳ 待完成工作
 
 ### 测试
-- [ ] BackupCodeRepository 集成测试
-- [ ] WebAuthnCredentialRepository 集成测试
+- [x] BackupCodeRepository 集成测试 (✅ 已通过)
+- [x] WebAuthnCredentialRepository 集成测试 (✅ 已通过)
 
 ### 新 Repository 实现
-- [ ] LoginLogRepository
-- [ ] OAuthClientRepository
-- [ ] AuthorizationCodeRepository
-- [ ] AccessTokenRepository
-- [ ] RefreshTokenRepository
+- [x] LoginLogRepository (已实现，✅ 已测试)
+- [x] OAuthClientRepository (已实现，✅ 已测试)
+- [x] AuthorizationCodeRepository (已实现，✅ 已测试)
+- [x] AccessTokenRepository (已实现，✅ 已测试)
+- [x] RefreshTokenRepository (已实现，✅ 已测试)
 
 ## 📊 统计数据
 

@@ -26,7 +26,7 @@ impl LoginLogRepository for PostgresLoginLogRepository {
         sqlx::query(
             r#"
             INSERT INTO login_logs (id, user_id, tenant_id, username, ip_address, user_agent, 
-                                   device_type, device_os, browser, result, failure_reason, 
+                                   device_type, os, browser, result, failure_reason, 
                                    country, city, created_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             "#,
@@ -219,7 +219,7 @@ struct LoginLogRow {
     ip_address: String,
     user_agent: String,
     device_type: Option<String>,
-    device_os: Option<String>,
+    os: Option<String>,
     browser: Option<String>,
     result: String,
     failure_reason: Option<String>,
@@ -241,7 +241,7 @@ impl From<LoginLogRow> for LoginLog {
             user_agent: row.user_agent,
             device_info: DeviceInfo {
                 device_type: row.device_type.unwrap_or_default(),
-                os: row.device_os.clone().unwrap_or_default(),
+                os: row.os.clone().unwrap_or_default(),
                 browser: row.browser.clone().unwrap_or_default(),
                 browser_version: None, // TODO: Store version
                 os_version: None, // TODO: Store version
