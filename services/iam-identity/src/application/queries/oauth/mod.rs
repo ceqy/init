@@ -1,3 +1,5 @@
 //! OAuth 查询
 
-// OAuth 查询将在这里添加
+pub mod oauth_queries;
+
+pub use oauth_queries::*;

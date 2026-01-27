@@ -1,3 +1,5 @@
 //! 用户查询
 
-// 用户查询将在这里添加
+pub mod user_queries;
+
+pub use user_queries::*;
