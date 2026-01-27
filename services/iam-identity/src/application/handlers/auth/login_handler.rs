@@ -18,6 +18,7 @@ use crate::domain::repositories::auth::{LoginLogRepository, SessionRepository};
 use crate::domain::services::auth::PasswordService;
 use crate::domain::repositories::user::UserRepository;
 use crate::domain::value_objects::Username;
+use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
 
 /// 简单的哈希函数（用于 refresh token）
 fn sha256_simple(input: &str) -> u64 {
@@ -35,6 +36,7 @@ pub struct LoginHandler {
     token_service: Arc<TokenService>,
     brute_force_protection: Arc<BruteForceProtectionService>,
     suspicious_detector: Arc<SuspiciousLoginDetector>,
+    event_publisher: Arc<dyn EventPublisher>,
     refresh_token_expires_in: i64,
 }
 
@@ -46,6 +48,7 @@ impl LoginHandler {
         token_service: Arc<TokenService>,
         brute_force_protection: Arc<BruteForceProtectionService>,
         suspicious_detector: Arc<SuspiciousLoginDetector>,
+        event_publisher: Arc<dyn EventPublisher>,
         refresh_token_expires_in: i64,
     ) -> Self {
         Self {
@@ -55,6 +58,7 @@ impl LoginHandler {
             token_service,
             brute_force_protection,
             suspicious_detector,
+            event_publisher,
             refresh_token_expires_in,
         }
     }
@@ -186,6 +190,16 @@ impl CommandHandler<LoginCommand> for LoginHandler {
         self.log_login(&tenant_id, &command.username, Some(&user.id), ip, user_agent,
                       LogResult::Success, None, is_suspicious).await?;
         self.brute_force_protection.record_successful_login(&user.id).await?;
+
+        // 发布用户登录事件
+        let login_event = IamDomainEvent::UserLoggedIn {
+            user_id: user.id.clone(),
+            tenant_id: user.tenant_id.clone(),
+            ip_address: command.ip_address.clone(),
+            user_agent: command.device_info.clone(),
+            timestamp: Utc::now(),
+        };
+        self.event_publisher.publish(login_event).await;
 
         Ok(LoginResult {
             tokens: Some(TokenPair {

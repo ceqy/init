@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use chrono::Utc;
 use cuba_common::TenantId;
 use cuba_cqrs_core::CommandHandler;
 use cuba_errors::{AppError, AppResult};
@@ -12,12 +13,14 @@ use crate::application::commands::auth::ResetPasswordCommand;
 use crate::domain::services::auth::{PasswordResetService, PasswordService};
 use crate::domain::repositories::user::UserRepository;
 use crate::domain::value_objects::{Email, Password};
+use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
 
 /// 重置密码处理器
 pub struct ResetPasswordHandler {
     password_reset_service: Arc<PasswordResetService>,
     password_service: Arc<PasswordService>,
     user_repo: Arc<dyn UserRepository>,
+    event_publisher: Arc<dyn EventPublisher>,
 }
 
 impl ResetPasswordHandler {
@@ -25,11 +28,13 @@ impl ResetPasswordHandler {
         password_reset_service: Arc<PasswordResetService>,
         password_service: Arc<PasswordService>,
         user_repo: Arc<dyn UserRepository>,
+        event_publisher: Arc<dyn EventPublisher>,
     ) -> Self {
         Self {
             password_reset_service,
             password_service,
             user_repo,
+            event_publisher,
         }
     }
 }
@@ -81,6 +86,14 @@ impl CommandHandler<ResetPasswordCommand> for ResetPasswordHandler {
             .revoke_all_tokens(&user_id, &tenant_id)
             .await?;
 
+        // 10. 发布密码修改事件
+        let event = IamDomainEvent::PasswordChanged {
+            user_id: user_id.clone(),
+            tenant_id: tenant_id.clone(),
+            timestamp: Utc::now(),
+        };
+        self.event_publisher.publish(event).await;
+
         info!(
             user_id = %user_id,
             email = %email,
@@ -90,4 +103,3 @@ impl CommandHandler<ResetPasswordCommand> for ResetPasswordHandler {
         Ok(())
     }
 }
-

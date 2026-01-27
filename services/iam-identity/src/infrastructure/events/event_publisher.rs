@@ -3,40 +3,145 @@
 //! 提供领域事件的发布功能
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
-use cuba_event_core::DomainEvent;
+use chrono::{DateTime, Utc};
+use cuba_common::{TenantId, UserId};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+/// IAM 领域事件枚举
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum IamDomainEvent {
+    UserCreated {
+        user_id: UserId,
+        tenant_id: TenantId,
+        username: String,
+        email: String,
+        timestamp: DateTime<Utc>,
+    },
+    UserLoggedIn {
+        user_id: UserId,
+        tenant_id: TenantId,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+        timestamp: DateTime<Utc>,
+    },
+    UserLoggedOut {
+        user_id: UserId,
+        tenant_id: TenantId,
+        session_id: String,
+        timestamp: DateTime<Utc>,
+    },
+    PasswordChanged {
+        user_id: UserId,
+        tenant_id: TenantId,
+        timestamp: DateTime<Utc>,
+    },
+    TwoFactorEnabled {
+        user_id: UserId,
+        tenant_id: TenantId,
+        method: String,
+        timestamp: DateTime<Utc>,
+    },
+    TwoFactorDisabled {
+        user_id: UserId,
+        tenant_id: TenantId,
+        timestamp: DateTime<Utc>,
+    },
+    OAuthClientCreated {
+        client_id: String,
+        tenant_id: TenantId,
+        name: String,
+        timestamp: DateTime<Utc>,
+    },
+    SessionCreated {
+        session_id: String,
+        user_id: UserId,
+        tenant_id: TenantId,
+        timestamp: DateTime<Utc>,
+    },
+    SessionRevoked {
+        session_id: String,
+        user_id: UserId,
+        tenant_id: TenantId,
+        timestamp: DateTime<Utc>,
+    },
+}
+
+impl IamDomainEvent {
+    pub fn event_type(&self) -> &'static str {
+        match self {
+            Self::UserCreated { .. } => "UserCreated",
+            Self::UserLoggedIn { .. } => "UserLoggedIn",
+            Self::UserLoggedOut { .. } => "UserLoggedOut",
+            Self::PasswordChanged { .. } => "PasswordChanged",
+            Self::TwoFactorEnabled { .. } => "TwoFactorEnabled",
+            Self::TwoFactorDisabled { .. } => "TwoFactorDisabled",
+            Self::OAuthClientCreated { .. } => "OAuthClientCreated",
+            Self::SessionCreated { .. } => "SessionCreated",
+            Self::SessionRevoked { .. } => "SessionRevoked",
+        }
+    }
+
+    pub fn aggregate_type(&self) -> &'static str {
+        match self {
+            Self::UserCreated { .. } 
+            | Self::UserLoggedIn { .. }
+            | Self::UserLoggedOut { .. }
+            | Self::PasswordChanged { .. }
+            | Self::TwoFactorEnabled { .. }
+            | Self::TwoFactorDisabled { .. } => "User",
+            Self::OAuthClientCreated { .. } => "OAuthClient",
+            Self::SessionCreated { .. }
+            | Self::SessionRevoked { .. } => "Session",
+        }
+    }
+
+    pub fn timestamp(&self) -> DateTime<Utc> {
+        match self {
+            Self::UserCreated { timestamp, .. }
+            | Self::UserLoggedIn { timestamp, .. }
+            | Self::UserLoggedOut { timestamp, .. }
+            | Self::PasswordChanged { timestamp, .. }
+            | Self::TwoFactorEnabled { timestamp, .. }
+            | Self::TwoFactorDisabled { timestamp, .. }
+            | Self::OAuthClientCreated { timestamp, .. }
+            | Self::SessionCreated { timestamp, .. }
+            | Self::SessionRevoked { timestamp, .. } => *timestamp,
+        }
+    }
+}
 
 /// 事件发布器 trait
 #[async_trait]
 pub trait EventPublisher: Send + Sync {
     /// 发布单个事件
-    async fn publish<E: DomainEvent + Send + Sync + 'static>(&self, event: E) -> AppResult<()>;
+    async fn publish(&self, event: IamDomainEvent);
     
     /// 批量发布事件
-    async fn publish_all<E: DomainEvent + Send + Sync + 'static>(&self, events: Vec<E>) -> AppResult<()>;
-}
-
-/// 事件订阅者 trait
-#[async_trait]
-pub trait EventSubscriber<E: DomainEvent>: Send + Sync {
-    /// 处理事件
-    async fn handle(&self, event: &E) -> AppResult<()>;
+    async fn publish_all(&self, events: Vec<IamDomainEvent>);
 }
 
 /// 内存事件总线实现
-/// 
-/// 用于开发和测试环境
 pub struct InMemoryEventBus {
-    handlers: Arc<RwLock<Vec<Box<dyn Fn(&dyn std::any::Any) + Send + Sync>>>>,
+    events: Arc<RwLock<Vec<IamDomainEvent>>>,
 }
 
 impl InMemoryEventBus {
     pub fn new() -> Self {
         Self {
-            handlers: Arc::new(RwLock::new(Vec::new())),
+            events: Arc::new(RwLock::new(Vec::new())),
         }
+    }
+
+    /// 获取所有发布的事件（用于测试）
+    pub async fn get_events(&self) -> Vec<IamDomainEvent> {
+        self.events.read().await.clone()
+    }
+
+    /// 清空事件（用于测试）
+    pub async fn clear(&self) {
+        self.events.write().await.clear();
     }
 }
 
@@ -48,68 +153,49 @@ impl Default for InMemoryEventBus {
 
 #[async_trait]
 impl EventPublisher for InMemoryEventBus {
-    async fn publish<E: DomainEvent + Send + Sync + 'static>(&self, event: E) -> AppResult<()> {
-        let handlers = self.handlers.read().await;
-        for handler in handlers.iter() {
-            handler(&event);
-        }
-        
+    async fn publish(&self, event: IamDomainEvent) {
         tracing::info!(
             event_type = event.event_type(),
             aggregate_type = event.aggregate_type(),
-            aggregate_id = event.aggregate_id(),
             "Domain event published"
         );
-        
-        Ok(())
+        self.events.write().await.push(event);
     }
     
-    async fn publish_all<E: DomainEvent + Send + Sync + 'static>(&self, events: Vec<E>) -> AppResult<()> {
+    async fn publish_all(&self, events: Vec<IamDomainEvent>) {
         for event in events {
-            self.publish(event).await?;
+            self.publish(event).await;
         }
-        Ok(())
     }
 }
 
 /// NoOp 事件发布器
-/// 
-/// 不执行任何操作，用于禁用事件发布
 pub struct NoOpEventPublisher;
 
 #[async_trait]
 impl EventPublisher for NoOpEventPublisher {
-    async fn publish<E: DomainEvent + Send + Sync + 'static>(&self, _event: E) -> AppResult<()> {
-        Ok(())
-    }
+    async fn publish(&self, _event: IamDomainEvent) {}
     
-    async fn publish_all<E: DomainEvent + Send + Sync + 'static>(&self, _events: Vec<E>) -> AppResult<()> {
-        Ok(())
-    }
+    async fn publish_all(&self, _events: Vec<IamDomainEvent>) {}
 }
 
 /// 日志事件发布器
-/// 
-/// 仅记录事件日志，不执行其他操作
 pub struct LoggingEventPublisher;
 
 #[async_trait]
 impl EventPublisher for LoggingEventPublisher {
-    async fn publish<E: DomainEvent + Send + Sync + 'static>(&self, event: E) -> AppResult<()> {
+    async fn publish(&self, event: IamDomainEvent) {
         tracing::info!(
             event_type = event.event_type(),
             aggregate_type = event.aggregate_type(),
-            aggregate_id = event.aggregate_id(),
             "Domain event: {}",
             event.event_type()
         );
-        Ok(())
     }
     
-    async fn publish_all<E: DomainEvent + Send + Sync + 'static>(&self, events: Vec<E>) -> AppResult<()> {
+    async fn publish_all(&self, events: Vec<IamDomainEvent>) {
         for event in events {
-            self.publish(event).await?;
+            self.publish(event).await;
         }
-        Ok(())
     }
 }

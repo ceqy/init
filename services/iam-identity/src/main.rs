@@ -50,6 +50,7 @@ use infrastructure::persistence::oauth::{
 use infrastructure::persistence::user::{
     PostgresEmailVerificationRepository, PostgresPhoneVerificationRepository, PostgresUserRepository,
 };
+use infrastructure::events::{EventPublisher, LoggingEventPublisher};
 use async_trait::async_trait;
 use cuba_adapter_email::{EmailClient, EmailSender};
 use cuba_bootstrap::{run_with_services, Infrastructure};
@@ -79,6 +80,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 组装 Cache（依赖 CachePort trait）
         let cache: Arc<dyn CachePort> = Arc::new(infra.redis_cache());
         let auth_cache: Arc<dyn AuthCache> = Arc::new(RedisAuthCache::new(cache));
+
+        // 组装事件发布器
+        let event_publisher: Arc<dyn EventPublisher> = Arc::new(LoggingEventPublisher);
 
         // 组装 TOTP 服务
         let totp_service = Arc::new(TotpService::new("Cuba ERP".to_string()));
@@ -204,6 +208,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let create_client_handler = Arc::new(CreateClientHandler::new(
             oauth_client_repo.clone(),
             user_repo.clone(),
+            event_publisher.clone(),
         ));
         let authorize_handler = Arc::new(AuthorizeHandler::new(oauth_service.clone()));
         let token_handler = Arc::new(TokenHandler::new(oauth_service.clone()));

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use chrono::Utc;
 use cuba_common::TenantId;
 use cuba_cqrs_core::CommandHandler;
 use cuba_errors::{AppError, AppResult};
@@ -10,15 +11,21 @@ use crate::application::commands::oauth::CreateClientCommand;
 use crate::domain::oauth::{GrantType, OAuthClient, OAuthClientType};
 use crate::domain::repositories::oauth::OAuthClientRepository;
 use crate::domain::repositories::user::UserRepository;
+use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
 
 pub struct CreateClientHandler {
     client_repo: Arc<dyn OAuthClientRepository>,
     user_repo: Arc<dyn UserRepository>,
+    event_publisher: Arc<dyn EventPublisher>,
 }
 
 impl CreateClientHandler {
-    pub fn new(client_repo: Arc<dyn OAuthClientRepository>, user_repo: Arc<dyn UserRepository>) -> Self {
-        Self { client_repo, user_repo }
+    pub fn new(
+        client_repo: Arc<dyn OAuthClientRepository>,
+        user_repo: Arc<dyn UserRepository>,
+        event_publisher: Arc<dyn EventPublisher>,
+    ) -> Self {
+        Self { client_repo, user_repo, event_publisher }
     }
 }
 
@@ -69,8 +76,9 @@ impl CommandHandler<CreateClientCommand> for CreateClientHandler {
              OAuthClientType::Confidential
         };
 
+        let client_name = command.name.clone();
         let mut client = OAuthClient::new(
-            tenant_id,
+            tenant_id.clone(),
             owner_id,
             command.name,
             client_type,
@@ -112,6 +120,15 @@ impl CommandHandler<CreateClientCommand> for CreateClientHandler {
         };
 
         self.client_repo.save(&client).await?;
+
+        // 发布 OAuth 客户端创建事件
+        let event = IamDomainEvent::OAuthClientCreated {
+            client_id: client.id.0.to_string(),
+            tenant_id: tenant_id.clone(),
+            name: client_name,
+            timestamp: Utc::now(),
+        };
+        self.event_publisher.publish(event).await;
 
         info!("OAuth client created: {}", client.id);
 
