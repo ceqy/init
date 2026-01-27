@@ -25,7 +25,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
 
         let row = sqlx::query_as::<_, RefreshTokenRow>(
             r#"
-            SELECT token, tenant_id, client_id, user_id, access_token, scope,
+            SELECT token, tenant_id, client_id, user_id, access_token, scopes,
                    revoked, expires_at, created_at
             FROM refresh_tokens
             WHERE token = $1 AND tenant_id = $2
@@ -48,7 +48,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         sqlx::query(
             r#"
             INSERT INTO refresh_tokens (token, tenant_id, client_id, user_id, access_token,
-                                       scope, revoked, expires_at, created_at)
+                                       scopes, revoked, expires_at, created_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             "#,
         )
@@ -140,7 +140,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
     async fn find_by_access_token(&self, access_token: &str, tenant_id: &TenantId) -> AppResult<Option<RefreshToken>> {
         let row = sqlx::query_as::<_, RefreshTokenRow>(
             r#"
-            SELECT token, tenant_id, client_id, user_id, access_token, scope,
+            SELECT token, tenant_id, client_id, user_id, access_token, scopes,
                    revoked, expires_at, created_at
             FROM refresh_tokens
             WHERE access_token = $1 AND tenant_id = $2
@@ -158,7 +158,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
     async fn list_active_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<RefreshToken>> {
         let rows = sqlx::query_as::<_, RefreshTokenRow>(
             r#"
-            SELECT token, tenant_id, client_id, user_id, access_token, scope,
+            SELECT token, tenant_id, client_id, user_id, access_token, scopes,
                    revoked, expires_at, created_at
             FROM refresh_tokens
             WHERE user_id = $1 AND tenant_id = $2 AND revoked = FALSE AND expires_at > NOW()
@@ -182,7 +182,7 @@ struct RefreshTokenRow {
     client_id: Uuid,
     user_id: Uuid,
     access_token: String,
-    scope: String,
+    scopes: String,
     revoked: bool,
     expires_at: chrono::DateTime<chrono::Utc>,
     created_at: chrono::DateTime<chrono::Utc>,
@@ -196,7 +196,7 @@ impl From<RefreshTokenRow> for RefreshToken {
             client_id: OAuthClientId::from_uuid(row.client_id),
             user_id: UserId::from_uuid(row.user_id),
             access_token: row.access_token,
-            scopes: row.scope.split_whitespace().map(|s| s.to_string()).collect(),
+            scopes: row.scopes.split_whitespace().map(|s| s.to_string()).collect(),
             revoked: row.revoked,
             expires_at: row.expires_at,
             created_at: row.created_at,

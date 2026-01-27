@@ -25,7 +25,7 @@ impl AuthorizationCodeRepository for PostgresAuthorizationCodeRepository {
 
         let row = sqlx::query_as::<_, AuthorizationCodeRow>(
             r#"
-            SELECT code, tenant_id, client_id, user_id, redirect_uri, scope,
+            SELECT code, tenant_id, client_id, user_id, redirect_uri, scopes,
                    code_challenge, code_challenge_method, used, expires_at, created_at
             FROM authorization_codes
             WHERE code = $1 AND tenant_id = $2
@@ -43,12 +43,13 @@ impl AuthorizationCodeRepository for PostgresAuthorizationCodeRepository {
     async fn save(&self, authorization_code: &AuthorizationCode) -> AppResult<()> {
         debug!("Saving authorization code");
 
+        // Store scopes as space-separated string to match database column type
         let scopes_str = authorization_code.scopes.join(" ");
 
         sqlx::query(
             r#"
             INSERT INTO authorization_codes (code, tenant_id, client_id, user_id, redirect_uri,
-                                            scope, code_challenge, code_challenge_method, used,
+                                            scopes, code_challenge, code_challenge_method, used,
                                             expires_at, created_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             "#,
@@ -58,7 +59,7 @@ impl AuthorizationCodeRepository for PostgresAuthorizationCodeRepository {
         .bind(authorization_code.client_id.0)
         .bind(authorization_code.user_id.0)
         .bind(&authorization_code.redirect_uri)
-        .bind(scopes_str)
+        .bind(&scopes_str)
         .bind(&authorization_code.code_challenge)
         .bind(&authorization_code.code_challenge_method)
         .bind(authorization_code.used)
@@ -97,7 +98,7 @@ impl AuthorizationCodeRepository for PostgresAuthorizationCodeRepository {
             .bind(tenant_id.0)
             .execute(&self.pool)
             .await
-            .map_err(|e| AppError::database(format!("Failed to delete authorization code: {}", e)))?;
+        .map_err(|e| AppError::database(format!("Failed to delete authorization code: {}", e)))?;
 
         Ok(())
     }
@@ -148,7 +149,7 @@ struct AuthorizationCodeRow {
     client_id: Uuid,
     user_id: Uuid,
     redirect_uri: String,
-    scope: String,
+    scopes: String,
     code_challenge: Option<String>,
     code_challenge_method: Option<String>,
     used: bool,
@@ -164,7 +165,7 @@ impl From<AuthorizationCodeRow> for AuthorizationCode {
             client_id: OAuthClientId::from_uuid(row.client_id),
             user_id: UserId::from_uuid(row.user_id),
             redirect_uri: row.redirect_uri,
-            scopes: row.scope.split_whitespace().map(|s| s.to_string()).collect(),
+            scopes: row.scopes.split_whitespace().map(|s| s.to_string()).collect(),
             code_challenge: row.code_challenge,
             code_challenge_method: row.code_challenge_method,
             used: row.used,

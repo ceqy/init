@@ -7,7 +7,9 @@ use cuba_common::TenantId;
 use cuba_cqrs_core::CommandHandler;
 
 use crate::oauth::application::commands::{AuthorizeCommand, CreateClientCommand, TokenCommand};
-use crate::oauth::application::handlers::{AuthorizeHandler, CreateClientHandler, TokenHandler};
+use crate::oauth::application::handlers::{
+    AuthorizeHandler, CreateClientHandler, TokenHandler,
+};
 use crate::oauth::domain::entities::OAuthClientId;
 use crate::oauth::domain::repositories::OAuthClientRepository;
 use crate::oauth::domain::services::OAuthService;
@@ -32,11 +34,10 @@ impl OAuthServiceImpl {
     pub fn new(
         client_repo: Arc<dyn OAuthClientRepository>,
         oauth_service: Arc<OAuthService>,
+        create_client_handler: Arc<CreateClientHandler>,
+        authorize_handler: Arc<AuthorizeHandler>,
+        token_handler: Arc<TokenHandler>,
     ) -> Self {
-        let create_client_handler = Arc::new(CreateClientHandler::new(client_repo.clone()));
-        let authorize_handler = Arc::new(AuthorizeHandler::new(oauth_service.clone()));
-        let token_handler = Arc::new(TokenHandler::new(oauth_service.clone()));
-
         Self {
             client_repo,
             oauth_service,

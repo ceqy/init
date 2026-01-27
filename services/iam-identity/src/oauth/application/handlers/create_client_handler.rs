@@ -8,16 +8,17 @@ use tracing::info;
 
 use crate::oauth::application::commands::CreateClientCommand;
 use crate::oauth::domain::entities::{GrantType, OAuthClient, OAuthClientType};
-use cuba_common::{UserId}; // Need UserId for owner_id
 use crate::oauth::domain::repositories::OAuthClientRepository;
+use crate::shared::domain::repositories::UserRepository;
 
 pub struct CreateClientHandler {
     client_repo: Arc<dyn OAuthClientRepository>,
+    user_repo: Arc<dyn UserRepository>,
 }
 
 impl CreateClientHandler {
-    pub fn new(client_repo: Arc<dyn OAuthClientRepository>) -> Self {
-        Self { client_repo }
+    pub fn new(client_repo: Arc<dyn OAuthClientRepository>, user_repo: Arc<dyn UserRepository>) -> Self {
+        Self { client_repo, user_repo }
     }
 }
 
@@ -29,8 +30,38 @@ impl CommandHandler<CreateClientCommand> for CreateClientHandler {
         let tenant_id = TenantId::from_string(&command.tenant_id)
             .map_err(|e| AppError::validation(format!("Invalid tenant_id: {}", e)))?;
 
-        // Default owner_id if not present (TODO: should come from command context/claims)
-        let owner_id = UserId::new();
+        // TODO: owner_id should come from command context/claims (authenticated user)
+        // For now, find or create a user in this tenant
+        let (users, _) = self.user_repo.list(
+            &tenant_id,
+            None,  // status
+            None,  // search
+            &[],  // role_ids
+            1,   // page
+            1,   // page_size
+        ).await.unwrap_or((vec![], 0));
+
+        let owner_id = if users.is_empty() {
+            // No users yet, create a temporary one for this tenant
+            use crate::shared::domain::entities::User;
+            use crate::shared::domain::value_objects::{Email, Username};
+            use crate::auth::domain::services::PasswordService;
+
+            let username = Username::new(format!("admin_{}", &tenant_id.0.to_string()[..8]))
+                .unwrap_or_else(|_| Username::new("admin".to_string()).unwrap());
+            let email = Email::new(format!("admin_{}@temp.local", &tenant_id.0.to_string()[..8]))
+                .unwrap_or_else(|_| Email::new("admin@temp.local".to_string()).unwrap());
+            let password_hash = PasswordService::hash_password("temp_password_123")
+                .map_err(|e| AppError::validation(format!("Failed to hash password: {}", e)))?;
+
+            let user = User::new(username, email, password_hash, tenant_id.clone());
+            self.user_repo.save(&user).await
+                .map_err(|e| AppError::internal(format!("Failed to create default user: {}", e)))?;
+            user.id.clone()
+        } else {
+            // Use the first user in the tenant
+            users[0].id.clone()
+        };
 
         let client_type = if command.public_client {
              OAuthClientType::Public

@@ -30,6 +30,16 @@ use cuba_adapter_email::{EmailClient, EmailSender};
 use cuba_bootstrap::{run_with_services, Infrastructure};
 use cuba_config::PasswordResetConfig;
 use cuba_ports::CachePort;
+use oauth::api::grpc::{OAuthServiceImpl, OAuthServiceServer};
+use oauth::application::handlers::{AuthorizeHandler, CreateClientHandler, TokenHandler};
+use oauth::domain::repositories::{
+    AccessTokenRepository, AuthorizationCodeRepository, OAuthClientRepository, RefreshTokenRepository,
+};
+use oauth::domain::services::OAuthService;
+use oauth::infrastructure::persistence::{
+    PostgresAccessTokenRepository, PostgresAuthorizationCodeRepository, PostgresOAuthClientRepository,
+    PostgresRefreshTokenRepository,
+};
 use shared::application::handlers::{
     SendEmailVerificationHandler, SendPhoneVerificationHandler, VerifyEmailHandler,
     VerifyPhoneHandler,
@@ -159,13 +169,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // 组装 UserService
         let user_service = UserServiceImpl::new(
-            user_repo, 
-            token_service,
+            user_repo.clone(),
+            token_service.clone(),
             send_email_verification_handler,
             verify_email_handler,
             send_phone_verification_handler,
             verify_phone_handler,
         );
+
+        // 组装 OAuth Repositories
+        let oauth_client_repo: Arc<dyn OAuthClientRepository> =
+            Arc::new(PostgresOAuthClientRepository::new(pool.clone()));
+        let authorization_code_repo: Arc<dyn AuthorizationCodeRepository> =
+            Arc::new(PostgresAuthorizationCodeRepository::new(pool.clone()));
+        let access_token_repo: Arc<dyn AccessTokenRepository> =
+            Arc::new(PostgresAccessTokenRepository::new(pool.clone()));
+        let refresh_token_repo: Arc<dyn RefreshTokenRepository> =
+            Arc::new(PostgresRefreshTokenRepository::new(pool.clone()));
+
+        // 组装 OAuthService
+        let oauth_service = Arc::new(OAuthService::new(
+            oauth_client_repo.clone(),
+            authorization_code_repo,
+            access_token_repo,
+            refresh_token_repo,
+        ));
+
+        // 组装 OAuthServiceImpl
+        let create_client_handler = Arc::new(CreateClientHandler::new(
+            oauth_client_repo.clone(),
+            user_repo.clone(),
+        ));
+        let authorize_handler = Arc::new(AuthorizeHandler::new(oauth_service.clone()));
+        let token_handler = Arc::new(TokenHandler::new(oauth_service.clone()));
+
+        let oauth_service_impl = OAuthServiceImpl::new(oauth_client_repo, oauth_service, create_client_handler, authorize_handler, token_handler);
 
         // 注册多个服务并启动
         let addr = format!("{}:{}", config.server.host, config.server.port)
@@ -176,12 +214,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let reflection_service = ReflectionBuilder::configure()
             .register_encoded_file_descriptor_set(auth::api::grpc::proto::FILE_DESCRIPTOR_SET)
             .register_encoded_file_descriptor_set(user::api::grpc::proto::FILE_DESCRIPTOR_SET)
+            .register_encoded_file_descriptor_set(oauth::api::grpc::proto::FILE_DESCRIPTOR_SET)
             .build_v1()
             .map_err(|e| cuba_errors::AppError::internal(format!("Failed to build reflection service: {}", e)))?;
 
         server
             .add_service(AuthServiceServer::new(auth_service))
             .add_service(UserServiceServer::new(user_service))
+            .add_service(OAuthServiceServer::new(oauth_service_impl))
             .add_service(reflection_service)
             .serve_with_shutdown(addr, cuba_bootstrap::shutdown_signal())
             .await
