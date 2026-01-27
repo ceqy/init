@@ -11,7 +11,7 @@ use cuba_auth_core::{Claims, TokenService};
 use cuba_common::{TenantId, UserId};
 use cuba_cqrs_core::CommandHandler;
 
-use crate::application::commands::{
+use crate::application::commands::user::{
     SendEmailVerificationCommand, SendPhoneVerificationCommand, VerifyEmailCommand,
     VerifyPhoneCommand,
 };
@@ -57,8 +57,8 @@ impl UserServiceImpl {
     }
 
     /// 将领域实体转换为 Proto User
-    fn user_to_proto(&self, user: &User) -> proto::User {
-        proto::User {
+    fn user_to_proto(&self, user: &User) -> user_proto::User {
+        user_proto::User {
             id: user.id.0.to_string(),
             username: user.username.as_str().to_string(),
             email: user.email.as_str().to_string(),
@@ -75,7 +75,7 @@ impl UserServiceImpl {
                 seconds: dt.timestamp(),
                 nanos: dt.timestamp_subsec_nanos() as i32,
             }),
-            audit_info: Some(proto::AuditInfo {
+            audit_info: Some(user_proto::AuditInfo {
                 created_at: Some(prost_types::Timestamp {
                     seconds: user.audit_info.created_at.timestamp(),
                     nanos: user.audit_info.created_at.timestamp_subsec_nanos() as i32,
@@ -456,7 +456,7 @@ impl UserService for UserServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 转换为 proto
-        let proto_users: Vec<proto::User> = users.iter().map(|u| self.user_to_proto(u)).collect();
+        let proto_users: Vec<user_proto::User> = users.iter().map(|u| self.user_to_proto(u)).collect();
 
         // 计算总页数
         let total_pages = ((total as f64) / (page_size as f64)).ceil() as i32;

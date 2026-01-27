@@ -19,7 +19,7 @@ impl PasswordService {
     }
 
     /// 修改用户密码
-    pub fn change_password(&self, user: &mut crate::shared::domain::entities::User, new_password: &str) -> AppResult<()> {
+    pub fn change_password(&self, user: &mut crate::domain::user::User, new_password: &str) -> AppResult<()> {
         let hashed = Self::hash_password(new_password)?;
         user.update_password(hashed);
         Ok(())

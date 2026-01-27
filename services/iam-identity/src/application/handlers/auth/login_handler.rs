@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::application::commands::auth::{LoginCommand, LoginResult};
 use crate::application::dto::auth::TokenPair;
-use crate::auth::application::services::{BruteForceProtectionService, SuspiciousLoginDetector};
+use crate::domain::services::auth::{BruteForceProtectionService, SuspiciousLoginDetector};
 use crate::domain::auth::{DeviceInfo, LoginFailureReason, LoginLog, LoginResult as LogResult, Session};
 use crate::domain::repositories::auth::{LoginLogRepository, SessionRepository};
 use crate::domain::services::auth::PasswordService;
@@ -63,7 +63,7 @@ impl LoginHandler {
                        ip: &str, user_agent: &str, result: LogResult, failure_reason: Option<LoginFailureReason>,
                        is_suspicious: bool) -> AppResult<()> {
         let log = LoginLog {
-            id: crate::auth::domain::entities::LoginLogId::new(),
+            id: crate::domain::auth::LoginLogId::new(),
             user_id: user_id.cloned(),
             tenant_id: tenant_id.clone(),
             username: username.to_string(),

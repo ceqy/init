@@ -108,8 +108,8 @@ fn sha256_hash(input: &str) -> String {
 }
 
 /// 将 Domain User 转换为 Proto User
-fn user_to_proto(user: &crate::shared::domain::entities::User) -> proto::User {
-    proto::User {
+fn user_to_proto(user: &crate::domain::user::User) -> auth_proto::User {
+    auth_proto::User {
         id: user.id.0.to_string(),
         username: user.username.as_str().to_string(),
         email: user.email.as_str().to_string(),
@@ -126,7 +126,7 @@ fn user_to_proto(user: &crate::shared::domain::entities::User) -> proto::User {
             seconds: dt.timestamp(),
             nanos: dt.timestamp_subsec_nanos() as i32,
         }),
-        audit_info: Some(proto::AuditInfo {
+        audit_info: Some(auth_proto::AuditInfo {
             created_at: Some(Timestamp {
                 seconds: user.audit_info.created_at.timestamp(),
                 nanos: user.audit_info.created_at.timestamp_subsec_nanos() as i32,
@@ -152,8 +152,8 @@ fn user_to_proto(user: &crate::shared::domain::entities::User) -> proto::User {
 }
 
 /// 将 Domain Session 转换为 Proto Session
-fn session_to_proto(session: &DomainSession, is_current: bool) -> proto::Session {
-    proto::Session {
+fn session_to_proto(session: &DomainSession, is_current: bool) -> auth_proto::Session {
+    auth_proto::Session {
         id: session.id.0.to_string(),
         user_id: session.user_id.0.to_string(),
         device_info: session.device_info.clone().unwrap_or_default(),
@@ -888,11 +888,11 @@ impl AuthService for AuthServiceImpl {
 
             // 7. 生成备份码
             let backup_codes = BackupCodeService::generate_codes();
-            let backup_code_entities: Vec<crate::auth::domain::entities::BackupCode> = backup_codes
+            let backup_code_entities: Vec<crate::domain::auth::BackupCode> = backup_codes
                 .iter()
                 .map(|code| {
                     let hash = BackupCodeService::hash_code(code);
-                    crate::auth::domain::entities::BackupCode::new(user_id.clone(), tenant_id.clone(), hash)
+                    crate::domain::auth::BackupCode::new(user_id.clone(), tenant_id.clone(), hash)
                 })
                 .collect();
 

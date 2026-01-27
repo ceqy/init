@@ -101,7 +101,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         Ok(Response::new(CreateClientResponse {
             client_id,
             client_secret: client_secret.unwrap_or_default(),
-            client: Some(super::proto::OAuthClient {
+            client: Some(super::oauth_proto::OAuthClient {
                 id: client.id.0.to_string(),
                 name: client.name,
                 redirect_uris: client.redirect_uris,
@@ -138,7 +138,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
             .ok_or_else(|| Status::not_found("Client not found"))?;
 
         Ok(Response::new(GetClientResponse {
-            client: Some(super::proto::OAuthClient {
+            client: Some(super::oauth_proto::OAuthClient {
                 id: client.id.0.to_string(),
                 name: client.name,
                 redirect_uris: client.redirect_uris,
@@ -198,7 +198,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(UpdateClientResponse {
-            client: Some(super::proto::OAuthClient {
+            client: Some(super::oauth_proto::OAuthClient {
                 id: client.id.0.to_string(),
                 name: client.name,
                 redirect_uris: client.redirect_uris,
@@ -266,7 +266,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
 
         let proto_clients = clients
             .into_iter()
-            .map(|client| super::proto::OAuthClient {
+            .map(|client| super::oauth_proto::OAuthClient {
                 id: client.id.0.to_string(),
                 name: client.name,
                 redirect_uris: client.redirect_uris,

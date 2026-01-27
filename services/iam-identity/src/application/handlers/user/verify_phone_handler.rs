@@ -9,7 +9,7 @@ use cuba_errors::AppResult;
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use crate::shared::application::commands::{VerifyPhoneCommand, VerifyPhoneResult};
+use crate::application::commands::user::{VerifyPhoneCommand, VerifyPhoneResult};
 use crate::domain::services::user::PhoneVerificationService;
 
 /// 验证手机处理器
@@ -81,7 +81,7 @@ impl CommandHandler<VerifyPhoneCommand> for VerifyPhoneHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::application::commands::SendPhoneVerificationCommand;
+    use crate::application::commands::user::SendPhoneVerificationCommand;
     use crate::application::handlers::user::SendPhoneVerificationHandler;
     use crate::domain::user::User;
     use crate::domain::services::user::{PhoneVerificationService, SmsSender};

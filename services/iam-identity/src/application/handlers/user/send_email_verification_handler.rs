@@ -9,7 +9,7 @@ use cuba_errors::AppResult;
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use crate::shared::application::commands::{
+use crate::application::commands::user::{
     SendEmailVerificationCommand, SendEmailVerificationResult,
 };
 use crate::domain::services::user::EmailVerificationService;

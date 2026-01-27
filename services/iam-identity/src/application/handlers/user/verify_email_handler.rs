@@ -9,7 +9,7 @@ use cuba_errors::AppResult;
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use crate::shared::application::commands::{VerifyEmailCommand, VerifyEmailResult};
+use crate::application::commands::user::{VerifyEmailCommand, VerifyEmailResult};
 use crate::domain::services::user::EmailVerificationService;
 
 /// 验证邮箱处理器
@@ -81,7 +81,7 @@ impl CommandHandler<VerifyEmailCommand> for VerifyEmailHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::application::commands::SendEmailVerificationCommand;
+    use crate::application::commands::user::SendEmailVerificationCommand;
     use crate::application::handlers::user::SendEmailVerificationHandler;
     use crate::domain::user::User;
     use crate::domain::services::user::EmailVerificationService;

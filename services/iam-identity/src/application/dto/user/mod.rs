@@ -1,3 +1,5 @@
 //! 用户 DTO
 
-// User DTOs
+pub mod user_dto;
+
+pub use user_dto::*;
