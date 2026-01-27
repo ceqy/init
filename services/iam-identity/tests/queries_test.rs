@@ -8,10 +8,10 @@ use iam_identity::application::queries::user::{
 use iam_identity::application::queries::oauth::{
     GetOAuthClientByIdQuery, ListUserOAuthClientsQuery, ListTenantOAuthClientsQuery,
     ValidateOAuthClientQuery, ListUserAuthorizedAppsQuery,
-    OAuthClientQueryResult, ListOAuthClientsResult, ValidateOAuthClientResult,
+    OAuthClientQueryResult, ValidateOAuthClientResult,
 };
 use cuba_common::UserId;
-use cuba_cqrs_core::Query;
+
 
 // ============ User Queries Tests ============
 

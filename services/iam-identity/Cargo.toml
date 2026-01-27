@@ -58,6 +58,7 @@ tonic-build = { workspace = true }
 criterion = "0.5"
 secrecy.workspace = true
 url = "2.5.8"
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [[bench]]
 name = "auth_benchmark"
