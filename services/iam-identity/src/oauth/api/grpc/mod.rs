@@ -1,7 +1,7 @@
 pub mod oauth_service_impl;
 
 pub mod proto {
-    tonic::include_proto!("cuba.iam.oauth");
+    include!("cuba.iam.oauth.rs");
 
     pub const FILE_DESCRIPTOR_SET: &[u8] =
         include_bytes!("oauth_descriptor.bin");

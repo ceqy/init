@@ -2,13 +2,9 @@
 //!
 //! 使用 cuba-bootstrap 统一启动模式
 
-mod api;
-mod application;
 mod auth;
 mod config;
-mod domain;
 mod error;
-mod infrastructure;
 mod oauth;
 mod shared;
 mod user;
