@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::shared::application::commands::{
     SendEmailVerificationCommand, SendEmailVerificationResult,
 };
-use crate::shared::domain::services::EmailVerificationService;
+use crate::domain::services::user::EmailVerificationService;
 
 /// 发送邮箱验证码处理器
 pub struct SendEmailVerificationHandler {
@@ -89,10 +89,10 @@ impl CommandHandler<SendEmailVerificationCommand> for SendEmailVerificationHandl
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::domain::entities::User;
-    use crate::shared::domain::services::EmailVerificationService;
-    use crate::shared::domain::value_objects::{Email, Password, Username};
-    use crate::shared::infrastructure::persistence::{
+    use crate::domain::user::User;
+    use crate::domain::services::user::EmailVerificationService;
+    use crate::domain::value_objects::{Email, Password, Username};
+    use crate::infrastructure::persistence::user::{
         PostgresEmailVerificationRepository, PostgresUserRepository,
     };
     use cuba_adapter_email::EmailSender;

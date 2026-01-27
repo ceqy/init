@@ -9,10 +9,10 @@ use rand::Rng;
 use sha2::{Digest, Sha256};
 use tracing::{debug, info, warn};
 
-use crate::auth::domain::entities::PasswordResetToken;
-use crate::auth::domain::repositories::PasswordResetRepository;
-use crate::shared::domain::repositories::UserRepository;
-use crate::shared::domain::value_objects::Email;
+use crate::domain::auth::PasswordResetToken;
+use crate::domain::repositories::auth::PasswordResetRepository;
+use crate::domain::repositories::user::UserRepository;
+use crate::domain::value_objects::Email;
 
 /// 密码重置服务
 pub struct PasswordResetService {
@@ -188,10 +188,10 @@ impl PasswordResetService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::auth::infrastructure::persistence::PostgresPasswordResetRepository;
-    use crate::shared::domain::entities::User;
-    use crate::shared::domain::value_objects::{Password, Username};
-    use crate::shared::infrastructure::persistence::PostgresUserRepository;
+    use crate::infrastructure::persistence::auth::PostgresPasswordResetRepository;
+    use crate::domain::user::User;
+    use crate::domain::value_objects::{Password, Username};
+    use crate::infrastructure::persistence::user::PostgresUserRepository;
     use uuid::Uuid;
 
     #[sqlx::test]

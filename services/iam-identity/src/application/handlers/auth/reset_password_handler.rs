@@ -8,10 +8,10 @@ use cuba_cqrs_core::CommandHandler;
 use cuba_errors::{AppError, AppResult};
 use tracing::info;
 
-use crate::auth::application::commands::ResetPasswordCommand;
-use crate::auth::domain::services::{PasswordResetService, PasswordService};
-use crate::shared::domain::repositories::UserRepository;
-use crate::shared::domain::value_objects::{Email, Password};
+use crate::application::commands::auth::ResetPasswordCommand;
+use crate::domain::services::auth::{PasswordResetService, PasswordService};
+use crate::domain::repositories::user::UserRepository;
+use crate::domain::value_objects::{Email, Password};
 
 /// 重置密码处理器
 pub struct ResetPasswordHandler {
@@ -94,10 +94,10 @@ impl CommandHandler<ResetPasswordCommand> for ResetPasswordHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::auth::infrastructure::persistence::PostgresPasswordResetRepository;
-    use crate::shared::domain::entities::User;
-    use crate::shared::domain::value_objects::Username;
-    use crate::shared::infrastructure::persistence::PostgresUserRepository;
+    use crate::infrastructure::persistence::auth::PostgresPasswordResetRepository;
+    use crate::domain::user::User;
+    use crate::domain::value_objects::Username;
+    use crate::infrastructure::persistence::user::PostgresUserRepository;
     use uuid::Uuid;
 
     #[sqlx::test]

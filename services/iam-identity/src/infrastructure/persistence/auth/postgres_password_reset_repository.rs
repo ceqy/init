@@ -6,8 +6,8 @@ use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::{debug, warn};
 
-use crate::auth::domain::entities::{PasswordResetToken, PasswordResetTokenId};
-use crate::auth::domain::repositories::PasswordResetRepository;
+use crate::domain::auth::{PasswordResetToken, PasswordResetTokenId};
+use crate::domain::repositories::auth::PasswordResetRepository;
 
 /// PostgreSQL 密码重置令牌仓储
 pub struct PostgresPasswordResetRepository {

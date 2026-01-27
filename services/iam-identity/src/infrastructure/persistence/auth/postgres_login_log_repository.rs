@@ -7,8 +7,8 @@ use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::auth::domain::entities::{LoginLog, LoginLogId, LoginResult};
-use crate::auth::domain::repositories::LoginLogRepository;
+use crate::domain::auth::{LoginLog, LoginLogId, LoginResult};
+use crate::domain::repositories::auth::LoginLogRepository;
 
 pub struct PostgresLoginLogRepository {
     pool: PgPool,
@@ -230,7 +230,7 @@ struct LoginLogRow {
 
 impl From<LoginLogRow> for LoginLog {
     fn from(row: LoginLogRow) -> Self {
-        use crate::auth::domain::entities::{DeviceInfo, LoginFailureReason};
+        use crate::domain::auth::{DeviceInfo, LoginFailureReason};
 
         LoginLog {
             id: LoginLogId(row.id),

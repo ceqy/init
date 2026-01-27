@@ -6,10 +6,10 @@ use cuba_cqrs_core::CommandHandler;
 use cuba_errors::{AppError, AppResult};
 use tracing::info;
 
-use crate::oauth::application::commands::CreateClientCommand;
-use crate::oauth::domain::entities::{GrantType, OAuthClient, OAuthClientType};
-use crate::oauth::domain::repositories::OAuthClientRepository;
-use crate::shared::domain::repositories::UserRepository;
+use crate::application::commands::oauth::CreateClientCommand;
+use crate::domain::oauth::{GrantType, OAuthClient, OAuthClientType};
+use crate::domain::repositories::oauth::OAuthClientRepository;
+use crate::domain::repositories::user::UserRepository;
 
 pub struct CreateClientHandler {
     client_repo: Arc<dyn OAuthClientRepository>,
@@ -43,9 +43,9 @@ impl CommandHandler<CreateClientCommand> for CreateClientHandler {
 
         let owner_id = if users.is_empty() {
             // No users yet, create a temporary one for this tenant
-            use crate::shared::domain::entities::User;
-            use crate::shared::domain::value_objects::{Email, Username};
-            use crate::auth::domain::services::PasswordService;
+            use crate::domain::user::User;
+            use crate::domain::value_objects::{Email, Username};
+            use crate::domain::services::auth::PasswordService;
 
             let username = Username::new(format!("admin_{}", &tenant_id.0.to_string()[..8]))
                 .unwrap_or_else(|_| Username::new("admin".to_string()).unwrap());

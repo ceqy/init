@@ -5,8 +5,8 @@ use cuba_common::{AuditInfo, TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 
-use crate::shared::domain::entities::{Tenant, TenantStatus};
-use crate::shared::domain::repositories::TenantRepository;
+use crate::domain::user::{Tenant, TenantStatus};
+use crate::domain::repositories::user::TenantRepository;
 
 
 pub struct PostgresTenantRepository {

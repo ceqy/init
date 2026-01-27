@@ -5,7 +5,7 @@ use cuba_common::{AuditInfo, TenantId, UserId};
 use cuba_domain_core::{AggregateRoot, Entity};
 use serde::{Deserialize, Serialize};
 
-use crate::shared::domain::value_objects::{Email, HashedPassword, Username};
+use crate::domain::value_objects::{Email, HashedPassword, Username};
 
 /// 用户状态
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

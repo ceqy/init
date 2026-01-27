@@ -11,14 +11,14 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 use base64::{engine::general_purpose, Engine as _};
 
-use crate::auth::domain::entities::{PasswordResetToken, Session as DomainSession, SessionId};
-use crate::auth::domain::repositories::{
+use crate::domain::auth::{PasswordResetToken, Session as DomainSession, SessionId};
+use crate::domain::repositories::auth::{
     BackupCodeRepository, PasswordResetRepository, SessionRepository,
 };
-use crate::auth::domain::services::{BackupCodeService, TotpService, WebAuthnService};
-use crate::auth::infrastructure::cache::AuthCache;
-use crate::shared::domain::repositories::UserRepository;
-use crate::shared::domain::value_objects::{Email, HashedPassword, Username};
+use crate::domain::services::auth::{BackupCodeService, TotpService, WebAuthnService};
+use crate::infrastructure::cache::AuthCache;
+use crate::domain::repositories::user::UserRepository;
+use crate::domain::value_objects::{Email, HashedPassword, Username};
 use cuba_adapter_email::EmailSender;
 
 use super::proto::{self, auth_service_server::AuthService};

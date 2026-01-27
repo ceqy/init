@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use cuba_common::{TenantId, UserId};
 use cuba_errors::AppResult;
 
-use crate::oauth::domain::entities::{AccessToken, OAuthClientId};
+use crate::domain::oauth::{AccessToken, OAuthClientId};
 
 /// Access Token 仓储接口
 #[async_trait]

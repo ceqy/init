@@ -6,8 +6,8 @@ use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::auth::domain::entities::{Session, SessionId};
-use crate::auth::domain::repositories::SessionRepository;
+use crate::domain::auth::{Session, SessionId};
+use crate::domain::repositories::auth::SessionRepository;
 
 pub struct PostgresSessionRepository {
     pool: PgPool,

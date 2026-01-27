@@ -5,8 +5,8 @@ use sqlx::PgPool;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::oauth::domain::entities::{OAuthClient, OAuthClientId};
-use crate::oauth::domain::repositories::OAuthClientRepository;
+use crate::domain::oauth::{OAuthClient, OAuthClientId};
+use crate::domain::repositories::oauth::OAuthClientRepository;
 
 pub struct PostgresOAuthClientRepository {
     pool: PgPool,
@@ -220,7 +220,7 @@ struct OAuthClientRow {
 
 impl From<OAuthClientRow> for OAuthClient {
     fn from(row: OAuthClientRow) -> Self {
-        use crate::oauth::domain::entities::{GrantType, OAuthClientType};
+        use crate::domain::oauth::{GrantType, OAuthClientType};
 
         let client_type = match row.client_type.as_str() {
             "Confidential" => OAuthClientType::Confidential,

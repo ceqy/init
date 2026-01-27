@@ -7,8 +7,8 @@ use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use tracing::{debug, info, warn};
 
-use crate::shared::domain::entities::EmailVerification;
-use crate::shared::domain::repositories::{EmailVerificationRepository, UserRepository};
+use crate::domain::user::EmailVerification;
+use crate::domain::repositories::user::{EmailVerificationRepository, UserRepository};
 
 /// 邮箱验证服务
 pub struct EmailVerificationService {
@@ -181,9 +181,9 @@ impl EmailVerificationService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::domain::entities::User;
-    use crate::shared::domain::value_objects::{Email, Password, Username};
-    use crate::shared::infrastructure::persistence::{
+    use crate::domain::user::User;
+    use crate::domain::value_objects::{Email, Password, Username};
+    use crate::infrastructure::persistence::user::{
         PostgresEmailVerificationRepository, PostgresUserRepository,
     };
     use uuid::Uuid;

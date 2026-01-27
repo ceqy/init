@@ -6,10 +6,10 @@ use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::{debug, warn};
 
-use crate::shared::domain::entities::{
+use crate::domain::user::{
     PhoneVerification, PhoneVerificationId, PhoneVerificationStatus,
 };
-use crate::shared::domain::repositories::PhoneVerificationRepository;
+use crate::domain::repositories::user::PhoneVerificationRepository;
 
 /// PostgreSQL 手机验证仓储
 pub struct PostgresPhoneVerificationRepository {

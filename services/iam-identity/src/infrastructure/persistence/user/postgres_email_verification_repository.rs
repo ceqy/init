@@ -7,10 +7,10 @@ use sqlx::PgPool;
 use tracing::{debug, warn};
 
 
-use crate::shared::domain::entities::{
+use crate::domain::user::{
     EmailVerification, EmailVerificationId, EmailVerificationStatus,
 };
-use crate::shared::domain::repositories::EmailVerificationRepository;
+use crate::domain::repositories::user::EmailVerificationRepository;
 
 /// PostgreSQL 邮箱验证仓储
 pub struct PostgresEmailVerificationRepository {

@@ -10,14 +10,14 @@ use cuba_cqrs_core::CommandHandler;
 use cuba_errors::{AppError, AppResult};
 use uuid::Uuid;
 
-use crate::auth::application::commands::{LoginCommand, LoginResult};
-use crate::auth::application::dto::TokenPair;
+use crate::application::commands::auth::{LoginCommand, LoginResult};
+use crate::application::dto::auth::TokenPair;
 use crate::auth::application::services::{BruteForceProtectionService, SuspiciousLoginDetector};
-use crate::auth::domain::entities::{DeviceInfo, LoginFailureReason, LoginLog, LoginResult as LogResult, Session};
-use crate::auth::domain::repositories::{LoginLogRepository, SessionRepository};
-use crate::auth::domain::services::PasswordService;
-use crate::shared::domain::repositories::UserRepository;
-use crate::shared::domain::value_objects::Username;
+use crate::domain::auth::{DeviceInfo, LoginFailureReason, LoginLog, LoginResult as LogResult, Session};
+use crate::domain::repositories::auth::{LoginLogRepository, SessionRepository};
+use crate::domain::services::auth::PasswordService;
+use crate::domain::repositories::user::UserRepository;
+use crate::domain::value_objects::Username;
 
 /// 简单的哈希函数（用于 refresh token）
 fn sha256_simple(input: &str) -> u64 {

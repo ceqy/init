@@ -10,7 +10,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::shared::application::commands::{VerifyPhoneCommand, VerifyPhoneResult};
-use crate::shared::domain::services::PhoneVerificationService;
+use crate::domain::services::user::PhoneVerificationService;
 
 /// 验证手机处理器
 pub struct VerifyPhoneHandler {
@@ -82,11 +82,11 @@ impl CommandHandler<VerifyPhoneCommand> for VerifyPhoneHandler {
 mod tests {
     use super::*;
     use crate::shared::application::commands::SendPhoneVerificationCommand;
-    use crate::shared::application::handlers::SendPhoneVerificationHandler;
-    use crate::shared::domain::entities::User;
-    use crate::shared::domain::services::{PhoneVerificationService, SmsSender};
-    use crate::shared::domain::value_objects::{Email, Password, Username};
-    use crate::shared::infrastructure::persistence::{
+    use crate::application::handlers::user::SendPhoneVerificationHandler;
+    use crate::domain::user::User;
+    use crate::domain::services::user::{PhoneVerificationService, SmsSender};
+    use crate::domain::value_objects::{Email, Password, Username};
+    use crate::infrastructure::persistence::user::{
         PostgresPhoneVerificationRepository, PostgresUserRepository,
     };
 

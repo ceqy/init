@@ -6,8 +6,8 @@ use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use cuba_ports::CachePort;
 
-use crate::auth::domain::repositories::LoginLogRepository;
-use crate::shared::domain::repositories::UserRepository;
+use crate::domain::repositories::auth::LoginLogRepository;
+use crate::domain::repositories::user::UserRepository;
 
 /// 暴力破解防护配置
 #[derive(Debug, Clone)]

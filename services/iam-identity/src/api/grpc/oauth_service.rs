@@ -6,13 +6,13 @@ use tracing::info;
 use cuba_common::TenantId;
 use cuba_cqrs_core::CommandHandler;
 
-use crate::oauth::application::commands::{AuthorizeCommand, CreateClientCommand, TokenCommand};
-use crate::oauth::application::handlers::{
+use crate::application::commands::oauth::{AuthorizeCommand, CreateClientCommand, TokenCommand};
+use crate::application::handlers::oauth::{
     AuthorizeHandler, CreateClientHandler, TokenHandler,
 };
-use crate::oauth::domain::entities::OAuthClientId;
-use crate::oauth::domain::repositories::OAuthClientRepository;
-use crate::oauth::domain::services::OAuthService;
+use crate::domain::oauth::OAuthClientId;
+use crate::domain::repositories::oauth::OAuthClientRepository;
+use crate::domain::services::oauth::OAuthService;
 
 use super::proto::{
     o_auth_service_server::OAuthService as OAuthServiceTrait, AuthorizeRequest, AuthorizeResponse,
@@ -177,7 +177,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         client.name = req.name;
         client.redirect_uris = req.redirect_uris;
         if !req.grant_types.is_empty() {
-             use crate::oauth::domain::entities::GrantType;
+             use crate::domain::oauth::GrantType;
              client.grant_types = req.grant_types.iter().map(|s| {
                  match s.as_str() {
                     "authorization_code" => GrantType::AuthorizationCode,

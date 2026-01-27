@@ -5,7 +5,7 @@ use cuba_common::{AuditInfo, TenantId};
 use cuba_domain_core::{AggregateRoot, Entity};
 use serde::{Deserialize, Serialize};
 
-use crate::shared::domain::value_objects::{PasswordPolicy, TenantSettings};
+use crate::domain::value_objects::{PasswordPolicy, TenantSettings};
 
 /// 租户状态
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

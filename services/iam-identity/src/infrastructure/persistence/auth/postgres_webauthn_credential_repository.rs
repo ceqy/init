@@ -6,8 +6,8 @@ use sqlx::PgPool;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::auth::domain::entities::{WebAuthnCredential, WebAuthnCredentialId};
-use crate::auth::domain::repositories::WebAuthnCredentialRepository;
+use crate::domain::auth::{WebAuthnCredential, WebAuthnCredentialId};
+use crate::domain::repositories::auth::WebAuthnCredentialRepository;
 
 /// PostgreSQL WebAuthn 凭证仓储
 pub struct PostgresWebAuthnCredentialRepository {

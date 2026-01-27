@@ -5,7 +5,7 @@ use chrono::{Utc, Timelike, Duration};
 use cuba_common::{TenantId, UserId};
 use cuba_errors::AppResult;
 
-use crate::auth::domain::repositories::LoginLogRepository;
+use crate::domain::repositories::auth::LoginLogRepository;
 
 /// 可疑登录检测服务
 pub struct SuspiciousLoginDetector {

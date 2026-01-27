@@ -5,8 +5,8 @@ use sqlx::PgPool;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::oauth::domain::entities::{OAuthClientId, RefreshToken};
-use crate::oauth::domain::repositories::RefreshTokenRepository;
+use crate::domain::oauth::{OAuthClientId, RefreshToken};
+use crate::domain::repositories::oauth::RefreshTokenRepository;
 
 pub struct PostgresRefreshTokenRepository {
     pool: PgPool,

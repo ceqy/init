@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::shared::application::commands::{
     SendPhoneVerificationCommand, SendPhoneVerificationResult,
 };
-use crate::shared::domain::services::PhoneVerificationService;
+use crate::domain::services::user::PhoneVerificationService;
 
 /// 发送手机验证码处理器
 pub struct SendPhoneVerificationHandler {
@@ -89,10 +89,10 @@ impl CommandHandler<SendPhoneVerificationCommand> for SendPhoneVerificationHandl
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::domain::entities::User;
-    use crate::shared::domain::services::{PhoneVerificationService, SmsSender};
-    use crate::shared::domain::value_objects::{Email, Password, Username};
-    use crate::shared::infrastructure::persistence::{
+    use crate::domain::user::User;
+    use crate::domain::services::user::{PhoneVerificationService, SmsSender};
+    use crate::domain::value_objects::{Email, Password, Username};
+    use crate::infrastructure::persistence::user::{
         PostgresPhoneVerificationRepository, PostgresUserRepository,
     };
 

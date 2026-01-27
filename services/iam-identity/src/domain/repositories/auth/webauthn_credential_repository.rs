@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use cuba_common::{TenantId, UserId};
 use cuba_errors::AppResult;
 
-use crate::auth::domain::entities::{WebAuthnCredential, WebAuthnCredentialId};
+use crate::domain::auth::{WebAuthnCredential, WebAuthnCredentialId};
 
 /// WebAuthn 凭证仓储接口
 #[async_trait]

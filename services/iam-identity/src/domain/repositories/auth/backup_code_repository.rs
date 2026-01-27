@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use cuba_common::{TenantId, UserId};
 use cuba_errors::AppResult;
 
-use crate::auth::domain::entities::{BackupCode, BackupCodeId};
+use crate::domain::auth::{BackupCode, BackupCodeId};
 
 #[async_trait]
 pub trait BackupCodeRepository: Send + Sync {

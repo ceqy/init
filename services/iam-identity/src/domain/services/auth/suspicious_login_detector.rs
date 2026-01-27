@@ -6,7 +6,7 @@ use cuba_errors::AppResult;
 use std::sync::Arc;
 
 
-use crate::auth::domain::repositories::LoginLogRepository;
+use crate::domain::repositories::auth::LoginLogRepository;
 
 /// 可疑登录检测服务
 pub struct SuspiciousLoginDetector {

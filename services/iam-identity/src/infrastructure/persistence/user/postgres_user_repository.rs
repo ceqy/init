@@ -6,9 +6,9 @@ use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::shared::domain::entities::{User, UserStatus};
-use crate::shared::domain::repositories::UserRepository;
-use crate::shared::domain::value_objects::{Email, HashedPassword, Username};
+use crate::domain::user::{User, UserStatus};
+use crate::domain::repositories::user::UserRepository;
+use crate::domain::value_objects::{Email, HashedPassword, Username};
 
 pub struct PostgresUserRepository {
     pool: PgPool,

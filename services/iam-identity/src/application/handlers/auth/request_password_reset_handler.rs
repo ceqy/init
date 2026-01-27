@@ -9,9 +9,9 @@ use cuba_cqrs_core::CommandHandler;
 use cuba_errors::{AppError, AppResult};
 use tracing::{info, warn};
 
-use crate::auth::application::commands::RequestPasswordResetCommand;
-use crate::auth::domain::services::PasswordResetService;
-use crate::shared::domain::value_objects::Email;
+use crate::application::commands::auth::RequestPasswordResetCommand;
+use crate::domain::services::auth::PasswordResetService;
+use crate::domain::value_objects::Email;
 
 /// 请求密码重置处理器
 pub struct RequestPasswordResetHandler {
@@ -111,12 +111,12 @@ Cuba ERP 系统
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::auth::domain::repositories::PasswordResetRepository;
-    use crate::auth::infrastructure::persistence::PostgresPasswordResetRepository;
-    use crate::shared::domain::entities::User;
-    use crate::shared::domain::repositories::UserRepository;
-    use crate::shared::domain::value_objects::{Password, Username};
-    use crate::shared::infrastructure::persistence::PostgresUserRepository;
+    use crate::domain::repositories::auth::PasswordResetRepository;
+    use crate::infrastructure::persistence::auth::PostgresPasswordResetRepository;
+    use crate::domain::user::User;
+    use crate::domain::repositories::user::UserRepository;
+    use crate::domain::value_objects::{Password, Username};
+    use crate::infrastructure::persistence::user::PostgresUserRepository;
     use uuid::Uuid;
 
     // Mock EmailSender for testing

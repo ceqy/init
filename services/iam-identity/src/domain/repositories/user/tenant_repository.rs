@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use cuba_common::TenantId;
 use cuba_errors::AppResult;
 
-use crate::shared::domain::entities::{Tenant, TenantStatus};
+use crate::domain::user::{Tenant, TenantStatus};
 
 /// 租户仓储接口
 #[async_trait]

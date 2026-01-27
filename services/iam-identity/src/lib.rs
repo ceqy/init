@@ -1,14 +1,14 @@
 //! IAM Identity Service Library
 //!
-//! 模块化架构：
-//! - `shared`: 共享层（User 实体、值对象、仓储）
-//! - `auth`: 认证模块（登录、令牌、2FA、会话）
-//! - `user`: 用户模块（注册、CRUD、验证、社交绑定）
-//! - `oauth`: OAuth2/OIDC 模块
+//! 统一的单体模块化架构：
+//! - `domain`: 领域层（实体、值对象、仓储接口、领域服务、事件）
+//! - `application`: 应用层（命令、查询、处理器、DTO）
+//! - `infrastructure`: 基础设施层（持久化、缓存、外部服务）
+//! - `api`: API 层（gRPC 服务）
 
-pub mod auth;
+pub mod api;
+pub mod application;
 pub mod config;
+pub mod domain;
 pub mod error;
-pub mod oauth;
-pub mod shared;
-pub mod user;
+pub mod infrastructure;

@@ -7,8 +7,8 @@ use tracing::{debug, info};
 use uuid::Uuid;
 use webauthn_rs::prelude::*;
 
-use crate::auth::domain::entities::{WebAuthnCredential, WebAuthnCredentialId};
-use crate::auth::domain::repositories::WebAuthnCredentialRepository;
+use crate::domain::auth::{WebAuthnCredential, WebAuthnCredentialId};
+use crate::domain::repositories::auth::WebAuthnCredentialRepository;
 
 /// WebAuthn 服务
 pub struct WebAuthnService {

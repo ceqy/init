@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use cuba_common::{TenantId, UserId};
 use cuba_errors::AppResult;
 
-use crate::auth::domain::entities::{PasswordResetToken, PasswordResetTokenId};
+use crate::domain::auth::{PasswordResetToken, PasswordResetTokenId};
 
 /// 密码重置令牌仓储接口
 #[async_trait]

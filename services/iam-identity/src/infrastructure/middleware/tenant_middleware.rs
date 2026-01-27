@@ -5,7 +5,7 @@ use std::sync::Arc;
 use cuba_common::TenantId;
 use tonic::{Request, Status};
 
-use crate::shared::domain::repositories::TenantRepository;
+use crate::domain::repositories::user::TenantRepository;
 
 /// 租户上下文扩展
 pub struct TenantContextExtension {

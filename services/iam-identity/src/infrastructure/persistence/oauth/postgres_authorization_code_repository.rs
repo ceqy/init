@@ -5,8 +5,8 @@ use sqlx::PgPool;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::oauth::domain::entities::{AuthorizationCode, OAuthClientId};
-use crate::oauth::domain::repositories::AuthorizationCodeRepository;
+use crate::domain::oauth::{AuthorizationCode, OAuthClientId};
+use crate::domain::repositories::oauth::AuthorizationCodeRepository;
 
 pub struct PostgresAuthorizationCodeRepository {
     pool: PgPool,

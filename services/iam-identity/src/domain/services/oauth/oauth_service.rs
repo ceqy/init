@@ -7,8 +7,8 @@ use cuba_errors::{AppError, AppResult};
 use rand::Rng;
 use sha2::{Digest, Sha256};
 
-use crate::oauth::domain::entities::{AccessToken, AuthorizationCode, OAuthClientId, RefreshToken};
-use crate::oauth::domain::repositories::{
+use crate::domain::oauth::{AccessToken, AuthorizationCode, OAuthClientId, RefreshToken};
+use crate::domain::repositories::oauth::{
     AccessTokenRepository, AuthorizationCodeRepository, OAuthClientRepository, RefreshTokenRepository,
 };
 

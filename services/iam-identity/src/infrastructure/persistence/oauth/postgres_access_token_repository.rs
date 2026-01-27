@@ -5,8 +5,8 @@ use sqlx::PgPool;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::oauth::domain::entities::{AccessToken, OAuthClientId};
-use crate::oauth::domain::repositories::AccessTokenRepository;
+use crate::domain::oauth::{AccessToken, OAuthClientId};
+use crate::domain::repositories::oauth::AccessTokenRepository;
 
 pub struct PostgresAccessTokenRepository {
     pool: PgPool,

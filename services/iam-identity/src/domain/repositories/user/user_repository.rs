@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use cuba_common::{TenantId, UserId};
 use cuba_errors::AppResult;
 
-use crate::shared::domain::entities::User;
-use crate::shared::domain::value_objects::{Email, Username};
+use crate::domain::user::User;
+use crate::domain::value_objects::{Email, Username};
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {

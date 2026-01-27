@@ -5,7 +5,7 @@ use cuba_adapter_redis::RedisCache;
 use cuba_errors::AppResult;
 use cuba_ports::CachePort;
 
-use crate::auth::domain::services::LoginAttemptCache;
+use crate::domain::services::auth::LoginAttemptCache;
 
 /// Redis 登录尝试缓存实现
 pub struct RedisLoginAttemptCache {

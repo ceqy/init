@@ -7,8 +7,8 @@ use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::auth::domain::entities::{BackupCode, BackupCodeId};
-use crate::auth::domain::repositories::BackupCodeRepository;
+use crate::domain::auth::{BackupCode, BackupCodeId};
+use crate::domain::repositories::auth::BackupCodeRepository;
 
 pub struct PostgresBackupCodeRepository {
     pool: PgPool,

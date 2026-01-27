@@ -10,7 +10,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::shared::application::commands::{VerifyEmailCommand, VerifyEmailResult};
-use crate::shared::domain::services::EmailVerificationService;
+use crate::domain::services::user::EmailVerificationService;
 
 /// 验证邮箱处理器
 pub struct VerifyEmailHandler {
@@ -82,11 +82,11 @@ impl CommandHandler<VerifyEmailCommand> for VerifyEmailHandler {
 mod tests {
     use super::*;
     use crate::shared::application::commands::SendEmailVerificationCommand;
-    use crate::shared::application::handlers::SendEmailVerificationHandler;
-    use crate::shared::domain::entities::User;
-    use crate::shared::domain::services::EmailVerificationService;
-    use crate::shared::domain::value_objects::{Email, Password, Username};
-    use crate::shared::infrastructure::persistence::{
+    use crate::application::handlers::user::SendEmailVerificationHandler;
+    use crate::domain::user::User;
+    use crate::domain::services::user::EmailVerificationService;
+    use crate::domain::value_objects::{Email, Password, Username};
+    use crate::infrastructure::persistence::user::{
         PostgresEmailVerificationRepository, PostgresUserRepository,
     };
     use cuba_adapter_email::EmailSender;

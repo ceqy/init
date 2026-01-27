@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use cuba_common::{TenantId, UserId};
 use cuba_errors::AppResult;
 
-use crate::shared::domain::entities::{EmailVerification, EmailVerificationId};
+use crate::domain::user::{EmailVerification, EmailVerificationId};
 
 /// 邮箱验证仓储接口
 #[async_trait]

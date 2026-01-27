@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use cuba_common::{TenantId, UserId};
 use cuba_errors::AppResult;
 
-use crate::auth::domain::entities::{LoginLog, LoginLogId, LoginResult};
+use crate::domain::auth::{LoginLog, LoginLogId, LoginResult};
 
 /// 登录日志仓储接口
 #[async_trait]

@@ -6,9 +6,9 @@ use cuba_cqrs_core::CommandHandler;
 use cuba_errors::{AppError, AppResult};
 use tracing::info;
 
-use crate::oauth::application::commands::TokenCommand;
-use crate::oauth::domain::entities::OAuthClientId;
-use crate::oauth::domain::services::OAuthService;
+use crate::application::commands::oauth::TokenCommand;
+use crate::domain::oauth::OAuthClientId;
+use crate::domain::services::oauth::OAuthService;
 
 pub struct TokenHandler {
     oauth_service: Arc<OAuthService>,

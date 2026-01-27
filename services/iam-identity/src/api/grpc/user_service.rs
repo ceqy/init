@@ -15,13 +15,13 @@ use crate::shared::application::commands::{
     SendEmailVerificationCommand, SendPhoneVerificationCommand, VerifyEmailCommand,
     VerifyPhoneCommand,
 };
-use crate::shared::application::handlers::{
+use crate::application::handlers::user::{
     SendEmailVerificationHandler, SendPhoneVerificationHandler, VerifyEmailHandler,
     VerifyPhoneHandler,
 };
-use crate::shared::domain::entities::{User, UserStatus};
-use crate::shared::domain::repositories::UserRepository;
-use crate::shared::domain::value_objects::{Email, HashedPassword, Username};
+use crate::domain::user::{User, UserStatus};
+use crate::domain::repositories::user::UserRepository;
+use crate::domain::value_objects::{Email, HashedPassword, Username};
 
 use super::proto::{
     self, user_service_server::UserService, *,
