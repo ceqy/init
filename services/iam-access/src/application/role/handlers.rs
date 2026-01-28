@@ -7,14 +7,26 @@ use cuba_errors::{AppError, AppResult};
 use crate::domain::role::{Role, RoleId, RoleRepository};
 use super::commands::*;
 
+use cuba_ports::EventPublisher;
+use crate::domain::role::events::RbacEvent;
+
 /// 角色命令处理器
-pub struct RoleCommandHandler<R: RoleRepository> {
+pub struct RoleCommandHandler<R, EP>
+where
+    R: RoleRepository,
+    EP: EventPublisher,
+{
     role_repo: Arc<R>,
+    event_publisher: Arc<EP>,
 }
 
-impl<R: RoleRepository> RoleCommandHandler<R> {
-    pub fn new(role_repo: Arc<R>) -> Self {
-        Self { role_repo }
+impl<R, EP> RoleCommandHandler<R, EP>
+where
+    R: RoleRepository,
+    EP: EventPublisher,
+{
+    pub fn new(role_repo: Arc<R>, event_publisher: Arc<EP>) -> Self {
+        Self { role_repo, event_publisher }
     }
 
     /// 创建角色
@@ -28,12 +40,23 @@ impl<R: RoleRepository> RoleCommandHandler<R> {
         }
 
         let role = if cmd.is_system {
-            Role::system_role(cmd.tenant_id, cmd.code, cmd.name, cmd.description)
+            Role::system_role(cmd.tenant_id, cmd.code.clone(), cmd.name.clone(), cmd.description.clone())
         } else {
-            Role::new(cmd.tenant_id, cmd.code, cmd.name, cmd.description)
+            Role::new(cmd.tenant_id, cmd.code.clone(), cmd.name.clone(), cmd.description.clone())
         };
 
         self.role_repo.create(&role).await?;
+
+        // 发布事件
+        let event = RbacEvent::RoleCreated {
+            id: role.id.0,
+            tenant_id: role.tenant_id.0,
+            code: role.code.clone(),
+            name: role.name.clone(),
+            by: None, // TODO: capture user context
+        };
+        self.event_publisher.publish("rbac.role.created", &event).await
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(role)
     }
@@ -49,6 +72,15 @@ impl<R: RoleRepository> RoleCommandHandler<R> {
 
         role.update(cmd.name, cmd.description);
         self.role_repo.update(&role).await?;
+
+        // 发布事件
+        let event = RbacEvent::RoleUpdated {
+            id: role.id.0,
+            tenant_id: role.tenant_id.0,
+            by: None,
+        };
+        self.event_publisher.publish("rbac.role.updated", &event).await
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(role)
     }
@@ -69,6 +101,15 @@ impl<R: RoleRepository> RoleCommandHandler<R> {
 
         self.role_repo.delete(&role_id).await?;
 
+        // 发布事件
+        let event = RbacEvent::RoleDeleted {
+            id: role.id.0,
+            tenant_id: role.tenant_id.0,
+            by: None,
+        };
+        self.event_publisher.publish("rbac.role.deleted", &event).await
+            .map_err(|e| AppError::internal(e.to_string()))?;
+
         Ok(())
     }
 
@@ -88,6 +129,15 @@ impl<R: RoleRepository> RoleCommandHandler<R> {
         }
 
         self.role_repo.update(&role).await?;
+
+        // 发布事件
+        let event = RbacEvent::RoleUpdated {
+            id: role.id.0,
+            tenant_id: role.tenant_id.0,
+            by: None,
+        };
+        self.event_publisher.publish("rbac.role.updated", &event).await
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(role)
     }

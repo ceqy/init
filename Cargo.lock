@@ -1644,6 +1644,7 @@ dependencies = [
  "metrics",
  "prost",
  "prost-types",
+ "redis",
  "secrecy",
  "serde",
  "serde_json",

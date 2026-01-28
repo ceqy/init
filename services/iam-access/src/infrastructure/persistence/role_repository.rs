@@ -153,11 +153,17 @@ impl RoleRepository for PostgresRoleRepository {
             .await
             .map_err(map_sqlx_error)?;
 
-        let mut roles = Vec::new();
-        for r in rows {
-            let permissions = self.load_role_permissions(&r.id).await?;
-            roles.push(r.into_role(permissions));
+        if rows.is_empty() {
+            return Ok((Vec::new(), total.0));
         }
+
+        let role_ids: Vec<Uuid> = rows.iter().map(|r| r.id).collect();
+        let permissions_map = self.load_roles_permissions(&role_ids).await?;
+
+        let roles = rows.into_iter().map(|r| {
+            let permissions = permissions_map.get(&r.id).cloned().unwrap_or_default();
+            r.into_role(permissions)
+        }).collect();
 
         Ok((roles, total.0))
     }
@@ -193,11 +199,17 @@ impl RoleRepository for PostgresRoleRepository {
         .await
         .map_err(map_sqlx_error)?;
 
-        let mut roles = Vec::new();
-        for r in rows {
-            let permissions = self.load_role_permissions(&r.id).await?;
-            roles.push(r.into_role(permissions));
+        if rows.is_empty() {
+            return Ok((Vec::new(), total.0));
         }
+
+        let role_ids: Vec<Uuid> = rows.iter().map(|r| r.id).collect();
+        let permissions_map = self.load_roles_permissions(&role_ids).await?;
+
+        let roles = rows.into_iter().map(|r| {
+            let permissions = permissions_map.get(&r.id).cloned().unwrap_or_default();
+            r.into_role(permissions)
+        }).collect();
 
         Ok((roles, total.0))
     }
@@ -234,9 +246,60 @@ impl PostgresRoleRepository {
 
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
+    async fn load_roles_permissions(&self, role_ids: &[Uuid]) -> AppResult<std::collections::HashMap<Uuid, Vec<Permission>>> {
+        let rows = sqlx::query_as::<_, RolePermissionJoinRow>(
+            r#"
+            SELECT rp.role_id, p.id, p.code, p.name, p.description, p.resource, p.action, p.module, p.is_active, p.created_at
+            FROM permissions p
+            INNER JOIN role_permissions rp ON p.id = rp.permission_id
+            WHERE rp.role_id = ANY($1)
+            "#,
+        )
+        .bind(role_ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(map_sqlx_error)?;
+
+        let mut map: std::collections::HashMap<Uuid, Vec<Permission>> = std::collections::HashMap::new();
+        for row in rows {
+            map.entry(row.role_id).or_default().push(row.permission());
+        }
+
+        Ok(map)
+    }
 }
 
 // ============ 数据行映射 ============
+
+#[derive(sqlx::FromRow)]
+struct RolePermissionJoinRow {
+    role_id: Uuid,
+    id: Uuid,
+    code: String,
+    name: String,
+    description: Option<String>,
+    resource: String,
+    action: String,
+    module: String,
+    is_active: bool,
+    created_at: DateTime<Utc>,
+}
+
+impl RolePermissionJoinRow {
+    fn permission(self) -> Permission {
+        Permission {
+            id: PermissionId::from_uuid(self.id),
+            code: self.code,
+            name: self.name,
+            description: self.description,
+            resource: self.resource,
+            action: self.action,
+            module: self.module,
+            is_active: self.is_active,
+            created_at: self.created_at,
+        }
+    }
+}
 
 #[derive(sqlx::FromRow)]
 struct RoleRow {

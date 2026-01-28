@@ -42,7 +42,7 @@ impl std::str::FromStr for PermissionId {
 /// 
 /// 权限代表对某个资源执行某个操作的许可
 /// 例如: users:read, orders:write, products:delete
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 pub struct Permission {
     pub id: PermissionId,
     /// 权限代码 (唯一标识符，如 "users:read")

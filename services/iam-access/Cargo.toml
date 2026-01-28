@@ -16,6 +16,7 @@ cuba-cqrs-core = { workspace = true }
 cuba-event-core = { workspace = true }
 cuba-adapter-postgres = { workspace = true }
 cuba-adapter-redis = { workspace = true }
+redis = { workspace = true, features = ["tokio-comp"] }
 cuba-bootstrap = { workspace = true }
 
 tonic = { workspace = true }

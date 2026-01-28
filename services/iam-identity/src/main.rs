@@ -60,7 +60,7 @@ use infrastructure::events::{
 use async_trait::async_trait;
 use secrecy::ExposeSecret;
 use cuba_adapter_email::{EmailClient, EmailSender};
-use cuba_bootstrap::{run_with_services, Infrastructure};
+use cuba_bootstrap::{run_server, Infrastructure};
 use cuba_adapter_postgres::PostgresOutbox;
 
 use cuba_ports::{CachePort, OutboxPort};
@@ -79,7 +79,7 @@ impl SmsSender for NoOpSmsSender {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    run_with_services("config", |infra: Infrastructure, mut server: Server| async move {
+    run_server("config", |infra: Infrastructure, mut server: Server| async move {
         // 从 Infrastructure 获取资源
         let pool = infra.postgres_pool();
         let token_service = infra.token_service();
@@ -247,10 +247,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let oauth_service_impl = OAuthServiceImpl::new(oauth_client_repo, oauth_service, create_client_handler, authorize_handler, token_handler, uow_factory.clone());
 
         // 注册多个服务并启动
-        let addr = format!("{}:{}", config.server.host, config.server.port)
-            .parse()
-            .map_err(|e| cuba_errors::AppError::internal(format!("Invalid address: {}", e)))?;
-
         // 构建反射服务
         let reflection_service = ReflectionBuilder::configure()
             .register_encoded_file_descriptor_set(api::grpc::auth_proto::FILE_DESCRIPTOR_SET)
@@ -276,17 +272,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _outbox_handle = outbox_processor.clone().start();
         tracing::info!("Outbox processor started");
 
-        server
+        Ok(server
             .add_service(AuthServiceServer::new(auth_service))
             .add_service(UserServiceServer::new(user_service))
             .add_service(OAuthServiceServer::new(oauth_service_impl))
             .add_service(AuditServiceServer::new(audit_service))
-            .add_service(reflection_service)
-            .serve_with_shutdown(addr, cuba_bootstrap::shutdown_signal())
-            .await
-            .map_err(|e| cuba_errors::AppError::internal(format!("Server error: {}", e)))?;
-
-        Ok(())
+            .add_service(reflection_service))
     })
     .await
 }

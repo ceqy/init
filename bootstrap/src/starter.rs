@@ -196,10 +196,78 @@ where
 
     info!(%addr, "gRPC server starting");
 
-    // 10. 让用户构建并启动服务器
+    // 10.让用户构建并启动服务器
     let infra_for_service = Infrastructure::from_config(config.clone()).await?;
     let server = Server::builder();
     server_builder(infra_for_service, server).await?;
+
+    // 11. 清理
+    health_handle.abort();
+
+    info!("Service stopped");
+
+    Ok(())
+}
+
+/// 标准化运行 gRPC 服务 (推荐)
+///
+/// 相比 `run_with_services`，此函数会自动处理 `serve_with_shutdown`，
+/// 用户只需返回配置好的 `Router`。
+pub async fn run_server<F, Fut>(
+    config_dir: &str,
+    server_builder: F,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: FnOnce(Infrastructure, Server) -> Fut,
+    Fut: Future<Output = Result<tonic::transport::server::Router, Box<dyn std::error::Error>>>,
+{
+    // 1. 加载配置
+    let config = AppConfig::load(config_dir)?;
+
+    // 2. 初始化运行时
+    init_runtime(&config);
+
+    info!("Starting {} service", config.app_name);
+
+    // 3. 初始化 Metrics 记录器
+    let metrics = Arc::new(MetricsRecorder::new());
+
+    // 4. 创建基础设施
+    let infra = Infrastructure::from_config(config.clone()).await?;
+    let infra_arc = Arc::new(infra);
+
+    // 5. 创建健康检查器
+    let health_checker = Arc::new(HealthChecker::new());
+
+    // 6. 启动连接池 metrics
+    let pool_collector = PoolMetricsCollector::default();
+    pool_collector.set_infrastructure(infra_arc.clone()).await;
+    let _metrics_handle = pool_collector.start();
+
+    // 7. 启动健康检查 HTTP 服务器
+    let health_port = config.server.port + 1000;
+    let health_server = HealthServer::new(health_checker.clone(), metrics.clone(), health_port);
+    let health_infra = Infrastructure::from_config(config.clone()).await?;
+    health_server.set_infrastructure(health_infra).await;
+
+    let health_handle = tokio::spawn(async move {
+        if let Err(e) = health_server.serve().await {
+            error!("Health server error: {}", e);
+        }
+    });
+
+    // 8. 构建服务地址
+    let addr: SocketAddr = format!("{}:{}", config.server.host, config.server.port).parse()?;
+
+    // 9. 构建 Router
+    let infra_for_service = Infrastructure::from_config(config.clone()).await?;
+    let server = Server::builder();
+    let router = server_builder(infra_for_service, server).await?;
+
+    info!(%addr, "gRPC server starting");
+
+    // 10. 启动服务器
+    router.serve_with_shutdown(addr, shutdown_signal()).await?;
 
     // 11. 清理
     health_handle.abort();

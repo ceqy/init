@@ -39,35 +39,40 @@ use crate::domain::role::{
 };
 
 /// RBAC gRPC 服务
-pub struct RbacServiceImpl<R, P, UR, RP>
+pub struct RbacServiceImpl<R, P, UR, RP, EP>
 where
     R: RoleRepository + Send + Sync + 'static,
     P: PermissionRepository + Send + Sync + 'static,
     UR: UserRoleRepository + Send + Sync + 'static,
     RP: RolePermissionRepository + Send + Sync + 'static,
+    EP: EventPublisher + Send + Sync + 'static,
 {
-    role_cmd_handler: RoleCommandHandler<R>,
+    role_cmd_handler: RoleCommandHandler<R, EP>,
     role_query_handler: RoleQueryHandler<R, UR>,
     permission_repo: Arc<P>,
     role_permission_repo: Arc<RP>,
     user_role_repo: Arc<UR>,
 }
 
-impl<R, P, UR, RP> RbacServiceImpl<R, P, UR, RP>
+use cuba_ports::EventPublisher;
+
+impl<R, P, UR, RP, EP> RbacServiceImpl<R, P, UR, RP, EP>
 where
     R: RoleRepository + Send + Sync + 'static,
     P: PermissionRepository + Send + Sync + 'static,
     UR: UserRoleRepository + Send + Sync + 'static,
     RP: RolePermissionRepository + Send + Sync + 'static,
+    EP: EventPublisher + Send + Sync + 'static,
 {
     pub fn new(
         role_repo: Arc<R>,
         permission_repo: Arc<P>,
         user_role_repo: Arc<UR>,
         role_permission_repo: Arc<RP>,
+        event_publisher: Arc<EP>,
     ) -> Self {
         Self {
-            role_cmd_handler: RoleCommandHandler::new(role_repo.clone()),
+            role_cmd_handler: RoleCommandHandler::new(role_repo.clone(), event_publisher),
             role_query_handler: RoleQueryHandler::new(role_repo, user_role_repo.clone()),
             permission_repo,
             role_permission_repo,
@@ -117,12 +122,13 @@ fn permission_to_proto(perm: &Permission) -> ProtoPermission {
 }
 
 #[tonic::async_trait]
-impl<R, P, UR, RP> RbacService for RbacServiceImpl<R, P, UR, RP>
+impl<R, P, UR, RP, EP> RbacService for RbacServiceImpl<R, P, UR, RP, EP>
 where
     R: RoleRepository + Send + Sync + 'static,
     P: PermissionRepository + Send + Sync + 'static,
     UR: UserRoleRepository + Send + Sync + 'static,
     RP: RolePermissionRepository + Send + Sync + 'static,
+    EP: EventPublisher + Send + Sync + 'static,
 {
     // ===== 角色管理 =====
 
