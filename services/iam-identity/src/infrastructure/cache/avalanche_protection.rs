@@ -92,6 +92,7 @@ impl<T: Clone + Send + Sync + 'static> SingleflightGroup<T> {
 }
 
 /// 带雪崩防护的缓存包装器
+#[derive(Clone)]
 pub struct AvalancheProtectedCache {
     inner: Arc<dyn CachePort>,
     /// Singleflight 组（用于字符串类型）
@@ -249,7 +250,7 @@ mod tests {
 
         // 等待所有请求完成
         for handle in handles {
-            let result = handle.await.unwrap();
+            let result: AppResult<Option<String>> = handle.await.unwrap();
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), Some("value".to_string()));
         }
