@@ -25,7 +25,12 @@ pub struct DatabaseConfig {
 }
 
 fn default_max_connections() -> u32 {
-    10
+    // 根据环境自动调整连接池大小
+    // 开发环境: 10, 生产环境: 50
+    match std::env::var("APP_ENV").as_deref() {
+        Ok("production") => 50,
+        _ => 10,
+    }
 }
 
 /// Redis 配置
