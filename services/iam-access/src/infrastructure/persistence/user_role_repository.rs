@@ -167,7 +167,8 @@ impl UserRoleRepository for PostgresUserRoleRepository {
         let user_uuid: Uuid = user_id.parse()
             .map_err(|_| AppError::validation("Invalid user_id"))?;
 
-        let result: (bool,) = sqlx::query_as(
+        // 1. 检查精确匹配
+        let exact_match: (bool,) = sqlx::query_as(
             r#"
             SELECT EXISTS(
                 SELECT 1
@@ -177,7 +178,7 @@ impl UserRoleRepository for PostgresUserRoleRepository {
                 INNER JOIN roles r ON ur.role_id = r.id
                 WHERE ur.user_id = $1 AND ur.tenant_id = $2 
                 AND r.is_active = TRUE AND p.is_active = TRUE
-                AND (p.code = $3 OR p.code LIKE REPLACE($3, ':', ':%'))
+                AND p.code = $3
             )
             "#,
         )
@@ -188,7 +189,40 @@ impl UserRoleRepository for PostgresUserRoleRepository {
         .await
         .map_err(map_sqlx_error)?;
 
-        Ok(result.0)
+        if exact_match.0 {
+            return Ok(true);
+        }
+
+        // 2. 检查通配符匹配 (resource:*)
+        // 仅当 permission_code 格式为 "resource:action" 时检查
+        let parts: Vec<&str> = permission_code.split(':').collect();
+        if parts.len() == 2 {
+            let wildcard_code = format!("{}:*", parts[0]);
+            let wildcard_match: (bool,) = sqlx::query_as(
+                r#"
+                SELECT EXISTS(
+                    SELECT 1
+                    FROM permissions p
+                    INNER JOIN role_permissions rp ON p.id = rp.permission_id
+                    INNER JOIN user_roles ur ON rp.role_id = ur.role_id
+                    INNER JOIN roles r ON ur.role_id = r.id
+                    WHERE ur.user_id = $1 AND ur.tenant_id = $2 
+                    AND r.is_active = TRUE AND p.is_active = TRUE
+                    AND p.code = $3
+                )
+                "#,
+            )
+            .bind(user_uuid)
+            .bind(tenant_id.0)
+            .bind(&wildcard_code)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(map_sqlx_error)?;
+
+            return Ok(wildcard_match.0);
+        }
+
+        Ok(false)
     }
 
     async fn clear_user_roles(&self, user_id: &str, tenant_id: &TenantId) -> AppResult<()> {

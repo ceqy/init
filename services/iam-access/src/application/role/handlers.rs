@@ -31,6 +31,9 @@ where
 
     /// 创建角色
     pub async fn handle_create(&self, cmd: CreateRoleCommand) -> AppResult<Role> {
+        // 验证输入
+        cmd.validate().map_err(|e| AppError::validation(e))?;
+
         // 检查代码是否已存在
         if self.role_repo.exists_by_code(&cmd.tenant_id, &cmd.code).await? {
             return Err(AppError::conflict(format!(
