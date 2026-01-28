@@ -84,19 +84,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
         
-        // 订阅 - MultiplexedConnection 不支持 pubsub，需要使用普通连接
-        // Note: get_async_connection() is deprecated but required for pubsub functionality
-        // The recommended get_multiplexed_async_connection() doesn't support into_pubsub()
-        #[allow(deprecated)]
-        let con = match client.get_async_connection().await {
-            Ok(c) => c,
+        // 使用 get_async_pubsub() 直接获取 PubSub 连接（非 deprecated API）
+        let mut pubsub = match client.get_async_pubsub().await {
+            Ok(ps) => ps,
             Err(e) => {
                 info!("Failed to connect to Redis for pubsub: {}", e);
                 return;
             }
         };
         
-        let mut pubsub = con.into_pubsub();
         if let Err(e) = pubsub.subscribe("domain_events").await {
              info!("Failed to subscribe to domain_events: {}", e);
              return;
