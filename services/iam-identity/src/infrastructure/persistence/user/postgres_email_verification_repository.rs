@@ -17,6 +17,40 @@ pub struct PostgresEmailVerificationRepository {
     pool: PgPool,
 }
 
+/// 数据库行模型
+#[derive(sqlx::FromRow)]
+pub struct EmailVerificationRow {
+    pub id: uuid::Uuid,
+    pub user_id: uuid::Uuid,
+    pub tenant_id: uuid::Uuid,
+    pub email: String,
+    pub code: String,
+    pub status: String,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+    pub verified_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl EmailVerificationRow {
+    pub fn into_verification(self) -> EmailVerification {
+        EmailVerification {
+            id: EmailVerificationId::from_uuid(self.id),
+            user_id: UserId::from_uuid(self.user_id),
+            tenant_id: TenantId::from_uuid(self.tenant_id),
+            email: self.email,
+            code: self.code,
+            status: match self.status.as_str() {
+                "Verified" => EmailVerificationStatus::Verified,
+                "Expired" => EmailVerificationStatus::Expired,
+                _ => EmailVerificationStatus::Pending,
+            },
+            expires_at: self.expires_at,
+            verified_at: self.verified_at,
+            created_at: self.created_at,
+        }
+    }
+}
+
 impl PostgresEmailVerificationRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }

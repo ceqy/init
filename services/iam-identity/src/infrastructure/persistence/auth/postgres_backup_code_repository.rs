@@ -21,7 +21,7 @@ impl PostgresBackupCodeRepository {
 }
 
 #[derive(sqlx::FromRow)]
-struct BackupCodeRow {
+pub struct BackupCodeRow {
     id: Uuid,
     user_id: Uuid,
     tenant_id: Uuid,
@@ -32,7 +32,7 @@ struct BackupCodeRow {
 }
 
 impl BackupCodeRow {
-    fn into_backup_code(self) -> BackupCode {
+    pub fn into_backup_code(self) -> BackupCode {
         BackupCode {
             id: BackupCodeId(self.id),
             user_id: UserId::from_uuid(self.user_id),

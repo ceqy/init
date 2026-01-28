@@ -41,6 +41,7 @@ pub struct AuthServiceImpl {
     email_sender: Arc<dyn EmailSender>,
     auth_cache: Arc<dyn AuthCache>,
     event_publisher: Arc<dyn EventPublisher>,
+    uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
     refresh_token_expires_in: i64,
     password_reset_config: cuba_config::PasswordResetConfig,
 }
@@ -58,6 +59,7 @@ impl AuthServiceImpl {
         email_sender: Arc<dyn EmailSender>,
         auth_cache: Arc<dyn AuthCache>,
         event_publisher: Arc<dyn EventPublisher>,
+        uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
         refresh_token_expires_in: i64,
         password_reset_config: cuba_config::PasswordResetConfig,
     ) -> Self {
@@ -72,6 +74,7 @@ impl AuthServiceImpl {
             email_sender,
             auth_cache,
             event_publisher,
+            uow_factory,
             refresh_token_expires_in,
             password_reset_config,
         }
@@ -711,9 +714,12 @@ impl AuthService for AuthServiceImpl {
         // 1. 计算令牌哈希
         let token_hash = sha256_hash(&req.reset_token);
 
+        // 开始事务
+        let uow = self.uow_factory.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+
         // 2. 查找令牌
-        let token = self
-            .password_reset_repo
+        let token = uow
+            .password_resets()
             .find_by_token_hash(&token_hash, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
@@ -731,8 +737,8 @@ impl AuthService for AuthServiceImpl {
         }
 
         // 4. 获取用户
-        let mut user = self
-            .user_repo
+        let mut user = uow
+            .users()
             .find_by_id(&token.user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
@@ -760,24 +766,31 @@ impl AuthService for AuthServiceImpl {
         let new_password_hash = HashedPassword::from_plain(&req.new_password)
             .map_err(|e| Status::internal(format!("Failed to hash password: {}", e)))?;
 
+        // --- 开始数据库更新 ---
+
         // 8. 更新密码
         user.update_password(new_password_hash);
-        self.user_repo
+        uow.users()
             .update(&user)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 9. 标记令牌为已使用
-        self.password_reset_repo
+        uow.password_resets()
             .mark_as_used(&token.id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 10. 撤销所有会话（安全考虑）
-        self.session_repo
+        uow.sessions()
             .revoke_all_by_user_id(&user.id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 提交事务
+        uow.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // --- 事务外操作（重试友好的或非关键的） ---
 
         // 11. 将用户所有 Token 加入黑名单
         self.auth_cache

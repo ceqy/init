@@ -293,39 +293,39 @@ impl UserRepository for PostgresUserRepository {
 }
 
 #[derive(sqlx::FromRow)]
-struct UserRow {
-    id: Uuid,
-    username: String,
-    email: String,
-    password_hash: String,
-    display_name: Option<String>,
-    phone: Option<String>,
-    avatar_url: Option<String>,
-    tenant_id: Uuid,
-    role_ids: Vec<String>,
-    status: String,
-    language: String,
-    timezone: String,
-    two_factor_enabled: bool,
-    two_factor_secret: Option<String>,
-    last_login_at: Option<chrono::DateTime<chrono::Utc>>,
-    email_verified: bool,
-    email_verified_at: Option<chrono::DateTime<chrono::Utc>>,
-    phone_verified: bool,
-    phone_verified_at: Option<chrono::DateTime<chrono::Utc>>,
-    failed_login_count: i32,
-    locked_until: Option<chrono::DateTime<chrono::Utc>>,
-    lock_reason: Option<String>,
-    last_failed_login_at: Option<chrono::DateTime<chrono::Utc>>,
-    last_password_change_at: Option<chrono::DateTime<chrono::Utc>>,
-    created_at: chrono::DateTime<chrono::Utc>,
-    created_by: Option<Uuid>,
-    updated_at: chrono::DateTime<chrono::Utc>,
-    updated_by: Option<Uuid>,
+pub struct UserRow {
+    pub id: Uuid,
+    pub username: String,
+    pub email: String,
+    pub password_hash: String,
+    pub display_name: Option<String>,
+    pub phone: Option<String>,
+    pub avatar_url: Option<String>,
+    pub tenant_id: Uuid,
+    pub role_ids: Vec<String>,
+    pub status: String,
+    pub language: String,
+    pub timezone: String,
+    pub two_factor_enabled: bool,
+    pub two_factor_secret: Option<String>,
+    pub last_login_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub email_verified: bool,
+    pub email_verified_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub phone_verified: bool,
+    pub phone_verified_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub failed_login_count: i32,
+    pub locked_until: Option<chrono::DateTime<chrono::Utc>>,
+    pub lock_reason: Option<String>,
+    pub last_failed_login_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub last_password_change_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub created_by: Option<Uuid>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub updated_by: Option<Uuid>,
 }
 
 impl UserRow {
-    fn into_user(self) -> Result<User, String> {
+    pub fn into_user(self) -> Result<User, String> {
         let username = Username::new(&self.username)
             .map_err(|e| format!("Invalid username in database for user {}: {}", self.id, e))?;
 

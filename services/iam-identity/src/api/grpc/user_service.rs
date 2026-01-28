@@ -40,6 +40,7 @@ pub struct UserServiceImpl {
     verify_email_handler: Arc<VerifyEmailHandler>,
     send_phone_verification_handler: Arc<SendPhoneVerificationHandler>,
     verify_phone_handler: Arc<VerifyPhoneHandler>,
+    uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
 }
 
 impl UserServiceImpl {
@@ -51,6 +52,7 @@ impl UserServiceImpl {
         verify_email_handler: Arc<VerifyEmailHandler>,
         send_phone_verification_handler: Arc<SendPhoneVerificationHandler>,
         verify_phone_handler: Arc<VerifyPhoneHandler>,
+        uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
     ) -> Self {
         Self {
             user_repo,
@@ -60,6 +62,7 @@ impl UserServiceImpl {
             verify_email_handler,
             send_phone_verification_handler,
             verify_phone_handler,
+            uow_factory,
         }
     }
 
@@ -143,9 +146,12 @@ impl UserService for UserServiceImpl {
         let email = Email::new(&req.email)
             .map_err(|e| Status::invalid_argument(format!("Invalid email: {}", e)))?;
 
+        // 开始事务
+        let uow = self.uow_factory.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let user_repo = uow.users();
+
         // 检查用户名和邮箱是否已存在
-        if self
-            .user_repo
+        if user_repo
             .exists_by_username(&username, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
@@ -153,8 +159,7 @@ impl UserService for UserServiceImpl {
             return Err(Status::already_exists("Username already exists"));
         }
 
-        if self
-            .user_repo
+        if user_repo
             .exists_by_email(&email, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
@@ -183,10 +188,13 @@ impl UserService for UserServiceImpl {
         }
 
         // 保存用户
-        self.user_repo
+        user_repo
             .save(&user)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 提交事务
+        uow.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         // 发布用户创建事件
         self.event_publisher.publish(IamDomainEvent::UserCreated {

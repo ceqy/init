@@ -117,20 +117,24 @@ impl PhoneVerificationService {
     /// 验证手机验证码
     ///
     /// # 参数
+    /// - `uow`: 工作单元
     /// - `user_id`: 用户 ID
     /// - `code`: 验证码
     /// - `tenant_id`: 租户 ID
     pub async fn verify_code(
         &self,
+        uow: &dyn crate::domain::unit_of_work::UnitOfWork,
         user_id: &UserId,
         code: &str,
         tenant_id: &TenantId,
     ) -> AppResult<()> {
         debug!(user_id = %user_id, tenant_id = %tenant_id, "Verifying phone code");
 
+        let phone_repo = uow.phone_verifications();
+        let user_repo = uow.users();
+
         // 1. 查找最新的验证记录
-        let mut verification = self
-            .phone_verification_repo
+        let mut verification = phone_repo
             .find_latest_by_user_id(user_id, tenant_id)
             .await?
             .ok_or_else(|| {
@@ -145,17 +149,16 @@ impl PhoneVerificationService {
         })?;
 
         // 3. 更新验证记录
-        self.phone_verification_repo.update(&verification).await?;
+        phone_repo.update(&verification).await?;
 
         // 4. 更新用户的 phone_verified 字段
-        let mut user = self
-            .user_repo
+        let mut user = user_repo
             .find_by_id(user_id, tenant_id)
             .await?
             .ok_or_else(|| AppError::not_found("User not found"))?;
 
         user.phone_verified = true;
-        self.user_repo.update(&user).await?;
+        user_repo.update(&user).await?;
 
         info!(
             user_id = %user_id,

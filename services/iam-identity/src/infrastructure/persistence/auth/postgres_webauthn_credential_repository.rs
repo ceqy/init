@@ -176,20 +176,20 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
 
 // 数据库行映射
 #[derive(sqlx::FromRow)]
-struct WebAuthnCredentialRow {
-    id: Uuid,
-    user_id: Uuid,
-    tenant_id: Uuid,
-    credential_id: Vec<u8>,
-    public_key: Vec<u8>,
-    counter: i64,
-    name: String,
-    aaguid: Option<Uuid>,
-    transports: Vec<String>,
-    backup_eligible: bool,
-    backup_state: bool,
-    created_at: chrono::DateTime<chrono::Utc>,
-    last_used_at: Option<chrono::DateTime<chrono::Utc>>,
+pub struct WebAuthnCredentialRow {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub tenant_id: Uuid,
+    pub credential_id: Vec<u8>,
+    pub public_key: Vec<u8>,
+    pub counter: i64,
+    pub name: String,
+    pub aaguid: Option<Uuid>,
+    pub transports: Vec<String>,
+    pub backup_eligible: bool,
+    pub backup_state: bool,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub last_used_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl From<WebAuthnCredentialRow> for WebAuthnCredential {

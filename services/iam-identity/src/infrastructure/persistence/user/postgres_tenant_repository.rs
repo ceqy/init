@@ -251,7 +251,7 @@ impl TenantRepository for PostgresTenantRepository {
 }
 
 #[derive(sqlx::FromRow)]
-struct TenantRow {
+pub struct TenantRow {
     id: uuid::Uuid,
     name: String,
     display_name: String,

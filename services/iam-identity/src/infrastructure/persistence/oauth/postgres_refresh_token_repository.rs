@@ -176,16 +176,16 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
 }
 
 #[derive(sqlx::FromRow)]
-struct RefreshTokenRow {
-    token: String,
-    tenant_id: Uuid,
-    client_id: Uuid,
-    user_id: Uuid,
-    access_token: String,
-    scopes: String,
-    revoked: bool,
-    expires_at: chrono::DateTime<chrono::Utc>,
-    created_at: chrono::DateTime<chrono::Utc>,
+pub struct RefreshTokenRow {
+    pub token: String,
+    pub tenant_id: Uuid,
+    pub client_id: Uuid,
+    pub user_id: Uuid,
+    pub access_token: String,
+    pub scopes: String,
+    pub revoked: bool,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl From<RefreshTokenRow> for RefreshToken {

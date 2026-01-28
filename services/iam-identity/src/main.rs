@@ -142,6 +142,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let webauthn_credential_repo: Arc<dyn WebAuthnCredentialRepository> =
             Arc::new(PostgresWebAuthnCredentialRepository::new(pool.clone()));
 
+        // 组装 Unit of Work 工厂
+        let uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory> =
+            Arc::new(crate::infrastructure::persistence::postgres_unit_of_work::PostgresUnitOfWorkFactory::new(pool.clone()));
+
+
         // 组装 WebAuthn 服务
         let rp_id = config.webauthn.rp_id.clone();
         let rp_origin = config.webauthn.rp_origin
@@ -153,7 +158,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .map_err(|e| cuba_errors::AppError::internal(format!("Failed to create WebAuthn service: {}", e)))?,
         );
 
-        // 组装 AuthService
+        // 组组 AuthService
         let auth_service = AuthServiceImpl::new(
             user_repo.clone(),
             session_repo,
@@ -165,6 +170,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             email_sender.clone(),
             auth_cache,
             event_publisher.clone(),
+            uow_factory.clone(),
             config.jwt.refresh_expires_in as i64,
             password_reset_config,
         );
@@ -195,12 +201,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ));
         let verify_email_handler = Arc::new(VerifyEmailHandler::new(
             email_verification_service.clone(),
+            uow_factory.clone(),
         ));
         let send_phone_verification_handler = Arc::new(SendPhoneVerificationHandler::new(
             phone_verification_service.clone(),
         ));
         let verify_phone_handler = Arc::new(VerifyPhoneHandler::new(
             phone_verification_service.clone(),
+            uow_factory.clone(),
         ));
 
         // 组装 UserService
@@ -212,36 +220,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             verify_email_handler,
             send_phone_verification_handler,
             verify_phone_handler,
+            uow_factory.clone(),
         );
 
         // 组装 OAuth Repositories
         let oauth_client_repo: Arc<dyn OAuthClientRepository> =
             Arc::new(PostgresOAuthClientRepository::new(pool.clone()));
-        let authorization_code_repo: Arc<dyn AuthorizationCodeRepository> =
+        let _authorization_code_repo: Arc<dyn AuthorizationCodeRepository> =
             Arc::new(PostgresAuthorizationCodeRepository::new(pool.clone()));
-        let access_token_repo: Arc<dyn AccessTokenRepository> =
+        let _access_token_repo: Arc<dyn AccessTokenRepository> =
             Arc::new(PostgresAccessTokenRepository::new(pool.clone()));
-        let refresh_token_repo: Arc<dyn RefreshTokenRepository> =
+        let _refresh_token_repo: Arc<dyn RefreshTokenRepository> =
             Arc::new(PostgresRefreshTokenRepository::new(pool.clone()));
 
         // 组装 OAuthService
-        let oauth_service = Arc::new(OAuthService::new(
-            oauth_client_repo.clone(),
-            authorization_code_repo,
-            access_token_repo,
-            refresh_token_repo,
-        ));
+        let oauth_service = Arc::new(OAuthService::new());
 
         // 组装 OAuthServiceImpl
         let create_client_handler = Arc::new(CreateClientHandler::new(
-            oauth_client_repo.clone(),
-            user_repo.clone(),
+            uow_factory.clone(),
             event_publisher.clone(),
         ));
-        let authorize_handler = Arc::new(AuthorizeHandler::new(oauth_service.clone()));
-        let token_handler = Arc::new(TokenHandler::new(oauth_service.clone()));
+        let authorize_handler = Arc::new(AuthorizeHandler::new(oauth_service.clone(), uow_factory.clone()));
+        let token_handler = Arc::new(TokenHandler::new(oauth_service.clone(), uow_factory.clone()));
 
-        let oauth_service_impl = OAuthServiceImpl::new(oauth_client_repo, oauth_service, create_client_handler, authorize_handler, token_handler);
+        let oauth_service_impl = OAuthServiceImpl::new(oauth_client_repo, oauth_service, create_client_handler, authorize_handler, token_handler, uow_factory.clone());
 
         // 注册多个服务并启动
         let addr = format!("{}:{}", config.server.host, config.server.port)

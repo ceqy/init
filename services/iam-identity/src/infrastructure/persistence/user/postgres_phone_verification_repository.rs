@@ -16,6 +16,40 @@ pub struct PostgresPhoneVerificationRepository {
     pool: PgPool,
 }
 
+/// 数据库行模型
+#[derive(sqlx::FromRow)]
+pub struct PhoneVerificationRow {
+    pub id: uuid::Uuid,
+    pub user_id: uuid::Uuid,
+    pub tenant_id: uuid::Uuid,
+    pub phone: String,
+    pub code: String,
+    pub status: String,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+    pub verified_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl PhoneVerificationRow {
+    pub fn into_verification(self) -> PhoneVerification {
+        PhoneVerification {
+            id: PhoneVerificationId::from_uuid(self.id),
+            user_id: UserId::from_uuid(self.user_id),
+            tenant_id: TenantId::from_uuid(self.tenant_id),
+            phone: self.phone,
+            code: self.code,
+            status: match self.status.as_str() {
+                "Verified" => PhoneVerificationStatus::Verified,
+                "Expired" => PhoneVerificationStatus::Expired,
+                _ => PhoneVerificationStatus::Pending,
+            },
+            expires_at: self.expires_at,
+            verified_at: self.verified_at,
+            created_at: self.created_at,
+        }
+    }
+}
+
 impl PostgresPhoneVerificationRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }

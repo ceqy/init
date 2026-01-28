@@ -14,9 +14,7 @@ use crate::application::commands::auth::{LoginCommand, LoginResult};
 use crate::application::dto::auth::TokenPair;
 use crate::domain::services::auth::{BruteForceProtectionService, SuspiciousLoginDetector};
 use crate::domain::auth::{DeviceInfo, LoginFailureReason, LoginLog, LoginResult as LogResult, Session};
-use crate::domain::repositories::auth::{LoginLogRepository, SessionRepository};
 use crate::domain::services::auth::PasswordService;
-use crate::domain::repositories::user::UserRepository;
 use crate::domain::value_objects::Username;
 use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
 
@@ -29,10 +27,10 @@ fn sha256_simple(input: &str) -> u64 {
     hasher.finish()
 }
 
+use crate::domain::unit_of_work::{UnitOfWork, UnitOfWorkFactory};
+
 pub struct LoginHandler {
-    user_repo: Arc<dyn UserRepository>,
-    session_repo: Arc<dyn SessionRepository>,
-    login_log_repo: Arc<dyn LoginLogRepository>,
+    uow_factory: Arc<dyn UnitOfWorkFactory>,
     token_service: Arc<TokenService>,
     brute_force_protection: Arc<BruteForceProtectionService>,
     suspicious_detector: Arc<SuspiciousLoginDetector>,
@@ -42,9 +40,7 @@ pub struct LoginHandler {
 
 impl LoginHandler {
     pub fn new(
-        user_repo: Arc<dyn UserRepository>,
-        session_repo: Arc<dyn SessionRepository>,
-        login_log_repo: Arc<dyn LoginLogRepository>,
+        uow_factory: Arc<dyn UnitOfWorkFactory>,
         token_service: Arc<TokenService>,
         brute_force_protection: Arc<BruteForceProtectionService>,
         suspicious_detector: Arc<SuspiciousLoginDetector>,
@@ -52,9 +48,7 @@ impl LoginHandler {
         refresh_token_expires_in: i64,
     ) -> Self {
         Self {
-            user_repo,
-            session_repo,
-            login_log_repo,
+            uow_factory,
             token_service,
             brute_force_protection,
             suspicious_detector,
@@ -63,7 +57,8 @@ impl LoginHandler {
         }
     }
 
-    async fn log_login(&self, tenant_id: &TenantId, username: &str, user_id: Option<&cuba_common::UserId>, 
+
+    async fn log_login(&self, uow: &dyn UnitOfWork, tenant_id: &TenantId, username: &str, user_id: Option<&cuba_common::UserId>, 
                        ip: &str, user_agent: &str, result: LogResult, failure_reason: Option<LoginFailureReason>,
                        is_suspicious: bool) -> AppResult<()> {
         let log = LoginLog {
@@ -83,7 +78,7 @@ impl LoginHandler {
             created_at: Utc::now(),
         };
         
-        self.login_log_repo.save(&log).await
+        uow.login_logs().save(&log).await
     }
 }
 
@@ -99,12 +94,16 @@ impl CommandHandler<LoginCommand> for LoginHandler {
         let ip = command.ip_address.as_deref().unwrap_or("unknown");
         let user_agent = command.device_info.as_deref().unwrap_or("unknown");
 
+        // 开始事务
+        let uow = self.uow_factory.begin().await?;
+
         // 查找用户
-        let user = match self.user_repo.find_by_username(&username, &tenant_id).await? {
+        let user = match uow.users().find_by_username(&username, &tenant_id).await? {
             Some(u) => u,
             None => {
-                self.log_login(&tenant_id, &command.username, None, ip, user_agent, 
-                              LogResult::Failed, Some(LoginFailureReason::InvalidCredentials), false).await?;
+                self.log_login(uow.as_ref(), &tenant_id, &command.username, None, ip, user_agent, 
+                               LogResult::Failed, Some(LoginFailureReason::InvalidCredentials), false).await?;
+                uow.commit().await?; // 即使失败也记录日志
                 return Err(AppError::unauthorized("Invalid credentials"));
             }
         };
@@ -125,24 +124,27 @@ impl CommandHandler<LoginCommand> for LoginHandler {
 
         // 检查账户锁定
         if self.brute_force_protection.is_locked(&user.id, &tenant_id).await? {
-            self.log_login(&tenant_id, &command.username, Some(&user.id), ip, user_agent,
+            self.log_login(uow.as_ref(), &tenant_id, &command.username, Some(&user.id), ip, user_agent,
                           LogResult::Failed, Some(LoginFailureReason::AccountLocked), is_suspicious).await?;
+            uow.commit().await?;
             return Err(AppError::forbidden("Account is locked due to too many failed attempts"));
         }
 
         // 验证密码
         let valid = PasswordService::verify_password(&command.password, &user.password_hash)?;
         if !valid {
-            self.log_login(&tenant_id, &command.username, Some(&user.id), ip, user_agent,
+            self.log_login(uow.as_ref(), &tenant_id, &command.username, Some(&user.id), ip, user_agent,
                           LogResult::Failed, Some(LoginFailureReason::InvalidCredentials), is_suspicious).await?;
             self.brute_force_protection.record_failed_attempt(&user.id, &tenant_id).await?;
+            uow.commit().await?;
             return Err(AppError::unauthorized("Invalid credentials"));
         }
 
         // 检查用户状态
         if !user.is_active() {
-            self.log_login(&tenant_id, &command.username, Some(&user.id), ip, user_agent,
+            self.log_login(uow.as_ref(), &tenant_id, &command.username, Some(&user.id), ip, user_agent,
                           LogResult::Failed, Some(LoginFailureReason::AccountDisabled), is_suspicious).await?;
+            uow.commit().await?;
             return Err(AppError::forbidden("User account is not active"));
         }
 
@@ -150,6 +152,8 @@ impl CommandHandler<LoginCommand> for LoginHandler {
         if user.two_factor_enabled {
             // 创建临时会话用于 2FA
             let session_id = Uuid::now_v7().to_string();
+            // 注意：此处可能也需要记录日志或保存临时会话状态
+            uow.commit().await?;
             return Ok(LoginResult {
                 tokens: None,
                 user_id: user.id.0.to_string(),
@@ -162,8 +166,6 @@ impl CommandHandler<LoginCommand> for LoginHandler {
         let access_token = self.token_service.generate_access_token(
             &user.id,
             &user.tenant_id,
-            // FUTURE: 实现 RBAC 权限系统后，从 user.role_ids 解析对应的权限列表
-            // 当前权限列表为空，待 RoleRepository 实现后补充
             vec![],
             user.role_ids.clone(),
         )?;
@@ -173,7 +175,6 @@ impl CommandHandler<LoginCommand> for LoginHandler {
             .generate_refresh_token(&user.id, &user.tenant_id)?;
 
         // 创建会话
-        // 使用简单的哈希（生产环境应使用更安全的方式）
         let refresh_token_hash = format!("{:x}", sha256_simple(&refresh_token));
         let expires_at = Utc::now() + Duration::seconds(self.refresh_token_expires_in);
 
@@ -186,14 +187,17 @@ impl CommandHandler<LoginCommand> for LoginHandler {
             session = session.with_ip_address(ip_address);
         }
 
-        self.session_repo.save(&session).await?;
+        uow.sessions().save(&session).await?;
 
         // 记录成功登录
-        self.log_login(&tenant_id, &command.username, Some(&user.id), ip, user_agent,
+        self.log_login(uow.as_ref(), &tenant_id, &command.username, Some(&user.id), ip, user_agent,
                       LogResult::Success, None, is_suspicious).await?;
         self.brute_force_protection.record_successful_login(&user.id).await?;
 
-        // 发布用户登录事件
+        // 提交事务
+        uow.commit().await?;
+
+        // 发布用户登录事件（在事务提交后）
         let login_event = IamDomainEvent::UserLoggedIn {
             user_id: user.id.clone(),
             tenant_id: user.tenant_id.clone(),

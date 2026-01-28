@@ -14,6 +14,33 @@ pub struct PostgresPasswordResetRepository {
     pool: PgPool,
 }
 
+/// 数据库行模型
+#[derive(sqlx::FromRow)]
+pub struct PasswordResetTokenRow {
+    pub id: uuid::Uuid,
+    pub user_id: uuid::Uuid,
+    pub token_hash: String,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+    pub used: bool,
+    pub used_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl PasswordResetTokenRow {
+    pub fn into_token(self, tenant_id: TenantId) -> PasswordResetToken {
+        PasswordResetToken {
+            id: PasswordResetTokenId::from_uuid(self.id),
+            user_id: UserId::from_uuid(self.user_id),
+            tenant_id,
+            token_hash: self.token_hash,
+            expires_at: self.expires_at,
+            used: self.used,
+            used_at: self.used_at,
+            created_at: self.created_at,
+        }
+    }
+}
+
 impl PostgresPasswordResetRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }

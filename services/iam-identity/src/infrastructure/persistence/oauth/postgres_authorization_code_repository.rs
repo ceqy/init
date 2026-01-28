@@ -143,18 +143,18 @@ impl AuthorizationCodeRepository for PostgresAuthorizationCodeRepository {
 }
 
 #[derive(sqlx::FromRow)]
-struct AuthorizationCodeRow {
-    code: String,
-    tenant_id: Uuid,
-    client_id: Uuid,
-    user_id: Uuid,
-    redirect_uri: String,
-    scopes: String,
-    code_challenge: Option<String>,
-    code_challenge_method: Option<String>,
-    used: bool,
-    expires_at: chrono::DateTime<chrono::Utc>,
-    created_at: chrono::DateTime<chrono::Utc>,
+pub struct AuthorizationCodeRow {
+    pub code: String,
+    pub tenant_id: Uuid,
+    pub client_id: Uuid,
+    pub user_id: Uuid,
+    pub redirect_uri: String,
+    pub scopes: String,
+    pub code_challenge: Option<String>,
+    pub code_challenge_method: Option<String>,
+    pub used: bool,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl From<AuthorizationCodeRow> for AuthorizationCode {

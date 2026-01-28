@@ -13,11 +13,15 @@ use crate::domain::services::oauth::OAuthService;
 
 pub struct AuthorizeHandler {
     oauth_service: Arc<OAuthService>,
+    uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
 }
 
 impl AuthorizeHandler {
-    pub fn new(oauth_service: Arc<OAuthService>) -> Self {
-        Self { oauth_service }
+    pub fn new(
+        oauth_service: Arc<OAuthService>,
+        uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
+    ) -> Self {
+        Self { oauth_service, uow_factory }
     }
 }
 
@@ -39,9 +43,12 @@ impl CommandHandler<AuthorizeCommand> for AuthorizeHandler {
         let tenant_id = TenantId::from_str(&command.tenant_id)
             .map_err(|e| AppError::validation(format!("Invalid tenant_id: {}", e)))?;
 
-        let code = self
+        let uow = self.uow_factory.begin().await?;
+
+        let code = match self
             .oauth_service
             .create_authorization_code(
+                uow.as_ref(),
                 &client_id,
                 &user_id,
                 &tenant_id,
@@ -50,7 +57,17 @@ impl CommandHandler<AuthorizeCommand> for AuthorizeHandler {
                 command.code_challenge,
                 command.code_challenge_method,
             )
-            .await?;
+            .await
+        {
+            Ok(code) => {
+                uow.commit().await?;
+                code
+            }
+            Err(e) => {
+                let _ = uow.rollback().await;
+                return Err(e);
+            }
+        };
 
         info!("Authorization code created for client: {}", client_id);
 

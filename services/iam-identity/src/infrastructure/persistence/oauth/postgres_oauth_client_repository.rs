@@ -12,6 +12,82 @@ pub struct PostgresOAuthClientRepository {
     pool: PgPool,
 }
 
+#[derive(sqlx::FromRow)]
+pub struct OAuthClientRow {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub owner_id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub client_secret_hash: Option<String>,
+    pub client_type: String, // Stored as string
+    pub grant_types: Vec<String>,
+    pub redirect_uris: Vec<String>,
+    pub allowed_scopes: Vec<String>,
+
+    pub public_client: bool,
+    pub access_token_lifetime: i32,
+    pub refresh_token_lifetime: i32,
+    pub require_pkce: bool,
+    pub require_consent: bool,
+    pub is_active: bool,
+    pub logo_url: Option<String>,
+    pub homepage_url: Option<String>,
+    pub privacy_policy_url: Option<String>,
+    pub terms_of_service_url: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<OAuthClientRow> for OAuthClient {
+    fn from(row: OAuthClientRow) -> Self {
+        use crate::domain::oauth::{GrantType, OAuthClientType, OAuthClientId};
+
+        let client_type = match row.client_type.as_str() {
+            "Confidential" => OAuthClientType::Confidential,
+            "Public" => OAuthClientType::Public,
+            _ => OAuthClientType::Confidential, // Default or Error
+        };
+
+        let grant_types = row.grant_types.iter().map(|s| {
+            match s.as_str() {
+                "authorization_code" => GrantType::AuthorizationCode,
+                "client_credentials" => GrantType::ClientCredentials,
+                "refresh_token" => GrantType::RefreshToken,
+                "implicit" => GrantType::Implicit,
+                "password" => GrantType::Password,
+                _ => GrantType::AuthorizationCode, // Fallback
+            }
+        }).collect();
+
+        Self {
+            id: OAuthClientId::from_uuid(row.id),
+            tenant_id: TenantId::from_uuid(row.tenant_id),
+            owner_id: UserId::from_uuid(row.owner_id),
+            name: row.name,
+            description: row.description,
+            client_secret_hash: row.client_secret_hash,
+            client_type,
+            grant_types,
+            redirect_uris: row.redirect_uris,
+            allowed_scopes: row.allowed_scopes.clone(),
+            scopes: row.allowed_scopes,
+            public_client: row.public_client,
+            access_token_lifetime: row.access_token_lifetime as i64,
+            refresh_token_lifetime: row.refresh_token_lifetime as i64,
+            require_pkce: row.require_pkce,
+            require_consent: row.require_consent,
+            is_active: row.is_active,
+            logo_url: row.logo_url,
+            homepage_url: row.homepage_url,
+            privacy_policy_url: row.privacy_policy_url,
+            terms_of_service_url: row.terms_of_service_url,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        }
+    }
+}
+
 impl PostgresOAuthClientRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
@@ -191,78 +267,3 @@ impl OAuthClientRepository for PostgresOAuthClientRepository {
     }
 }
 
-#[derive(sqlx::FromRow)]
-struct OAuthClientRow {
-    id: Uuid,
-    tenant_id: Uuid,
-    owner_id: Uuid,
-    name: String,
-    description: Option<String>,
-    client_secret_hash: Option<String>,
-    client_type: String, // Stored as string
-    grant_types: Vec<String>,
-    redirect_uris: Vec<String>,
-    allowed_scopes: Vec<String>,
-
-    public_client: bool,
-    access_token_lifetime: i32,
-    refresh_token_lifetime: i32,
-    require_pkce: bool,
-    require_consent: bool,
-    is_active: bool,
-    logo_url: Option<String>,
-    homepage_url: Option<String>,
-    privacy_policy_url: Option<String>,
-    terms_of_service_url: Option<String>,
-    created_at: chrono::DateTime<chrono::Utc>,
-    updated_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl From<OAuthClientRow> for OAuthClient {
-    fn from(row: OAuthClientRow) -> Self {
-        use crate::domain::oauth::{GrantType, OAuthClientType};
-
-        let client_type = match row.client_type.as_str() {
-            "Confidential" => OAuthClientType::Confidential,
-            "Public" => OAuthClientType::Public,
-            _ => OAuthClientType::Confidential, // Default or Error
-        };
-
-        let grant_types = row.grant_types.iter().map(|s| {
-            match s.as_str() {
-                "authorization_code" => GrantType::AuthorizationCode,
-                "client_credentials" => GrantType::ClientCredentials,
-                "refresh_token" => GrantType::RefreshToken,
-                "implicit" => GrantType::Implicit,
-                "password" => GrantType::Password,
-                _ => GrantType::AuthorizationCode, // Fallback
-            }
-        }).collect();
-
-        Self {
-            id: OAuthClientId::from_uuid(row.id),
-            tenant_id: TenantId::from_uuid(row.tenant_id),
-            owner_id: UserId::from_uuid(row.owner_id),
-            name: row.name,
-            description: row.description,
-            client_secret_hash: row.client_secret_hash,
-            client_type,
-            grant_types,
-            redirect_uris: row.redirect_uris,
-            allowed_scopes: row.allowed_scopes.clone(),
-            scopes: row.allowed_scopes,
-            public_client: row.public_client,
-            access_token_lifetime: row.access_token_lifetime as i64,
-            refresh_token_lifetime: row.refresh_token_lifetime as i64,
-            require_pkce: row.require_pkce,
-            require_consent: row.require_consent,
-            is_active: row.is_active,
-            logo_url: row.logo_url,
-            homepage_url: row.homepage_url,
-            privacy_policy_url: row.privacy_policy_url,
-            terms_of_service_url: row.terms_of_service_url,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        }
-    }
-}

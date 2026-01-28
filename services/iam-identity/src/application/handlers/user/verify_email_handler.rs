@@ -10,17 +10,23 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::application::commands::user::{VerifyEmailCommand, VerifyEmailResult};
+use crate::domain::unit_of_work::UnitOfWorkFactory;
 use crate::domain::services::user::EmailVerificationService;
 
 /// 验证邮箱处理器
 pub struct VerifyEmailHandler {
     email_verification_service: Arc<EmailVerificationService>,
+    uow_factory: Arc<dyn UnitOfWorkFactory>,
 }
 
 impl VerifyEmailHandler {
-    pub fn new(email_verification_service: Arc<EmailVerificationService>) -> Self {
+    pub fn new(
+        email_verification_service: Arc<EmailVerificationService>,
+        uow_factory: Arc<dyn UnitOfWorkFactory>,
+    ) -> Self {
         Self {
             email_verification_service,
+            uow_factory,
         }
     }
 }
@@ -45,13 +51,19 @@ impl CommandHandler<VerifyEmailCommand> for VerifyEmailHandler {
             })?,
         );
 
+        // 开始事务
+        let uow = self.uow_factory.begin().await?;
+
         // 验证验证码
         match self
             .email_verification_service
-            .verify_code(&user_id, &command.code, &tenant_id)
+            .verify_code(uow.as_ref(), &user_id, &command.code, &tenant_id)
             .await
         {
             Ok(_) => {
+                // 提交事务
+                uow.commit().await?;
+
                 info!(
                     user_id = %command.user_id,
                     "Email verified successfully"
@@ -63,6 +75,9 @@ impl CommandHandler<VerifyEmailCommand> for VerifyEmailHandler {
                 })
             }
             Err(e) => {
+                // 验证失败，回滚
+                let _ = uow.rollback().await;
+
                 warn!(
                     user_id = %command.user_id,
                     error = %e,

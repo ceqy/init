@@ -10,23 +10,21 @@ use tracing::info;
 
 use crate::application::commands::oauth::CreateClientCommand;
 use crate::domain::oauth::{GrantType, OAuthClient, OAuthClientType};
-use crate::domain::repositories::oauth::OAuthClientRepository;
-use crate::domain::repositories::user::UserRepository;
 use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
 
+use crate::domain::unit_of_work::UnitOfWorkFactory;
+
 pub struct CreateClientHandler {
-    client_repo: Arc<dyn OAuthClientRepository>,
-    user_repo: Arc<dyn UserRepository>,
+    uow_factory: Arc<dyn UnitOfWorkFactory>,
     event_publisher: Arc<dyn EventPublisher>,
 }
 
 impl CreateClientHandler {
     pub fn new(
-        client_repo: Arc<dyn OAuthClientRepository>,
-        user_repo: Arc<dyn UserRepository>,
+        uow_factory: Arc<dyn UnitOfWorkFactory>,
         event_publisher: Arc<dyn EventPublisher>,
     ) -> Self {
-        Self { client_repo, user_repo, event_publisher }
+        Self { uow_factory, event_publisher }
     }
 }
 
@@ -38,10 +36,11 @@ impl CommandHandler<CreateClientCommand> for CreateClientHandler {
         let tenant_id = TenantId::from_str(&command.tenant_id)
             .map_err(|e| AppError::validation(format!("Invalid tenant_id: {}", e)))?;
 
-        // FUTURE: owner_id 应从 gRPC 请求的认证 Claims 中获取（authenticated user）
-        // 需要修改 CreateClientCommand 结构体添加 owner_id 字段
-        // 当前临时方案：使用租户中的第一个用户作为 owner
-        let (users, _) = self.user_repo.list(
+        // 开始事务
+        let uow = self.uow_factory.begin().await?;
+
+        // 查找所有者
+        let (users, _) = uow.users().list(
             &tenant_id,
             None,  // status
             None,  // search
@@ -66,7 +65,7 @@ impl CommandHandler<CreateClientCommand> for CreateClientHandler {
                 .map_err(|e| AppError::validation(format!("Failed to hash password: {}", e)))?;
 
             let user = User::new(username, email, password_hash, tenant_id.clone());
-            self.user_repo.save(&user).await
+            uow.users().save(&user).await
                 .map_err(|e| AppError::internal(format!("Failed to create default user: {}", e)))?;
             user.id.clone()
         } else {
@@ -117,13 +116,14 @@ impl CommandHandler<CreateClientCommand> for CreateClientHandler {
                 let random_bytes = rand::thread_rng().r#gen::<[u8; 32]>();
                 hex::encode(random_bytes)
             });
-            // Hash secret (simplified for now, should use argon2/bcrypt)
-            // Ideally inject a password service
             client.set_client_secret(secret.clone()); 
             Some(secret)
         };
 
-        self.client_repo.save(&client).await?;
+        uow.oauth_clients().save(&client).await?;
+
+        // 提交事务
+        uow.commit().await?;
 
         // 发布 OAuth 客户端创建事件
         let event = IamDomainEvent::OAuthClientCreated {

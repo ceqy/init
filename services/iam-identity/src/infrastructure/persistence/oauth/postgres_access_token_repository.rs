@@ -157,15 +157,15 @@ impl AccessTokenRepository for PostgresAccessTokenRepository {
 }
 
 #[derive(sqlx::FromRow)]
-struct AccessTokenRow {
-    token: String,
-    tenant_id: Uuid,
-    client_id: Uuid,
-    user_id: Option<Uuid>,
-    scope: String,
-    revoked: bool,
-    expires_at: chrono::DateTime<chrono::Utc>,
-    created_at: chrono::DateTime<chrono::Utc>,
+pub struct AccessTokenRow {
+    pub token: String,
+    pub tenant_id: Uuid,
+    pub client_id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub scope: String,
+    pub revoked: bool,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl From<AccessTokenRow> for AccessToken {

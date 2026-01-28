@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use tracing::debug;
 use base64::{Engine as _, engine::general_purpose};
 use cuba_common::{TenantId, UserId};
@@ -8,34 +6,19 @@ use rand::Rng;
 use sha2::{Digest, Sha256};
 
 use crate::domain::oauth::{AccessToken, AuthorizationCode, OAuthClientId, RefreshToken};
-use crate::domain::repositories::oauth::{
-    AccessTokenRepository, AuthorizationCodeRepository, OAuthClientRepository, RefreshTokenRepository,
-};
 
 pub struct OAuthService {
-    client_repo: Arc<dyn OAuthClientRepository>,
-    code_repo: Arc<dyn AuthorizationCodeRepository>,
-    access_token_repo: Arc<dyn AccessTokenRepository>,
-    refresh_token_repo: Arc<dyn RefreshTokenRepository>,
+    // 仓库现在通过 UnitOfWork 传递，这里可以保持为空，或者仅保留非仓库的依赖
 }
 
 impl OAuthService {
-    pub fn new(
-        client_repo: Arc<dyn OAuthClientRepository>,
-        code_repo: Arc<dyn AuthorizationCodeRepository>,
-        access_token_repo: Arc<dyn AccessTokenRepository>,
-        refresh_token_repo: Arc<dyn RefreshTokenRepository>,
-    ) -> Self {
-        Self {
-            client_repo,
-            code_repo,
-            access_token_repo,
-            refresh_token_repo,
-        }
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub async fn create_authorization_code(
         &self,
+        uow: &dyn crate::domain::unit_of_work::UnitOfWork,
         client_id: &OAuthClientId,
         user_id: &UserId,
         tenant_id: &TenantId,
@@ -46,8 +29,10 @@ impl OAuthService {
     ) -> AppResult<String> {
         debug!("Creating authorization code for client: {}", client_id);
 
-        let client = self
-            .client_repo
+        let client_repo = uow.oauth_clients();
+        let code_repo = uow.authorization_codes();
+
+        let client = client_repo
             .find_by_id(client_id, tenant_id)
             .await?
             .ok_or_else(|| AppError::not_found("OAuth client not found"))?;
@@ -68,13 +53,14 @@ impl OAuthService {
             code_challenge_method,
         );
 
-        self.code_repo.save(&authorization_code).await?;
+        code_repo.save(&authorization_code).await?;
 
         Ok(code)
     }
 
     pub async fn exchange_code_for_token(
         &self,
+        uow: &dyn crate::domain::unit_of_work::UnitOfWork,
         code: &str,
         client_id: &OAuthClientId,
         tenant_id: &TenantId,
@@ -83,8 +69,11 @@ impl OAuthService {
     ) -> AppResult<(String, String)> {
         debug!("Exchanging authorization code for token");
 
-        let mut authorization_code = self
-            .code_repo
+        let code_repo = uow.authorization_codes();
+        let access_token_repo = uow.access_tokens();
+        let refresh_token_repo = uow.refresh_tokens();
+
+        let mut authorization_code = code_repo
             .find_by_code(code, tenant_id)
             .await?
             .ok_or_else(|| AppError::not_found("Authorization code not found"))?;
@@ -114,7 +103,7 @@ impl OAuthService {
         }
 
         authorization_code.mark_as_used();
-        self.code_repo.update(&authorization_code).await?;
+        code_repo.update(&authorization_code).await?;
 
         let access_token = Self::generate_token();
         let refresh_token = Self::generate_token();
@@ -138,22 +127,25 @@ impl OAuthService {
             2592000, // 30 days
         );
 
-        self.access_token_repo.save(&access_token_entity).await?;
-        self.refresh_token_repo.save(&refresh_token_entity).await?;
+        access_token_repo.save(&access_token_entity).await?;
+        refresh_token_repo.save(&refresh_token_entity).await?;
 
         Ok((access_token, refresh_token))
     }
 
     pub async fn refresh_access_token(
         &self,
+        uow: &dyn crate::domain::unit_of_work::UnitOfWork,
         refresh_token: &str,
         client_id: &OAuthClientId,
         tenant_id: &TenantId,
     ) -> AppResult<(String, String)> {
         debug!("Refreshing access token");
 
-        let mut refresh_token_entity = self
-            .refresh_token_repo
+        let access_token_repo = uow.access_tokens();
+        let refresh_token_repo = uow.refresh_tokens();
+
+        let mut refresh_token_entity = refresh_token_repo
             .find_by_token(refresh_token, tenant_id)
             .await?
             .ok_or_else(|| AppError::not_found("Refresh token not found"))?;
@@ -170,14 +162,13 @@ impl OAuthService {
             return Err(AppError::validation("Invalid client"));
         }
 
-        let old_access_token = self
-            .access_token_repo
+        let old_access_token = access_token_repo
             .find_by_token(&refresh_token_entity.access_token, tenant_id)
             .await?;
 
         if let Some(mut old_token) = old_access_token {
             old_token.revoke();
-            self.access_token_repo.update(&old_token).await?;
+            access_token_repo.update(&old_token).await?;
         }
 
         let new_access_token = Self::generate_token();
@@ -203,40 +194,46 @@ impl OAuthService {
         );
 
         refresh_token_entity.revoke();
-        self.refresh_token_repo.update(&refresh_token_entity).await?;
+        refresh_token_repo.update(&refresh_token_entity).await?;
 
-        self.access_token_repo.save(&access_token_entity).await?;
-        self.refresh_token_repo.save(&new_refresh_token_entity).await?;
+        access_token_repo.save(&access_token_entity).await?;
+        refresh_token_repo.save(&new_refresh_token_entity).await?;
 
         Ok((new_access_token, new_refresh_token))
     }
 
-    pub async fn revoke_token(&self, token: &str, tenant_id: &TenantId) -> AppResult<()> {
+    pub async fn revoke_token(
+        &self,
+        uow: &dyn crate::domain::unit_of_work::UnitOfWork,
+        token: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<()> {
         debug!("Revoking token");
 
-        if let Some(mut access_token) = self.access_token_repo.find_by_token(token, tenant_id).await? {
-            access_token.revoke();
-            self.access_token_repo.update(&access_token).await?;
+        let access_token_repo = uow.access_tokens();
+        let refresh_token_repo = uow.refresh_tokens();
 
-            if let Some(mut refresh_token) = self
-                .refresh_token_repo
+        if let Some(mut access_token) = access_token_repo.find_by_token(token, tenant_id).await? {
+            access_token.revoke();
+            access_token_repo.update(&access_token).await?;
+
+            if let Some(mut refresh_token) = refresh_token_repo
                 .find_by_access_token(token, tenant_id)
                 .await?
             {
                 refresh_token.revoke();
-                self.refresh_token_repo.update(&refresh_token).await?;
+                refresh_token_repo.update(&refresh_token).await?;
             }
-        } else if let Some(mut refresh_token) = self.refresh_token_repo.find_by_token(token, tenant_id).await? {
+        } else if let Some(mut refresh_token) = refresh_token_repo.find_by_token(token, tenant_id).await? {
             refresh_token.revoke();
-            self.refresh_token_repo.update(&refresh_token).await?;
+            refresh_token_repo.update(&refresh_token).await?;
 
-            if let Some(mut access_token) = self
-                .access_token_repo
+            if let Some(mut access_token) = access_token_repo
                 .find_by_token(&refresh_token.access_token, tenant_id)
                 .await?
             {
                 access_token.revoke();
-                self.access_token_repo.update(&access_token).await?;
+                access_token_repo.update(&access_token).await?;
             }
         } else {
             return Err(AppError::not_found("Token not found"));
@@ -245,10 +242,16 @@ impl OAuthService {
         Ok(())
     }
 
-    pub async fn introspect_token(&self, token: &str, tenant_id: &TenantId) -> AppResult<Option<AccessToken>> {
+    pub async fn introspect_token(
+        &self,
+        uow: &dyn crate::domain::unit_of_work::UnitOfWork,
+        token: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<AccessToken>> {
         debug!("Introspecting token");
 
-        let access_token = self.access_token_repo.find_by_token(token, tenant_id).await?;
+        let access_token_repo = uow.access_tokens();
+        let access_token = access_token_repo.find_by_token(token, tenant_id).await?;
 
         if let Some(token) = &access_token {
             if token.revoked || token.is_expired() {

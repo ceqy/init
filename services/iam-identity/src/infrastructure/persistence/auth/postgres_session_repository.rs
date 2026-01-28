@@ -156,7 +156,7 @@ impl SessionRepository for PostgresSessionRepository {
 }
 
 #[derive(sqlx::FromRow)]
-struct SessionRow {
+pub struct SessionRow {
     id: Uuid,
     user_id: Uuid,
     tenant_id: Uuid,
@@ -171,7 +171,7 @@ struct SessionRow {
 }
 
 impl SessionRow {
-    fn into_session(self) -> Session {
+    pub fn into_session(self) -> Session {
         Session {
             id: SessionId(self.id),
             user_id: UserId::from_uuid(self.user_id),

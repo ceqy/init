@@ -29,6 +29,7 @@ pub struct OAuthServiceImpl {
     create_client_handler: Arc<CreateClientHandler>,
     authorize_handler: Arc<AuthorizeHandler>,
     token_handler: Arc<TokenHandler>,
+    uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
 }
 
 impl OAuthServiceImpl {
@@ -38,6 +39,7 @@ impl OAuthServiceImpl {
         create_client_handler: Arc<CreateClientHandler>,
         authorize_handler: Arc<AuthorizeHandler>,
         token_handler: Arc<TokenHandler>,
+        uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
     ) -> Self {
         Self {
             client_repo,
@@ -45,6 +47,7 @@ impl OAuthServiceImpl {
             create_client_handler,
             authorize_handler,
             token_handler,
+            uow_factory,
         }
     }
 
@@ -448,12 +451,22 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let tenant_id = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
-        self.oauth_service
-            .revoke_token(&req.token, &tenant_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let uow = self.uow_factory.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(()))
+        let res = self.oauth_service
+            .revoke_token(uow.as_ref(), &req.token, &tenant_id)
+            .await;
+
+        match res {
+            Ok(_) => {
+                uow.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+                Ok(Response::new(()))
+            }
+            Err(e) => {
+                let _ = uow.rollback().await;
+                Err(Status::internal(e.to_string()))
+            }
+        }
     }
 
     async fn introspect_token(
@@ -466,9 +479,11 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let tenant_id = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
+        let uow = self.uow_factory.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+
         let token = self
             .oauth_service
-            .introspect_token(&req.token, &tenant_id)
+            .introspect_token(uow.as_ref(), &req.token, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 

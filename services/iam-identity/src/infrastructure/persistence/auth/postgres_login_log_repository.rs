@@ -211,21 +211,21 @@ impl LoginLogRepository for PostgresLoginLogRepository {
 }
 
 #[derive(sqlx::FromRow)]
-struct LoginLogRow {
-    id: Uuid,
-    user_id: Option<Uuid>,
-    tenant_id: Uuid,
-    username: String,
-    ip_address: String,
-    user_agent: String,
-    device_type: Option<String>,
-    os: Option<String>,
-    browser: Option<String>,
-    result: String,
-    failure_reason: Option<String>,
-    country: Option<String>,
-    city: Option<String>,
-    created_at: DateTime<Utc>,
+pub struct LoginLogRow {
+    pub id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub tenant_id: Uuid,
+    pub username: String,
+    pub ip_address: String,
+    pub user_agent: String,
+    pub device_type: Option<String>,
+    pub os: Option<String>,
+    pub browser: Option<String>,
+    pub result: String,
+    pub failure_reason: Option<String>,
+    pub country: Option<String>,
+    pub city: Option<String>,
+    pub created_at: DateTime<Utc>,
 }
 
 impl From<LoginLogRow> for LoginLog {
