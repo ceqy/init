@@ -299,3 +299,246 @@ pub enum OAuthClientError {
     InvalidSecret,
 }
 
+
+// ============================================================
+// 单元测试
+// ============================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_client() -> OAuthClient {
+        let tenant_id = TenantId::new();
+        let owner_id = UserId::new();
+        let name = "Test Client".to_string();
+        let client_type = OAuthClientType::Confidential;
+        let redirect_uris = vec!["https://example.com/callback".to_string()];
+
+        OAuthClient::new(tenant_id, owner_id, name, client_type, redirect_uris).unwrap()
+    }
+
+    #[test]
+    fn test_create_oauth_client() {
+        let client = create_test_client();
+
+        assert_eq!(client.name, "Test Client");
+        assert_eq!(client.client_type, OAuthClientType::Confidential);
+        assert!(!client.public_client);
+        assert!(client.is_active);
+        assert!(client.require_pkce);
+        assert!(client.require_consent);
+        assert_eq!(client.access_token_lifetime, 3600);
+        assert_eq!(client.refresh_token_lifetime, 2592000);
+    }
+
+    #[test]
+    fn test_create_public_client() {
+        let tenant_id = TenantId::new();
+        let owner_id = UserId::new();
+        let name = "Public Client".to_string();
+        let client_type = OAuthClientType::Public;
+        let redirect_uris = vec!["https://example.com/callback".to_string()];
+
+        let client = OAuthClient::new(tenant_id, owner_id, name, client_type, redirect_uris).unwrap();
+
+        assert_eq!(client.client_type, OAuthClientType::Public);
+        assert!(client.public_client);
+    }
+
+    #[test]
+    fn test_create_client_with_empty_name() {
+        let tenant_id = TenantId::new();
+        let owner_id = UserId::new();
+        let name = "".to_string();
+        let client_type = OAuthClientType::Confidential;
+        let redirect_uris = vec!["https://example.com/callback".to_string()];
+
+        let result = OAuthClient::new(tenant_id, owner_id, name, client_type, redirect_uris);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_create_client_with_empty_redirect_uris() {
+        let tenant_id = TenantId::new();
+        let owner_id = UserId::new();
+        let name = "Test Client".to_string();
+        let client_type = OAuthClientType::Confidential;
+        let redirect_uris = vec![];
+
+        let result = OAuthClient::new(tenant_id, owner_id, name, client_type, redirect_uris);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_https() {
+        let uri = "https://example.com/callback";
+        let result = OAuthClient::validate_redirect_uri(uri);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_localhost() {
+        let uri = "http://localhost:3000/callback";
+        let result = OAuthClient::validate_redirect_uri(uri);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_http_not_localhost() {
+        let uri = "http://example.com/callback";
+        let result = OAuthClient::validate_redirect_uri(uri);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_with_fragment() {
+        let uri = "https://example.com/callback#fragment";
+        let result = OAuthClient::validate_redirect_uri(uri);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_set_client_secret() {
+        let mut client = create_test_client();
+        let secret_hash = "hashed_secret".to_string();
+
+        client.set_client_secret(secret_hash.clone());
+
+        assert_eq!(client.client_secret_hash, Some(secret_hash));
+    }
+
+    #[test]
+    fn test_rotate_client_secret() {
+        let mut client = create_test_client();
+        client.set_client_secret("old_hash".to_string());
+
+        let new_secret_hash = "new_hash".to_string();
+        client.rotate_client_secret(new_secret_hash.clone());
+
+        assert_eq!(client.client_secret_hash, Some(new_secret_hash));
+    }
+
+    #[test]
+    fn test_verify_client_secret() {
+        let mut client = create_test_client();
+        let secret = "test_secret";
+        client.set_client_secret(secret.to_string());
+
+        let result = client.verify_client_secret(secret);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_verify_client_secret_mismatch() {
+        let mut client = create_test_client();
+        client.set_client_secret("correct_secret".to_string());
+
+        let result = client.verify_client_secret("wrong_secret");
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_match() {
+        let client = create_test_client();
+
+        assert!(client.validate_redirect_uri_match("https://example.com/callback"));
+        assert!(!client.validate_redirect_uri_match("https://evil.com/callback"));
+    }
+
+    #[test]
+    fn test_is_grant_type_allowed() {
+        let client = create_test_client();
+
+        assert!(client.is_grant_type_allowed(&GrantType::AuthorizationCode));
+        assert!(!client.is_grant_type_allowed(&GrantType::ClientCredentials));
+    }
+
+    #[test]
+    fn test_validate_scopes() {
+        let client = create_test_client();
+
+        let valid_scopes = vec!["openid".to_string(), "profile".to_string()];
+        assert!(client.validate_scopes(&valid_scopes));
+
+        let invalid_scopes = vec!["openid".to_string(), "admin".to_string()];
+        assert!(!client.validate_scopes(&invalid_scopes));
+    }
+
+    #[test]
+    fn test_update_client() {
+        let mut client = create_test_client();
+
+        let result = client.update(
+            Some("Updated Client".to_string()),
+            Some("New description".to_string()),
+            None,
+            None,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(client.name, "Updated Client");
+        assert_eq!(client.description, Some("New description".to_string()));
+    }
+
+    #[test]
+    fn test_update_client_with_empty_name() {
+        let mut client = create_test_client();
+
+        let result = client.update(
+            Some("".to_string()),
+            None,
+            None,
+            None,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_redirect_uris() {
+        let mut client = create_test_client();
+
+        let new_uris = vec![
+            "https://example.com/callback1".to_string(),
+            "https://example.com/callback2".to_string(),
+        ];
+
+        let result = client.update(None, None, Some(new_uris.clone()), None);
+
+        assert!(result.is_ok());
+        assert_eq!(client.redirect_uris, new_uris);
+    }
+
+    #[test]
+    fn test_activate_client() {
+        let mut client = create_test_client();
+        client.deactivate();
+
+        client.activate();
+
+        assert!(client.is_active);
+    }
+
+    #[test]
+    fn test_deactivate_client() {
+        let mut client = create_test_client();
+
+        client.deactivate();
+
+        assert!(!client.is_active);
+    }
+
+    #[test]
+    fn test_grant_type_display() {
+        assert_eq!(GrantType::AuthorizationCode.to_string(), "authorization_code");
+        assert_eq!(GrantType::ClientCredentials.to_string(), "client_credentials");
+        assert_eq!(GrantType::RefreshToken.to_string(), "refresh_token");
+        assert_eq!(GrantType::Implicit.to_string(), "implicit");
+        assert_eq!(GrantType::Password.to_string(), "password");
+    }
+}

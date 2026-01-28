@@ -258,3 +258,243 @@ impl AggregateRoot for User {
         &mut self.audit_info
     }
 }
+
+// ============================================================
+// 单元测试
+// ============================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_user() -> User {
+        let username = Username::new("testuser").unwrap();
+        let email = Email::new("test@example.com").unwrap();
+        let password_hash = HashedPassword::from_hash("$2b$12$test_hash".to_string());
+        let tenant_id = TenantId::new();
+
+        User::new(username, email, password_hash, tenant_id)
+    }
+
+    #[test]
+    fn test_create_user() {
+        let user = create_test_user();
+
+        assert_eq!(user.status, UserStatus::PendingVerification);
+        assert_eq!(user.language, "zh-CN");
+        assert_eq!(user.timezone, "Asia/Shanghai");
+        assert!(!user.two_factor_enabled);
+        assert_eq!(user.failed_login_count, 0);
+        assert!(!user.email_verified);
+        assert!(!user.phone_verified);
+    }
+
+    #[test]
+    fn test_activate_user() {
+        let mut user = create_test_user();
+        user.activate();
+
+        assert_eq!(user.status, UserStatus::Active);
+        assert!(user.is_active());
+    }
+
+    #[test]
+    fn test_deactivate_user() {
+        let mut user = create_test_user();
+        user.activate();
+        user.deactivate();
+
+        assert_eq!(user.status, UserStatus::Inactive);
+        assert!(!user.is_active());
+    }
+
+    #[test]
+    fn test_lock_user() {
+        let mut user = create_test_user();
+        user.lock();
+
+        assert_eq!(user.status, UserStatus::Locked);
+    }
+
+    #[test]
+    fn test_record_login() {
+        let mut user = create_test_user();
+        assert!(user.last_login_at.is_none());
+
+        user.record_login();
+
+        assert!(user.last_login_at.is_some());
+    }
+
+    #[test]
+    fn test_enable_2fa() {
+        let mut user = create_test_user();
+        let secret = "JBSWY3DPEHPK3PXP".to_string();
+
+        user.enable_2fa(secret.clone());
+
+        assert!(user.two_factor_enabled);
+        assert_eq!(user.two_factor_secret, Some(secret));
+    }
+
+    #[test]
+    fn test_disable_2fa() {
+        let mut user = create_test_user();
+        user.enable_2fa("JBSWY3DPEHPK3PXP".to_string());
+        user.disable_2fa();
+
+        assert!(!user.two_factor_enabled);
+        assert!(user.two_factor_secret.is_none());
+    }
+
+    #[test]
+    fn test_update_password() {
+        let mut user = create_test_user();
+        let old_password_change_time = user.last_password_change_at;
+
+        // 等待一小段时间确保时间戳不同
+        std::thread::sleep(std::time::Duration::from_millis(10));
+
+        let new_password_hash = HashedPassword::from_hash("$2b$12$new_hash".to_string());
+        user.update_password(new_password_hash);
+
+        assert_ne!(user.password_hash.0, "$2b$12$test_hash");
+        assert!(user.last_password_change_at >= old_password_change_time);
+    }
+
+    #[test]
+    fn test_add_role() {
+        let mut user = create_test_user();
+        let role_id = "admin".to_string();
+
+        user.add_role(role_id.clone());
+
+        assert_eq!(user.role_ids.len(), 1);
+        assert!(user.role_ids.contains(&role_id));
+    }
+
+    #[test]
+    fn test_add_duplicate_role() {
+        let mut user = create_test_user();
+        let role_id = "admin".to_string();
+
+        user.add_role(role_id.clone());
+        user.add_role(role_id.clone());
+
+        assert_eq!(user.role_ids.len(), 1);
+    }
+
+    #[test]
+    fn test_remove_role() {
+        let mut user = create_test_user();
+        let role_id = "admin".to_string();
+
+        user.add_role(role_id.clone());
+        user.remove_role(&role_id);
+
+        assert_eq!(user.role_ids.len(), 0);
+    }
+
+    #[test]
+    fn test_record_login_failure() {
+        let mut user = create_test_user();
+
+        user.record_login_failure();
+
+        assert_eq!(user.failed_login_count, 1);
+        assert!(user.last_failed_login_at.is_some());
+    }
+
+    #[test]
+    fn test_auto_lock_after_10_failures() {
+        let mut user = create_test_user();
+
+        for _ in 0..10 {
+            user.record_login_failure();
+        }
+
+        assert_eq!(user.status, UserStatus::Locked);
+        assert!(user.locked_until.is_some());
+        assert!(user.lock_reason.is_some());
+        assert!(user.is_locked());
+    }
+
+    #[test]
+    fn test_clear_login_failures() {
+        let mut user = create_test_user();
+
+        user.record_login_failure();
+        user.record_login_failure();
+        user.clear_login_failures();
+
+        assert_eq!(user.failed_login_count, 0);
+        assert!(user.last_failed_login_at.is_none());
+    }
+
+    #[test]
+    fn test_lock_account() {
+        let mut user = create_test_user();
+        let reason = "Suspicious activity".to_string();
+
+        user.lock_account(30, reason.clone());
+
+        assert_eq!(user.status, UserStatus::Locked);
+        assert!(user.locked_until.is_some());
+        assert_eq!(user.lock_reason, Some(reason));
+        assert!(user.is_locked());
+    }
+
+    #[test]
+    fn test_unlock_account() {
+        let mut user = create_test_user();
+        user.lock_account(30, "Test lock".to_string());
+        user.unlock_account();
+
+        assert_eq!(user.status, UserStatus::Active);
+        assert!(user.locked_until.is_none());
+        assert!(user.lock_reason.is_none());
+        assert_eq!(user.failed_login_count, 0);
+        assert!(!user.is_locked());
+    }
+
+    #[test]
+    fn test_should_auto_unlock() {
+        let mut user = create_test_user();
+
+        // 锁定 -1 分钟（已过期）
+        user.locked_until = Some(Utc::now() - chrono::Duration::minutes(1));
+
+        assert!(user.should_auto_unlock());
+        assert!(!user.is_locked());
+    }
+
+    #[test]
+    fn test_get_lock_remaining_seconds() {
+        let mut user = create_test_user();
+
+        user.lock_account(5, "Test".to_string());
+
+        let remaining = user.get_lock_remaining_seconds();
+        assert!(remaining.is_some());
+        assert!(remaining.unwrap() > 0);
+        assert!(remaining.unwrap() <= 300); // 5 minutes = 300 seconds
+    }
+
+    #[test]
+    fn test_mark_email_verified() {
+        let mut user = create_test_user();
+
+        user.mark_email_verified();
+
+        assert!(user.email_verified);
+        assert!(user.email_verified_at.is_some());
+        assert!(user.is_email_verified());
+    }
+
+    #[test]
+    fn test_is_email_verified() {
+        let user = create_test_user();
+
+        assert!(!user.is_email_verified());
+    }
+}
