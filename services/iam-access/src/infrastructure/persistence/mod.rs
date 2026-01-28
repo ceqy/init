@@ -1,5 +1,6 @@
 //! 持久化层模块
 
+pub mod db_metrics;
 pub mod permission_repository;
 pub mod policy_repository;
 pub mod role_repository;

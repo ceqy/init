@@ -39,11 +39,11 @@ where
             )));
         }
 
-        let role = if cmd.is_system {
-            Role::system_role(cmd.tenant_id, cmd.code.clone(), cmd.name.clone(), cmd.description.clone())
-        } else {
-            Role::new(cmd.tenant_id, cmd.code.clone(), cmd.name.clone(), cmd.description.clone())
-        };
+        // 保存 performed_by 用于事件
+        let performed_by = cmd.performed_by;
+        
+        // 使用移动语义创建角色 (避免克隆)
+        let role = cmd.into_role();
 
         self.role_repo.create(&role).await?;
 
@@ -53,7 +53,7 @@ where
             tenant_id: role.tenant_id.0,
             code: role.code.clone(),
             name: role.name.clone(),
-            by: cmd.performed_by,
+            by: performed_by,
         };
         self.event_publisher.publish("rbac.role.created", &event).await
             .map_err(|e| AppError::internal(e.to_string()))?;

@@ -15,6 +15,18 @@ pub struct CreateRoleCommand {
     pub performed_by: Option<Uuid>,
 }
 
+impl CreateRoleCommand {
+    /// 将命令转换为角色实体 (移动语义，避免克隆)
+    pub fn into_role(self) -> crate::domain::role::Role {
+        use crate::domain::role::Role;
+        if self.is_system {
+            Role::system_role(self.tenant_id, self.code, self.name, self.description)
+        } else {
+            Role::new(self.tenant_id, self.code, self.name, self.description)
+        }
+    }
+}
+
 /// 更新角色命令
 #[derive(Debug, Clone)]
 pub struct UpdateRoleCommand {

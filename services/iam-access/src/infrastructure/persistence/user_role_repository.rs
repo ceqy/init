@@ -113,12 +113,17 @@ impl UserRoleRepository for PostgresUserRoleRepository {
         .await
         .map_err(map_sqlx_error)?;
 
-        // 加载每个角色的权限
-        let mut roles = Vec::new();
-        for row in rows {
-            let permissions = self.load_role_permissions(&row.id).await?;
-            roles.push(row.into_role(permissions));
-        }
+        // 批量加载所有角色的权限 (修复 N+1 查询)
+        let role_ids: Vec<Uuid> = rows.iter().map(|r| r.id).collect();
+        let mut permissions_map = self.batch_load_roles_permissions(&role_ids).await?;
+
+        let roles: Vec<Role> = rows
+            .into_iter()
+            .map(|row| {
+                let perms = permissions_map.remove(&row.id).unwrap_or_default();
+                row.into_role(perms)
+            })
+            .collect();
 
         if let Some(cache) = &self.auth_cache {
             let _ = cache.set_user_roles(tenant_id, &user_id_obj, &roles).await;
@@ -240,6 +245,39 @@ impl PostgresUserRoleRepository {
 
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
+
+    /// 批量加载多个角色的权限 (修复 N+1 查询)
+    async fn batch_load_roles_permissions(&self, role_ids: &[Uuid]) -> AppResult<std::collections::HashMap<Uuid, Vec<Permission>>> {
+        if role_ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+
+        let rows = sqlx::query_as::<_, RolePermissionRow>(
+            r#"
+            SELECT rp.role_id, p.id, p.code, p.name, p.description, p.resource, p.action, p.module, p.is_active, p.created_at
+            FROM permissions p
+            INNER JOIN role_permissions rp ON p.id = rp.permission_id
+            WHERE rp.role_id = ANY($1)
+            ORDER BY rp.role_id, p.resource, p.action
+            "#,
+        )
+        .bind(role_ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(map_sqlx_error)?;
+
+        let mut map: std::collections::HashMap<Uuid, Vec<Permission>> = std::collections::HashMap::new();
+        for row in rows {
+            map.entry(row.role_id).or_insert_with(Vec::new).push(row.into_permission());
+        }
+        
+        // 确保所有角色都有条目 (即使没有权限)
+        for role_id in role_ids {
+            map.entry(*role_id).or_insert_with(Vec::new);
+        }
+        
+        Ok(map)
+    }
 }
 
 // ============ 数据行映射 ============
@@ -305,6 +343,37 @@ impl From<PermissionRow> for Permission {
             module: row.module,
             is_active: row.is_active,
             created_at: row.created_at,
+        }
+    }
+}
+
+/// 用于批量加载角色权限的行结构
+#[derive(sqlx::FromRow)]
+struct RolePermissionRow {
+    role_id: Uuid,
+    id: Uuid,
+    code: String,
+    name: String,
+    description: Option<String>,
+    resource: String,
+    action: String,
+    module: String,
+    is_active: bool,
+    created_at: DateTime<Utc>,
+}
+
+impl RolePermissionRow {
+    fn into_permission(self) -> Permission {
+        Permission {
+            id: PermissionId::from_uuid(self.id),
+            code: self.code,
+            name: self.name,
+            description: self.description,
+            resource: self.resource,
+            action: self.action,
+            module: self.module,
+            is_active: self.is_active,
+            created_at: self.created_at,
         }
     }
 }
