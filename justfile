@@ -12,7 +12,15 @@ dev:
 iam:
     cd services/iam-identity && cargo run --package iam-identity
 
-# 启动所有服务（需要多终端或后台运行）
+# 启动所有服务 (Gateway + IAM) - 使用 Shell 并行运行
+all:
+    @echo "Starting all services..."
+    @trap 'kill 0' SIGINT; \
+    just iam & \
+    sleep 5 && just dev & \
+    wait
+
+# 启动所有服务（手动提示版本）
 start-all:
     @echo "请在两个终端分别运行："
     @echo "  终端1: just dev      # Gateway (HTTP :8080)"

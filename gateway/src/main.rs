@@ -6,6 +6,12 @@ mod config;
 mod grpc;
 mod middleware;
 mod routing;
+mod ws;
+
+use std::sync::Arc;
+use tokio::sync::broadcast;
+use redis::AsyncCommands;
+use secrecy::ExposeSecret;
 
 use axum::{middleware as axum_middleware, Router};
 use cuba_auth_core::TokenService;
@@ -14,16 +20,22 @@ use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::info;
+use futures::StreamExt;
 
 /// 应用状态
 #[derive(Clone)]
 struct AppState {
     grpc_clients: grpc::GrpcClients,
     token_service: TokenService,
+    notify_tx: Arc<broadcast::Sender<String>>,
 }
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 加载 .env 文件
+    dotenvy::dotenv().ok();
+
     // 初始化 tracing
     init_tracing("info");
 
@@ -42,12 +54,61 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grpc_clients = grpc::GrpcClients::new(config.iam_endpoint.clone())
         .await
         .expect("Failed to connect to IAM service");
+    // 创建广播通道 (容量 100)
+    let (notify_tx, _rx) = broadcast::channel::<String>(100);
+    let notify_tx = Arc::new(notify_tx);
+    let notify_tx_clone = notify_tx.clone();
+
+    // 启动 Redis 订阅任务
+    let redis_url = config.redis_url.clone(); 
+    // 注意：GatewayConfig 可能还没暴露 redis_url，假设它有。如果没有，需要先去 config.rs 添加。
+    // 假设 config.rs 还没有 redis_url，我们这里先用硬编码或者稍后修改 config.rs。
+    // 为了稳妥，先假设需要修改 config.rs。此处先留个 TODO 或者直接假装 config 有。
+    // 实际上我们在上一步并没有修改 GatewayConfig，所以这里肯定会报错。
+    // 我们先写好逻辑，下一步修 config。
+    tokio::spawn(async move {
+        // 连接 Redis
+        let client = match redis::Client::open(redis_url) {
+            Ok(c) => c,
+            Err(e) => {
+                info!("Failed to create Redis client for pubsub: {}", e);
+                return;
+            }
+        };
+        
+        // 订阅
+        let mut con = match client.get_async_connection().await {
+            Ok(c) => c,
+            Err(e) => {
+                info!("Failed to connect to Redis for pubsub: {}", e);
+                return;
+            }
+        };
+        
+        let mut pubsub = con.into_pubsub();
+        if let Err(e) = pubsub.subscribe("domain_events").await {
+             info!("Failed to subscribe to domain_events: {}", e);
+             return;
+        }
+
+        let mut stream = pubsub.on_message();
+        while let Some(msg) = stream.next().await {
+             let payload: String = match msg.get_payload() {
+                 Ok(p) => p,
+                 Err(_) => continue,
+             };
+             // 广播给所有 WebSocket 客户端
+             let _ = notify_tx_clone.send(payload);
+        }
+    });
 
     // 创建应用状态
     let state = AppState {
         grpc_clients,
         token_service,
+        notify_tx,
     };
+
 
     let app = create_app(state);
 
@@ -76,6 +137,7 @@ fn create_app(state: AppState) -> Router {
     let protected_routes = Router::new()
         .route("/api/auth/me", axum::routing::get(auth::get_current_user))
         .nest("/api/audit", audit::audit_routes())
+        .route("/ws/events", axum::routing::get(ws::websocket_handler).with_state(state.notify_tx))
         .route_layer(axum_middleware::from_fn_with_state(
             state.token_service.clone(),
             middleware::auth_middleware,
@@ -110,9 +172,14 @@ mod tests {
             user: UserServiceClient::new(channel),
         };
 
+        // Mock broadcast channel for tests
+        let (notify_tx, _rx) = broadcast::channel::<String>(100);
+        let notify_tx = Arc::new(notify_tx);
+
         AppState {
             grpc_clients,
             token_service,
+            notify_tx,
         }
     }
 

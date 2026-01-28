@@ -891,6 +891,8 @@ dependencies = [
  "cuba-config",
  "cuba-errors",
  "cuba-telemetry",
+ "dotenvy",
+ "futures",
  "prost",
  "prost-types",
  "redis",
@@ -903,6 +905,7 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
+ "url",
  "uuid",
 ]
 

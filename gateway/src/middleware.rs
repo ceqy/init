@@ -87,9 +87,22 @@ pub async fn auth_middleware(
         .get("Authorization")
         .and_then(|h| h.to_str().ok());
 
-    match auth_header {
-        Some(header) if header.starts_with("Bearer ") => {
-            let token = &header[7..];
+    // Reworking the logic to handle lifetimes correctly
+    let query_token_owner: Option<String> = request
+        .uri()
+        .query()
+        .and_then(|query| {
+            url::form_urlencoded::parse(query.as_bytes())
+                .find(|(key, _)| key == "token")
+                .map(|(_, value)| value.to_string())
+        });
+        
+    let token = match auth_header {
+        Some(header) if header.starts_with("Bearer ") => Some(&header[7..]),
+        _ => query_token_owner.as_deref(),
+    };
+
+    if let Some(token) = token {
             debug!("Validating JWT token");
 
             match token_service.validate_token(token) {
@@ -115,11 +128,9 @@ pub async fn auth_middleware(
                     Err(StatusCode::UNAUTHORIZED)
                 }
             }
-        }
-        _ => {
-            warn!("Missing or invalid authorization header");
+    } else {
+            warn!("Missing or invalid authorization header/query param");
             Err(StatusCode::UNAUTHORIZED)
-        }
     }
 }
 

@@ -26,6 +26,9 @@ uuid = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
 redis = { workspace = true, features = ["tokio-comp", "aio"] }
 secrecy.workspace = true
+futures.workspace = true
+url.workspace = true
+dotenvy.workspace = true
 
 [build-dependencies]
 tonic-build = { workspace = true }

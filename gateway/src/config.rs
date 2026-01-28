@@ -8,6 +8,7 @@ pub struct GatewayConfig {
     pub port: u16,
     pub jwt_secret: String,
     pub iam_endpoint: String,
+    pub redis_url: String,
 }
 
 impl GatewayConfig {
@@ -22,6 +23,8 @@ impl GatewayConfig {
                 .unwrap_or_else(|_| "your-super-secret-key".to_string()),
             iam_endpoint: env::var("IAM_ENDPOINT")
                 .unwrap_or_else(|_| "http://127.0.0.1:50051".to_string()),
+            redis_url: env::var("REDIS_URL")
+                .unwrap_or_else(|_| "redis://:cuba_redis_password@localhost:6379".to_string()),
         }
     }
 }

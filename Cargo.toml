@@ -59,6 +59,7 @@ serde_json = { version = "1.0" }
 
 # Configuration
 figment = { version = "0.10", features = ["toml", "env"] }
+dotenvy = { version = "0.15" }
 
 # Error handling
 thiserror = { version = "2.0" }
@@ -111,6 +112,7 @@ mockall = { version = "0.13" }
 # Additional utilities
 hex = { version = "0.4" }
 futures = { version = "0.3" }
+url = { version = "2.5.8" }
 
 # Internal crates
 cuba-common = { path = "crates/common" }
