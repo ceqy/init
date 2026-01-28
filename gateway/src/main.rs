@@ -72,6 +72,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         
         // 订阅 - MultiplexedConnection 不支持 pubsub，需要使用普通连接
+        // Note: get_async_connection() is deprecated but required for pubsub functionality
+        // The recommended get_multiplexed_async_connection() doesn't support into_pubsub()
+        #[allow(deprecated)]
         let mut con = match client.get_async_connection().await {
             Ok(c) => c,
             Err(e) => {

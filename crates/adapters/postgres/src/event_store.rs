@@ -79,14 +79,13 @@ impl EventStore for PostgresEventStore {
         .await
         .map_err(|e| {
             // 检查是否是唯一约束冲突（版本冲突）
-            if let Some(db_err) = e.as_database_error() {
-                if db_err.constraint() == Some("uk_event_store_aggregate_version") {
+            if let Some(db_err) = e.as_database_error()
+                && db_err.constraint() == Some("uk_event_store_aggregate_version") {
                     return AppError::conflict(format!(
                         "Version conflict for {}:{} - version {} already exists",
                         envelope.aggregate_type, envelope.aggregate_id, envelope.version
                     ));
                 }
-            }
             AppError::database(format!("Failed to append event: {}", e))
         })?;
 

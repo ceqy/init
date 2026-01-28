@@ -33,10 +33,8 @@ impl ShutdownController {
     }
 
     /// 创建一个可以等待关闭的 future
-    pub fn shutdown_signal(&self) -> impl Future<Output = ()> + Send + '_ {
-        async move {
-            self.notify.notified().await;
-        }
+    pub async fn shutdown_signal(&self) {
+        self.notify.notified().await;
     }
 }
 

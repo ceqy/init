@@ -22,6 +22,7 @@ struct Call<T> {
 
 /// Singleflight 组
 /// 用于合并对同一个 key 的并发请求，只执行一次实际操作
+#[derive(Clone)]
 struct SingleflightGroup<T> {
     calls: Arc<RwLock<HashMap<String, tokio::sync::broadcast::Sender<Result<T, String>>>>>,
 }

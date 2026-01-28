@@ -12,9 +12,21 @@ impl Email {
     pub fn new(email: impl Into<String>) -> Result<Self, EmailError> {
         let email = email.into();
 
+        // 基本长度检查
+        if email.len() < 5 {
+            return Err(EmailError::InvalidFormat(email));
+        }
+
         // 使用 email_address crate 进行严格的 RFC 5322 验证
         if !email_address::EmailAddress::is_valid(&email) {
             return Err(EmailError::InvalidFormat(email));
+        }
+
+        // 额外验证：域名至少要有一个点（例如 example.com）
+        if let Some(domain) = email.split('@').nth(1) {
+            if !domain.contains('.') {
+                return Err(EmailError::InvalidFormat(email));
+            }
         }
 
         Ok(Self(email.to_lowercase()))

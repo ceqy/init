@@ -9,6 +9,7 @@ pub struct GatewayConfig {
     pub jwt_secret: String,
     pub iam_endpoint: String,
     pub redis_url: String,
+    #[allow(dead_code)]
     pub cors_allowed_origins: Vec<String>,
 }
 

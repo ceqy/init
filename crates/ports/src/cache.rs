@@ -70,12 +70,11 @@ pub trait CachePort: Send + Sync {
     /// 原子性地比较并删除
     async fn delete_if_equals(&self, key: &str, expected_value: &str) -> AppResult<bool> {
         // 默认实现（非原子性，子类应该覆盖）
-        if let Some(current) = self.get(key).await? {
-            if current == expected_value {
+        if let Some(current) = self.get(key).await?
+            && current == expected_value {
                 self.delete(key).await?;
                 return Ok(true);
             }
-        }
         Ok(false)
     }
 }

@@ -103,7 +103,7 @@ impl WebAuthnService {
             user_id,
             credential_name,
             &passkey,
-            None, // aaguid - not easily accessible in webauthn-rs 0.5
+            None, // aaguid
             transports,
             tenant_id.clone(),
         )

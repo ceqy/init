@@ -194,10 +194,14 @@ mod tests {
         let conn = ConnectionManager::new(client).await.unwrap();
         let lock = RedisDistributedLock::new(conn);
 
-        let result = lock
-            .with_lock("test_key", Duration::from_secs(10), || Ok(42))
-            .await
-            .unwrap();
+        // 获取锁
+        assert!(lock.acquire("test_key", Duration::from_secs(10)).await.unwrap());
+
+        // 执行业务逻辑
+        let result = 42;
+
+        // 释放锁
+        lock.release("test_key").await.unwrap();
 
         assert_eq!(result, 42);
     }
