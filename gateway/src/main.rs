@@ -198,7 +198,7 @@ fn create_app(state: AppState, config: &config::GatewayConfig) -> Router {
         .merge(protected_routes.with_state(state.grpc_clients))
         .merge(stateless_routes)
         .layer(axum_middleware::from_fn(security_headers::security_headers_middleware))
-        .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024))  // 10 MB 请求体限制
+        .layer(RequestBodyLimitLayer::new(1024 * 1024))  // 1 MB 请求体限制 (DDoS 防护)
         .layer(TraceLayer::new_for_http())
         .layer(cors)
 }

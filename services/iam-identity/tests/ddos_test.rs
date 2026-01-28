@@ -92,7 +92,7 @@ async fn test_ddos_high_concurrent_login() {
         })
         .collect();
 
-    let durations: Vec<_> = futures::future::join_all(handles)
+    let _durations: Vec<_> = futures::future::join_all(handles)
         .await
         .into_iter()
         .filter_map(|r| r.ok())
@@ -496,7 +496,7 @@ async fn test_ddos_token_explosion_attack() {
     let mut success_count = 0;
     let mut failure_count = 0;
 
-    for i in 0..num_tokens {
+    for _i in 0..num_tokens {
         // 生成随机的伪造 token
         let fake_token = format!("fake_token_{}", uuid::Uuid::new_v4());
 
@@ -632,7 +632,7 @@ async fn test_ddos_connection_pool_exhaustion() {
     let start = Instant::now();
 
     let handles: Vec<_> = (0..num_connections)
-        .map(|i| {
+        .map(|_i| {
             let url = format!("{}/health", gateway);
             tokio::spawn(async move {
                 let client = Client::builder()

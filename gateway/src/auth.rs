@@ -10,7 +10,7 @@ use crate::middleware::AuthToken;
 use crate::grpc::{self, GrpcClients};
 use serde::{Deserialize, Serialize};
 use tonic::{metadata::MetadataValue, Request};
-use tracing::{error, info, debug};
+use tracing::{error, warn, info, debug};
 
 pub fn auth_routes() -> Router<GrpcClients> {
     Router::new()
@@ -75,12 +75,23 @@ async fn login(
 
     let mut client = clients.auth.clone();
     let response = client.login(grpc_req).await.map_err(|e| {
-        error!("gRPC login failed: {}", e);
         let status = match e.code() {
-            tonic::Code::Unauthenticated => StatusCode::UNAUTHORIZED,
-            tonic::Code::PermissionDenied => StatusCode::FORBIDDEN,
-            tonic::Code::InvalidArgument => StatusCode::BAD_REQUEST,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
+            tonic::Code::Unauthenticated => {
+                warn!("Login failed - invalid credentials: {}", e.message());
+                StatusCode::UNAUTHORIZED
+            }
+            tonic::Code::PermissionDenied => {
+                warn!("Login failed - permission denied: {}", e.message());
+                StatusCode::FORBIDDEN
+            }
+            tonic::Code::InvalidArgument => {
+                warn!("Login failed - invalid request: {}", e.message());
+                StatusCode::BAD_REQUEST
+            }
+            _ => {
+                error!("gRPC login failed unexpectedly: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
         };
         (status, e.message().to_string())
     })?;
