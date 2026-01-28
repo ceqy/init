@@ -1,5 +1,5 @@
 //! gRPC 追踪拦截器
-//! 
+//!
 //! 负责从请求元数据中提取追踪 ID (Trace ID / Correlation ID)
 //! 并将其注入到日志上下文中。
 
@@ -13,39 +13,60 @@ pub struct TraceInfo {
     pub trace_id: String,
 }
 
-/// gRPC 拦截器：提取追踪 ID
+/// 用户信息 (从元数据提取)
+#[derive(Debug, Clone)]
+pub struct UserInfo {
+    pub user_id: String,
+}
+
+/// gRPC 拦截器：提取追踪 ID 和用户信息
 pub fn tracing_interceptor(req: Request<()>) -> Result<Request<()>, Status> {
     let metadata = req.metadata();
-    
+
     // 优先从元数据提取 trace_id
-    let trace_id = metadata.get("x-trace-id")
+    let trace_id = metadata
+        .get("x-trace-id")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string())
         // 备选：x-request-id
         .or_else(|| {
-            metadata.get("x-request-id")
+            metadata
+                .get("x-request-id")
                 .and_then(|v| v.to_str().ok())
                 .map(|s| s.to_string())
         })
         // 备选：x-correlation-id
         .or_else(|| {
-            metadata.get("x-correlation-id")
+            metadata
+                .get("x-correlation-id")
                 .and_then(|v| v.to_str().ok())
                 .map(|s| s.to_string())
         })
         // 都没有则生成一个
         .unwrap_or_else(|| Uuid::now_v7().to_string());
 
-    // 将 trace_id 注入到请求扩展中，方便后续获取
+    // 提取用户信息
+    let user_id = metadata
+        .get("x-user-id")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "system".to_string());
+
+    // 将信息注入到请求扩展中
     let mut req = req;
     req.extensions_mut().insert(TraceInfo { trace_id });
+    req.extensions_mut().insert(UserInfo { user_id });
 
     Ok(req)
 }
 
 /// 辅助宏：或者助手函数来创建 span
-pub fn create_request_span(req: &Request<impl std::fmt::Debug>, name: &'static str) -> tracing::Span {
-    let trace_id = req.extensions()
+pub fn create_request_span(
+    req: &Request<impl std::fmt::Debug>,
+    name: &'static str,
+) -> tracing::Span {
+    let trace_id = req
+        .extensions()
         .get::<TraceInfo>()
         .map(|t| t.trace_id.as_str())
         .unwrap_or("unknown");
@@ -57,7 +78,7 @@ pub fn create_request_span(req: &Request<impl std::fmt::Debug>, name: &'static s
     )
 }
 
-/// 辅助函数：将当前追踪 ID 注入到传出的 gRPC 请求元数据中
+/*
 pub fn inject_trace_id<T>(req: &mut tonic::Request<T>) {
     let trace_id = tracing::Span::current()
         .field("trace_id")
@@ -74,3 +95,4 @@ pub fn inject_trace_id<T>(req: &mut tonic::Request<T>) {
         }
     }
 }
+*/

@@ -24,7 +24,10 @@ pub struct PostgresUserRoleRepository {
 
 impl PostgresUserRoleRepository {
     pub fn new(pool: PgPool) -> Self {
-        Self { pool, auth_cache: None }
+        Self {
+            pool,
+            auth_cache: None,
+        }
     }
 
     pub fn with_cache(mut self, auth_cache: Arc<AuthCache>) -> Self {
@@ -35,8 +38,14 @@ impl PostgresUserRoleRepository {
 
 #[async_trait]
 impl UserRoleRepository for PostgresUserRoleRepository {
-    async fn assign_roles(&self, user_id: &str, tenant_id: &TenantId, role_ids: &[RoleId]) -> AppResult<()> {
-        let user_uuid: Uuid = user_id.parse()
+    async fn assign_roles(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+        role_ids: &[RoleId],
+    ) -> AppResult<()> {
+        let user_uuid: Uuid = user_id
+            .parse()
             .map_err(|_| AppError::validation("Invalid user_id"))?;
 
         for role_id in role_ids {
@@ -57,14 +66,22 @@ impl UserRoleRepository for PostgresUserRoleRepository {
         }
 
         if let Some(cache) = &self.auth_cache {
-            let _ = cache.invalidate_user_roles(tenant_id, &cuba_common::UserId::from_uuid(user_uuid)).await;
+            let _ = cache
+                .invalidate_user_roles(tenant_id, &cuba_common::UserId::from_uuid(user_uuid))
+                .await;
         }
 
         Ok(())
     }
 
-    async fn remove_roles(&self, user_id: &str, tenant_id: &TenantId, role_ids: &[RoleId]) -> AppResult<()> {
-        let user_uuid: Uuid = user_id.parse()
+    async fn remove_roles(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+        role_ids: &[RoleId],
+    ) -> AppResult<()> {
+        let user_uuid: Uuid = user_id
+            .parse()
             .map_err(|_| AppError::validation("Invalid user_id"))?;
 
         let role_uuids: Vec<Uuid> = role_ids.iter().map(|r| r.0).collect();
@@ -80,14 +97,17 @@ impl UserRoleRepository for PostgresUserRoleRepository {
         .map_err(map_sqlx_error)?;
 
         if let Some(cache) = &self.auth_cache {
-            let _ = cache.invalidate_user_roles(tenant_id, &cuba_common::UserId::from_uuid(user_uuid)).await;
+            let _ = cache
+                .invalidate_user_roles(tenant_id, &cuba_common::UserId::from_uuid(user_uuid))
+                .await;
         }
 
         Ok(())
     }
 
     async fn get_user_roles(&self, user_id: &str, tenant_id: &TenantId) -> AppResult<Vec<Role>> {
-        let user_uuid: Uuid = user_id.parse()
+        let user_uuid: Uuid = user_id
+            .parse()
             .map_err(|_| AppError::validation("Invalid user_id"))?;
         let user_id_obj = cuba_common::UserId::from_uuid(user_uuid);
 
@@ -132,7 +152,11 @@ impl UserRoleRepository for PostgresUserRoleRepository {
         Ok(roles)
     }
 
-    async fn get_user_permissions(&self, user_id: &str, tenant_id: &TenantId) -> AppResult<Vec<Permission>> {
+    async fn get_user_permissions(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<Permission>> {
         // 尝试从缓存获取角色并提取权限
         if let Ok(roles) = self.get_user_roles(user_id, tenant_id).await {
             let mut permissions = std::collections::HashSet::new();
@@ -159,12 +183,18 @@ impl UserRoleRepository for PostgresUserRoleRepository {
         // But get_user_permissions implementation above replaces the SQL entirely by reusing get_user_roles logic.
         // So I don't need the SQL below anymore if I rely on get_user_roles.
         // However, Permission trait bounds (Hash/Eq) needed for HashSet. Permission already derives Hash/Eq.
-        
+
         unreachable!("get_user_roles handles DB fetch");
     }
 
-    async fn user_has_permission(&self, user_id: &str, tenant_id: &TenantId, permission_code: &str) -> AppResult<bool> {
-        let user_uuid: Uuid = user_id.parse()
+    async fn user_has_permission(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+        permission_code: &str,
+    ) -> AppResult<bool> {
+        let user_uuid: Uuid = user_id
+            .parse()
             .map_err(|_| AppError::validation("Invalid user_id"))?;
 
         // 1. 检查精确匹配
@@ -226,7 +256,8 @@ impl UserRoleRepository for PostgresUserRoleRepository {
     }
 
     async fn clear_user_roles(&self, user_id: &str, tenant_id: &TenantId) -> AppResult<()> {
-        let user_uuid: Uuid = user_id.parse()
+        let user_uuid: Uuid = user_id
+            .parse()
             .map_err(|_| AppError::validation("Invalid user_id"))?;
 
         sqlx::query("DELETE FROM user_roles WHERE user_id = $1 AND tenant_id = $2")
@@ -237,14 +268,22 @@ impl UserRoleRepository for PostgresUserRoleRepository {
             .map_err(map_sqlx_error)?;
 
         if let Some(cache) = &self.auth_cache {
-            let _ = cache.invalidate_user_roles(tenant_id, &cuba_common::UserId::from_uuid(user_uuid)).await;
+            let _ = cache
+                .invalidate_user_roles(tenant_id, &cuba_common::UserId::from_uuid(user_uuid))
+                .await;
         }
 
         Ok(())
     }
 
-    async fn user_has_role(&self, user_id: &str, tenant_id: &TenantId, role_id: &RoleId) -> AppResult<bool> {
-        let user_uuid: Uuid = user_id.parse()
+    async fn user_has_role(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+        role_id: &RoleId,
+    ) -> AppResult<bool> {
+        let user_uuid: Uuid = user_id
+            .parse()
             .map_err(|_| AppError::validation("Invalid user_id"))?;
 
         let result: (bool,) = sqlx::query_as(
@@ -262,26 +301,31 @@ impl UserRoleRepository for PostgresUserRoleRepository {
 }
 
 impl PostgresUserRoleRepository {
-    async fn load_role_permissions(&self, role_id: &Uuid) -> AppResult<Vec<Permission>> {
-        let rows = sqlx::query_as::<_, PermissionRow>(
-            r#"
+    /*
+        async fn load_role_permissions(&self, role_id: &Uuid) -> AppResult<Vec<Permission>> {
+            let rows = sqlx::query_as::<_, PermissionRow>(
+                r#"
             SELECT p.id, p.code, p.name, p.description, p.resource, p.action, p.module, p.is_active, p.created_at
             FROM permissions p
             INNER JOIN role_permissions rp ON p.id = rp.permission_id
             WHERE rp.role_id = $1
             ORDER BY p.resource, p.action
             "#,
-        )
-        .bind(role_id)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(map_sqlx_error)?;
+            )
+            .bind(role_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(map_sqlx_error)?;
 
-        Ok(rows.into_iter().map(|r| r.into()).collect())
-    }
+            Ok(rows.into_iter().map(|r| r.into()).collect())
+        }
+    */
 
     /// 批量加载多个角色的权限 (修复 N+1 查询)
-    async fn batch_load_roles_permissions(&self, role_ids: &[Uuid]) -> AppResult<std::collections::HashMap<Uuid, Vec<Permission>>> {
+    async fn batch_load_roles_permissions(
+        &self,
+        role_ids: &[Uuid],
+    ) -> AppResult<std::collections::HashMap<Uuid, Vec<Permission>>> {
         if role_ids.is_empty() {
             return Ok(std::collections::HashMap::new());
         }
@@ -300,16 +344,19 @@ impl PostgresUserRoleRepository {
         .await
         .map_err(map_sqlx_error)?;
 
-        let mut map: std::collections::HashMap<Uuid, Vec<Permission>> = std::collections::HashMap::new();
+        let mut map: std::collections::HashMap<Uuid, Vec<Permission>> =
+            std::collections::HashMap::new();
         for row in rows {
-            map.entry(row.role_id).or_insert_with(Vec::new).push(row.into_permission());
+            map.entry(row.role_id)
+                .or_insert_with(Vec::new)
+                .push(row.into_permission());
         }
-        
+
         // 确保所有角色都有条目 (即使没有权限)
         for role_id in role_ids {
             map.entry(*role_id).or_insert_with(Vec::new);
         }
-        
+
         Ok(map)
     }
 }

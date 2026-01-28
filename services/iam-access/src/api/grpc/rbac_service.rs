@@ -20,54 +20,47 @@ use crate::api::proto::rbac::{
     UpdateRoleResponse, rbac_service_server::RbacService,
 };
 use crate::application::{
-    CheckUserPermissionQuery, CreateRoleCommand, DeleteRoleCommand, GetRoleQuery,
-    GetUserPermissionsQuery, GetUserRolesQuery, ListRolesQuery, RoleCommandHandler,
-    RoleQueryHandler, SearchRolesQuery, UpdateRoleCommand,
+    AssignPermissionsToRoleCommand, AssignRolesToUserCommand, CheckUserPermissionQuery,
+    CreateRoleCommand, DeleteRoleCommand, GetRoleQuery, GetUserPermissionsQuery, GetUserRolesQuery,
+    ListRolesQuery, RemovePermissionsFromRoleCommand, RemoveRolesFromUserCommand,
+    RoleCommandHandler, RoleQueryHandler, SearchRolesQuery, UpdateRoleCommand,
 };
 use crate::domain::role::{
-    Permission, PermissionRepository, Role, RolePermissionRepository, RoleRepository,
-    UserRoleRepository,
+    Permission, PermissionRepository, Role, RoleRepository, UserRoleRepository,
 };
 
 /// RBAC gRPC 服务
-pub struct RbacServiceImpl<R, P, UR, RP>
+pub struct RbacServiceImpl<R, P, UR>
 where
     R: RoleRepository + Send + Sync + 'static,
     P: PermissionRepository + Send + Sync + 'static,
     UR: UserRoleRepository + Send + Sync + 'static,
-    RP: RolePermissionRepository + Send + Sync + 'static,
 {
     role_cmd_handler: RoleCommandHandler,
     role_query_handler: RoleQueryHandler<R, UR>,
     permission_repo: Arc<P>,
-    role_permission_repo: Arc<RP>,
-    user_role_repo: Arc<UR>,
 }
 
 use crate::domain::unit_of_work::UnitOfWorkFactory;
 
-use cuba_ports::EventPublisher;
+// Removed unused import: use cuba_ports::EventPublisher;
 
-impl<R, P, UR, RP> RbacServiceImpl<R, P, UR, RP>
+impl<R, P, UR> RbacServiceImpl<R, P, UR>
 where
     R: RoleRepository + Send + Sync + 'static,
     P: PermissionRepository + Send + Sync + 'static,
     UR: UserRoleRepository + Send + Sync + 'static,
-    RP: RolePermissionRepository + Send + Sync + 'static,
 {
     pub fn new(
         role_repo: Arc<R>,
         permission_repo: Arc<P>,
         user_role_repo: Arc<UR>,
-        role_permission_repo: Arc<RP>,
         uow_factory: Arc<dyn UnitOfWorkFactory>,
     ) -> Self {
         Self {
             role_cmd_handler: RoleCommandHandler::new(uow_factory),
-            role_query_handler: RoleQueryHandler::new(role_repo, user_role_repo.clone()),
+            role_query_handler: RoleQueryHandler::new(role_repo, user_role_repo),
             permission_repo,
-            role_permission_repo,
-            user_role_repo,
         }
     }
 }
@@ -113,12 +106,11 @@ fn permission_to_proto(perm: &Permission) -> ProtoPermission {
 }
 
 #[tonic::async_trait]
-impl<R, P, UR, RP> RbacService for RbacServiceImpl<R, P, UR, RP>
+impl<R, P, UR> RbacService for RbacServiceImpl<R, P, UR>
 where
     R: RoleRepository + Send + Sync + 'static,
     P: PermissionRepository + Send + Sync + 'static,
     UR: UserRoleRepository + Send + Sync + 'static,
-    RP: RolePermissionRepository + Send + Sync + 'static,
 {
     // ===== 角色管理 =====
 
@@ -128,11 +120,17 @@ where
     ) -> Result<Response<CreateRoleResponse>, Status> {
         let start = std::time::Instant::now();
 
-        // 先获取追踪信息，再 move request
-        let trace_info = request
+        let user_id = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .map(|u| u.user_id.clone());
+        let performed_by = user_id
+            .as_ref()
+            .and_then(|id| id.parse::<uuid::Uuid>().ok());
+        let trace_id = request
             .extensions()
             .get::<crate::api::grpc::TraceInfo>()
-            .cloned();
+            .map(|t| t.trace_id.clone());
 
         let req = request.into_inner();
 
@@ -145,9 +143,9 @@ where
             trace_id = tracing::field::Empty
         );
 
-        // 注入 Trace ID (从拦截器存放的 extensions 中获取)
-        if let Some(info) = trace_info {
-            span.record("trace_id", &info.trace_id);
+        // 注入 Trace ID
+        if let Some(tid) = trace_id {
+            span.record("trace_id", &tid);
         }
 
         let _enter = span.enter();
@@ -169,7 +167,7 @@ where
                 Some(req.description)
             },
             is_system: false,
-            performed_by: None, // TODO: extract from request metadata
+            performed_by,
         };
 
         let result = self.role_cmd_handler.handle_create(cmd).await;
@@ -199,6 +197,11 @@ where
         &self,
         request: Request<UpdateRoleRequest>,
     ) -> Result<Response<UpdateRoleResponse>, Status> {
+        let performed_by = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .and_then(|u| u.user_id.parse::<uuid::Uuid>().ok());
+
         let req = request.into_inner();
 
         let cmd = UpdateRoleCommand {
@@ -209,7 +212,7 @@ where
             } else {
                 Some(req.description)
             },
-            performed_by: None, // TODO: extract from request metadata
+            performed_by,
         };
 
         let role = self
@@ -227,11 +230,16 @@ where
         &self,
         request: Request<DeleteRoleRequest>,
     ) -> Result<Response<DeleteRoleResponse>, Status> {
+        let performed_by = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .and_then(|u| u.user_id.parse::<uuid::Uuid>().ok());
+
         let req = request.into_inner();
 
         let cmd = DeleteRoleCommand {
             role_id: req.id,
-            performed_by: None, // TODO: extract from request metadata
+            performed_by,
         };
 
         self.role_cmd_handler
@@ -452,22 +460,21 @@ where
         &self,
         request: Request<AssignPermissionsToRoleRequest>,
     ) -> Result<Response<AssignPermissionsToRoleResponse>, Status> {
+        let performed_by = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .and_then(|u| u.user_id.parse::<uuid::Uuid>().ok());
+
         let req = request.into_inner();
 
-        let role_id = req
-            .role_id
-            .parse()
-            .map_err(|_| Status::invalid_argument("Invalid role_id"))?;
+        let cmd = AssignPermissionsToRoleCommand {
+            role_id: req.role_id,
+            permission_ids: req.permission_ids,
+            performed_by,
+        };
 
-        let permission_ids: Vec<_> = req
-            .permission_ids
-            .iter()
-            .map(|id| id.parse())
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| Status::invalid_argument("Invalid permission_id"))?;
-
-        self.role_permission_repo
-            .assign_permissions(&role_id, &permission_ids)
+        self.role_cmd_handler
+            .handle_assign_permissions(cmd)
             .await
             .map_err(|e| Status::from(e))?;
 
@@ -480,22 +487,21 @@ where
         &self,
         request: Request<RemovePermissionsFromRoleRequest>,
     ) -> Result<Response<RemovePermissionsFromRoleResponse>, Status> {
+        let performed_by = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .and_then(|u| u.user_id.parse::<uuid::Uuid>().ok());
+
         let req = request.into_inner();
 
-        let role_id = req
-            .role_id
-            .parse()
-            .map_err(|_| Status::invalid_argument("Invalid role_id"))?;
+        let cmd = RemovePermissionsFromRoleCommand {
+            role_id: req.role_id,
+            permission_ids: req.permission_ids,
+            performed_by,
+        };
 
-        let permission_ids: Vec<_> = req
-            .permission_ids
-            .iter()
-            .map(|id| id.parse())
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| Status::invalid_argument("Invalid permission_id"))?;
-
-        self.role_permission_repo
-            .remove_permissions(&role_id, &permission_ids)
+        self.role_cmd_handler
+            .handle_remove_permissions(cmd)
             .await
             .map_err(|e| Status::from(e))?;
 
@@ -531,6 +537,11 @@ where
         &self,
         request: Request<AssignRolesToUserRequest>,
     ) -> Result<Response<AssignRolesToUserResponse>, Status> {
+        let performed_by = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .and_then(|u| u.user_id.parse::<uuid::Uuid>().ok());
+
         let req = request.into_inner();
 
         let tenant_id: TenantId = req
@@ -538,15 +549,15 @@ where
             .parse()
             .map_err(|_| Status::invalid_argument("Invalid tenant_id"))?;
 
-        let role_ids: Vec<_> = req
-            .role_ids
-            .iter()
-            .map(|id| id.parse())
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| Status::invalid_argument("Invalid role_id"))?;
+        let cmd = AssignRolesToUserCommand {
+            user_id: req.user_id,
+            tenant_id,
+            role_ids: req.role_ids,
+            performed_by,
+        };
 
-        self.user_role_repo
-            .assign_roles(&req.user_id, &tenant_id, &role_ids)
+        self.role_cmd_handler
+            .handle_assign_roles_to_user(cmd)
             .await
             .map_err(|e| Status::from(e))?;
 
@@ -557,6 +568,11 @@ where
         &self,
         request: Request<RemoveRolesFromUserRequest>,
     ) -> Result<Response<RemoveRolesFromUserResponse>, Status> {
+        let performed_by = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .and_then(|u| u.user_id.parse::<uuid::Uuid>().ok());
+
         let req = request.into_inner();
 
         let tenant_id: TenantId = req
@@ -564,15 +580,15 @@ where
             .parse()
             .map_err(|_| Status::invalid_argument("Invalid tenant_id"))?;
 
-        let role_ids: Vec<_> = req
-            .role_ids
-            .iter()
-            .map(|id| id.parse())
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| Status::invalid_argument("Invalid role_id"))?;
+        let cmd = RemoveRolesFromUserCommand {
+            user_id: req.user_id,
+            tenant_id,
+            role_ids: req.role_ids,
+            performed_by,
+        };
 
-        self.user_role_repo
-            .remove_roles(&req.user_id, &tenant_id, &role_ids)
+        self.role_cmd_handler
+            .handle_remove_roles_from_user(cmd)
             .await
             .map_err(|e| Status::from(e))?;
 

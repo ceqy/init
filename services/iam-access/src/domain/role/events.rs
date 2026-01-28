@@ -1,4 +1,4 @@
-use cuba_common::{TenantId, UserId};
+// use cuba_common::{TenantId, UserId}; // Removed unused
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

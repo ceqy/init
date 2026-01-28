@@ -1,5 +1,5 @@
 //! Outbox 仓储 - 用于可靠的事件发布
-//! 
+//!
 //! Outbox 模式保证事件发布的最终一致性：
 //! 1. 业务操作和事件写入在同一事务中
 //! 2. 后台进程异步发布事件
@@ -7,8 +7,9 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use cuba_errors::{AppError, AppResult};
-use serde::Serialize;
+use cuba_errors::AppResult;
+// use cuba_errors::AppError; // Removed unused
+// use serde::Serialize; // Removed unused
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
@@ -87,7 +88,9 @@ impl OutboxRepository for PostgresOutboxRepository {
         .bind(aggregate_type)
         .bind(aggregate_id)
         .bind(event_type)
-        .bind(serde_json::Value::from(serde_json::from_str::<serde_json::Value>(payload_json).unwrap_or_default()))
+        .bind(serde_json::Value::from(
+            serde_json::from_str::<serde_json::Value>(payload_json).unwrap_or_default(),
+        ))
         .bind(Utc::now())
         .execute(&mut **tx)
         .await
@@ -128,7 +131,7 @@ impl OutboxRepository for PostgresOutboxRepository {
 
     async fn mark_failed(&self, id: Uuid, error: &str) -> AppResult<()> {
         sqlx::query(
-            "UPDATE outbox SET retry_count = retry_count + 1, last_error = $1 WHERE id = $2"
+            "UPDATE outbox SET retry_count = retry_count + 1, last_error = $1 WHERE id = $2",
         )
         .bind(error)
         .bind(id)
@@ -139,13 +142,12 @@ impl OutboxRepository for PostgresOutboxRepository {
     }
 
     async fn delete_published(&self, before: DateTime<Utc>) -> AppResult<u64> {
-        let result = sqlx::query(
-            "DELETE FROM outbox WHERE published_at IS NOT NULL AND published_at < $1"
-        )
-        .bind(before)
-        .execute(&self.pool)
-        .await
-        .map_err(map_sqlx_error)?;
+        let result =
+            sqlx::query("DELETE FROM outbox WHERE published_at IS NOT NULL AND published_at < $1")
+                .bind(before)
+                .execute(&self.pool)
+                .await
+                .map_err(map_sqlx_error)?;
         Ok(result.rows_affected())
     }
 }

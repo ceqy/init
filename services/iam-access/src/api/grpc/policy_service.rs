@@ -73,6 +73,12 @@ where
         &self,
         request: Request<CreatePolicyRequest>,
     ) -> Result<Response<CreatePolicyResponse>, Status> {
+        let user_id = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .map(|u| u.user_id.clone())
+            .unwrap_or_else(|| "system".to_string());
+
         let req = request.into_inner();
 
         let tenant_id = req
@@ -102,6 +108,7 @@ where
                 Some(req.conditions)
             },
             priority: req.priority,
+            performed_by: user_id,
         };
 
         let policy = self
@@ -119,6 +126,12 @@ where
         &self,
         request: Request<UpdatePolicyRequest>,
     ) -> Result<Response<UpdatePolicyResponse>, Status> {
+        let user_id = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .map(|u| u.user_id.clone())
+            .unwrap_or_else(|| "system".to_string());
+
         let req = request.into_inner();
 
         let cmd = UpdatePolicyCommand {
@@ -143,6 +156,7 @@ where
                 Some(req.conditions)
             },
             priority: req.priority,
+            performed_by: user_id,
         };
 
         let policy = self
@@ -160,9 +174,18 @@ where
         &self,
         request: Request<DeletePolicyRequest>,
     ) -> Result<Response<DeletePolicyResponse>, Status> {
+        let user_id = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .map(|u| u.user_id.clone())
+            .unwrap_or_else(|| "system".to_string());
+
         let req = request.into_inner();
 
-        let cmd = DeletePolicyCommand { policy_id: req.id };
+        let cmd = DeletePolicyCommand {
+            policy_id: req.id,
+            performed_by: user_id,
+        };
 
         self.policy_cmd_handler
             .handle_delete(cmd)

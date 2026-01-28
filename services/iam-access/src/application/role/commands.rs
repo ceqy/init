@@ -21,8 +21,14 @@ impl CreateRoleCommand {
         if self.code.is_empty() {
             return Err("Role code cannot be empty".to_string());
         }
-        if !self.code.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
-            return Err("Role code can only contain alphanumeric, underscore, and hyphen".to_string());
+        if !self
+            .code
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+        {
+            return Err(
+                "Role code can only contain alphanumeric, underscore, and hyphen".to_string(),
+            );
         }
         if self.code.len() > 100 {
             return Err("Role code cannot exceed 100 characters".to_string());
@@ -75,6 +81,7 @@ pub struct DeleteRoleCommand {
 pub struct SetRoleActiveCommand {
     pub role_id: String,
     pub is_active: bool,
+    pub performed_by: Option<Uuid>,
 }
 
 /// 为角色分配权限命令
@@ -82,6 +89,7 @@ pub struct SetRoleActiveCommand {
 pub struct AssignPermissionsToRoleCommand {
     pub role_id: String,
     pub permission_ids: Vec<String>,
+    pub performed_by: Option<Uuid>,
 }
 
 /// 移除角色权限命令
@@ -89,6 +97,7 @@ pub struct AssignPermissionsToRoleCommand {
 pub struct RemovePermissionsFromRoleCommand {
     pub role_id: String,
     pub permission_ids: Vec<String>,
+    pub performed_by: Option<Uuid>,
 }
 
 /// 为用户分配角色命令
@@ -97,6 +106,7 @@ pub struct AssignRolesToUserCommand {
     pub user_id: String,
     pub tenant_id: TenantId,
     pub role_ids: Vec<String>,
+    pub performed_by: Option<Uuid>,
 }
 
 /// 移除用户角色命令
@@ -105,4 +115,5 @@ pub struct RemoveRolesFromUserCommand {
     pub user_id: String,
     pub tenant_id: TenantId,
     pub role_ids: Vec<String>,
+    pub performed_by: Option<Uuid>,
 }

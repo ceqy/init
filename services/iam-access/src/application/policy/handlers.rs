@@ -64,7 +64,7 @@ impl PolicyCommandHandler {
         uow.policies().create(&policy).await?;
 
         // 记录 Outbox 事件
-        let event = PolicyEvent::created(&policy, "system"); // TODO: get performed_by
+        let event = PolicyEvent::created(&policy, &cmd.performed_by);
         let payload = serde_json::to_string(&event)
             .map_err(|e| AppError::internal(format!("Failed to serialize event: {}", e)))?;
 
@@ -108,7 +108,7 @@ impl PolicyCommandHandler {
         uow.policies().update(&policy).await?;
 
         // 记录 Outbox 事件
-        let event = PolicyEvent::updated(&policy, "system"); // TODO: get performed_by
+        let event = PolicyEvent::updated(&policy, &cmd.performed_by);
         let payload = serde_json::to_string(&event)
             .map_err(|e| AppError::internal(format!("Failed to serialize event: {}", e)))?;
 
@@ -139,7 +139,11 @@ impl PolicyCommandHandler {
         uow.policies().delete(&policy_id).await?;
 
         // 记录 Outbox 事件
-        let event = PolicyEvent::deleted(policy.id.clone(), policy.tenant_id.clone(), "system"); // TODO: get performed_by
+        let event = PolicyEvent::deleted(
+            policy.id.clone(),
+            policy.tenant_id.clone(),
+            &cmd.performed_by,
+        );
         let payload = serde_json::to_string(&event)
             .map_err(|e| AppError::internal(format!("Failed to serialize event: {}", e)))?;
 
@@ -175,7 +179,7 @@ impl PolicyCommandHandler {
         uow.policies().update(&policy).await?;
 
         // 记录 Outbox 事件
-        let event = PolicyEvent::updated(&policy, "system"); // TODO: get performed_by
+        let event = PolicyEvent::updated(&policy, &cmd.performed_by);
         let payload = serde_json::to_string(&event)
             .map_err(|e| AppError::internal(format!("Failed to serialize event: {}", e)))?;
 

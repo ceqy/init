@@ -25,8 +25,8 @@ use api::{AuthorizationServiceImpl, PolicyServiceImpl, RbacServiceImpl};
 use application::policy::PolicyCommandHandler;
 use infrastructure::persistence::{
     OutboxPublisher, PostgresOutboxRepository, PostgresPermissionRepository,
-    PostgresPolicyRepository, PostgresRolePermissionRepository, PostgresRoleRepository,
-    PostgresUnitOfWorkFactory, PostgresUserRoleRepository,
+    PostgresPolicyRepository, PostgresRoleRepository, PostgresUnitOfWorkFactory,
+    PostgresUserRoleRepository,
 };
 
 /// 文件描述符集 (用于 gRPC 反射)
@@ -47,7 +47,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let role_repo = Arc::new(PostgresRoleRepository::new(pool.clone()));
         let policy_repo = Arc::new(PostgresPolicyRepository::new(pool.clone()));
         // user_role_repo initialized later with cache
-        let role_permission_repo = Arc::new(PostgresRolePermissionRepository::new(pool.clone()));
         let outbox_repo = Arc::new(PostgresOutboxRepository::new(pool.clone()));
 
         info!("Repositories initialized");
@@ -88,7 +87,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             role_repo.clone(),
             permission_repo.clone(),
             user_role_repo.clone(),
-            role_permission_repo.clone(),
             uow_factory.clone(),
         );
 

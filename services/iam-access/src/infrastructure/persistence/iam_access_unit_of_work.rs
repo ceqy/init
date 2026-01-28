@@ -48,7 +48,7 @@ impl UnitOfWorkFactory for PostgresUnitOfWorkFactory {
 /// Postgres Unit of Work 实现
 pub struct PostgresUnitOfWork {
     tx: SharedTx,
-    pool: PgPool,
+    // pool: PgPool, // Removed unused field
     role_repo: TxRoleRepository,
     permission_repo: TxPermissionRepository,
     role_permission_repo: TxRolePermissionRepository,
@@ -58,18 +58,18 @@ pub struct PostgresUnitOfWork {
 }
 
 impl PostgresUnitOfWork {
-    pub fn new(tx: Transaction<'static, Postgres>, pool: PgPool) -> Self {
+    pub fn new(tx: Transaction<'static, Postgres>, _pool: PgPool) -> Self {
         let tx = Arc::new(Mutex::new(Some(tx)));
 
         Self {
             tx: tx.clone(),
-            pool: pool.clone(),
+            // pool: pool.clone(), // Removed unused field
             role_repo: TxRoleRepository::new(tx.clone()),
             permission_repo: TxPermissionRepository::new(tx.clone()),
             role_permission_repo: TxRolePermissionRepository::new(tx.clone()),
             user_role_repo: TxUserRoleRepository::new(tx.clone()),
             policy_repo: TxPolicyRepository::new(tx.clone()),
-            outbox_repo: TxOutboxRepository::new(tx.clone(), pool),
+            outbox_repo: TxOutboxRepository::new(tx.clone(), _pool),
         }
     }
 }
@@ -146,13 +146,13 @@ impl UnitOfWork for PostgresUnitOfWork {
 
 /// 事务感知的 Outbox Repository
 pub struct TxOutboxRepository {
-    tx: SharedTx,
+    // tx: SharedTx, // Removed unused field
     pool: PgPool,
 }
 
 impl TxOutboxRepository {
-    pub fn new(tx: SharedTx, pool: PgPool) -> Self {
-        Self { tx, pool }
+    pub fn new(_tx: SharedTx, pool: PgPool) -> Self {
+        Self { /* tx, */ pool, }
     }
 }
 
