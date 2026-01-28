@@ -243,9 +243,11 @@ impl From<LoginLogRow> for LoginLog {
                 device_type: row.device_type.unwrap_or_default(),
                 os: row.os.clone().unwrap_or_default(),
                 browser: row.browser.clone().unwrap_or_default(),
-                browser_version: None, // TODO: Store version
-                os_version: None, // TODO: Store version
-                is_mobile: false, // TODO: Detect from user agent or store
+                // NOTE: 以下字段需要数据库迁移添加对应列后才能存储
+                // 当前数据库表 login_logs 不包含 browser_version, os_version, is_mobile 字段
+                browser_version: None,
+                os_version: None,
+                is_mobile: false,
                 device_fingerprint: None,
             },
             result: match row.result.as_str() {

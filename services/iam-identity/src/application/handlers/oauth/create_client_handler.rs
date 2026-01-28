@@ -38,8 +38,9 @@ impl CommandHandler<CreateClientCommand> for CreateClientHandler {
         let tenant_id = TenantId::from_str(&command.tenant_id)
             .map_err(|e| AppError::validation(format!("Invalid tenant_id: {}", e)))?;
 
-        // TODO: owner_id should come from command context/claims (authenticated user)
-        // For now, find or create a user in this tenant
+        // FUTURE: owner_id 应从 gRPC 请求的认证 Claims 中获取（authenticated user）
+        // 需要修改 CreateClientCommand 结构体添加 owner_id 字段
+        // 当前临时方案：使用租户中的第一个用户作为 owner
         let (users, _) = self.user_repo.list(
             &tenant_id,
             None,  // status

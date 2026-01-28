@@ -14,7 +14,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 
-/// Singleflight 调用状态
+/// Singleflight 调用状态（保留用于未来扩展）
+#[allow(dead_code)]
 struct Call<T> {
     /// 等待结果的通道
     rx: tokio::sync::broadcast::Receiver<Result<T, String>>,

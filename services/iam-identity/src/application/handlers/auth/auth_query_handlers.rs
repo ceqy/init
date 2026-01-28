@@ -147,7 +147,9 @@ impl QueryHandler<GetUser2FAStatusQuery> for GetUser2FAStatusHandler {
         let webauthn_enabled = !webauthn_credentials.is_empty();
 
         Ok(User2FAStatusResult {
-            totp_enabled: false, // TODO: 需要从 User 实体获取
+            // FUTURE: 注入 UserRepository 以获取 user.two_factor_enabled 的真实值
+            // 当前需要配合 GetUser2FAStatusQuery 中传入 totp_enabled 参数
+            totp_enabled: false,
             webauthn_enabled,
             backup_codes_available: has_backup_codes,
             preferred_method: if webauthn_enabled {

@@ -1,8 +1,7 @@
 //! 认证性能基准测试
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use iam_identity::auth::domain::services::*;
-use iam_identity::shared::domain::value_objects::*;
+use iam_identity::domain::services::auth::{BackupCodeService, PasswordService, TotpService};
 
 fn password_hashing_benchmark(c: &mut Criterion) {
     c.bench_function("password_hash", |b| {
@@ -56,7 +55,7 @@ fn totp_verification_benchmark(c: &mut Criterion) {
 fn backup_code_generation_benchmark(c: &mut Criterion) {
     c.bench_function("backup_code_generate", |b| {
         b.iter(|| {
-            BackupCodeService::generate_backup_codes(black_box(8))
+            BackupCodeService::generate_codes()
         })
     });
 }

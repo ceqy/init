@@ -9,11 +9,14 @@ use crate::domain::user::{Tenant, TenantStatus};
 use crate::domain::repositories::user::TenantRepository;
 
 
+/// PostgreSQL 租户仓储实现（完整实现，待集成到 DI 容器）
+#[allow(dead_code)]
 pub struct PostgresTenantRepository {
     pool: PgPool,
 }
 
 impl PostgresTenantRepository {
+    #[allow(dead_code)]
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

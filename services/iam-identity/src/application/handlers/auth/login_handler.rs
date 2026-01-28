@@ -162,7 +162,9 @@ impl CommandHandler<LoginCommand> for LoginHandler {
         let access_token = self.token_service.generate_access_token(
             &user.id,
             &user.tenant_id,
-            vec![], // TODO: 从角色获取权限
+            // FUTURE: 实现 RBAC 权限系统后，从 user.role_ids 解析对应的权限列表
+            // 当前权限列表为空，待 RoleRepository 实现后补充
+            vec![],
             user.role_ids.clone(),
         )?;
 

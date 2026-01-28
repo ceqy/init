@@ -45,11 +45,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::GatewayConfig::from_env();
 
     // 初始化 TokenService
+    // 注意：issuer 必须与 IAM 服务 (bootstrap/infrastructure.rs) 中的配置一致
     let token_service = TokenService::new(
         &config.jwt_secret,
         3600,  // access_token_expires_in: 1 小时
         86400 * 7,  // refresh_token_expires_in: 7 天
-        "cuba-gateway".to_string(),  // issuer
+        "cuba-iam".to_string(),  // issuer - 必须与 IAM 服务一致
         "cuba-api".to_string(),  // audience
     );
 
