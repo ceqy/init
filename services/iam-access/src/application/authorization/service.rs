@@ -93,6 +93,29 @@ where
 
     /// 执行授权检查
     pub async fn check(&self, request: AuthorizationCheckRequest) -> AppResult<AuthorizationCheckResult> {
+        use metrics::{counter, histogram};
+        let start = std::time::Instant::now();
+        
+        let result = self.check_internal(&request).await;
+        
+        // 记录指标
+        if let Ok(ref res) = result {
+            counter!("authorization_checks_total", 
+                "decision" => res.decision_source.to_string(),
+                "allowed" => res.allowed.to_string()
+            ).increment(1);
+        } else {
+            counter!("authorization_checks_errors_total").increment(1);
+        }
+        
+        histogram!("authorization_check_duration_ms")
+            .record(start.elapsed().as_millis() as f64);
+        
+        result
+    }
+
+    /// 内部授权检查逻辑
+    async fn check_internal(&self, request: &AuthorizationCheckRequest) -> AppResult<AuthorizationCheckResult> {
         // 1. 获取用户的角色
         let user_roles = self.user_role_repo
             .get_user_roles(&request.user_id, &request.tenant_id)
@@ -176,13 +199,17 @@ where
         })
     }
 
-    /// 批量检查
+    /// 批量检查 (并发执行)
     pub async fn batch_check(&self, requests: Vec<AuthorizationCheckRequest>) -> AppResult<Vec<AuthorizationCheckResult>> {
-        let mut results = Vec::with_capacity(requests.len());
-        for req in requests {
-            results.push(self.check(req).await?);
-        }
-        Ok(results)
+        use futures::stream::{self, StreamExt};
+        
+        let results: Vec<AppResult<AuthorizationCheckResult>> = stream::iter(requests)
+            .map(|req| self.check(req))
+            .buffer_unordered(10) // 最多 10 个并发
+            .collect()
+            .await;
+        
+        results.into_iter().collect()
     }
 
     /// 获取用户在指定租户下授予的所有权限
@@ -193,6 +220,17 @@ where
     ) -> AppResult<Vec<Permission>> {
         self.user_role_repo
             .get_user_permissions(user_id, tenant_id)
+            .await
+    }
+
+    /// 获取用户在指定租户下的所有角色
+    pub async fn get_user_roles(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<crate::domain::role::Role>> {
+        self.user_role_repo
+            .get_user_roles(user_id, tenant_id)
             .await
     }
 }

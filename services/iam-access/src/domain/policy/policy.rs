@@ -159,10 +159,29 @@ impl Policy {
         self
     }
 
-    /// 设置条件
+    /// 设置条件 (会验证 JSON 格式)
     pub fn with_conditions(mut self, conditions: String) -> Self {
         self.conditions = Some(conditions);
         self
+    }
+
+    /// 设置条件 (带验证)
+    pub fn set_conditions(&mut self, conditions: String) -> Result<(), String> {
+        // 验证是否为有效 JSON
+        serde_json::from_str::<serde_json::Value>(&conditions)
+            .map_err(|e| format!("Invalid JSON: {}", e))?;
+        
+        self.conditions = Some(conditions);
+        Ok(())
+    }
+
+    /// 验证条件是否为有效 JSON
+    pub fn validate_conditions(&self) -> Result<(), String> {
+        if let Some(ref cond) = self.conditions {
+            serde_json::from_str::<serde_json::Value>(cond)
+                .map_err(|e| format!("Invalid conditions JSON: {}", e))?;
+        }
+        Ok(())
     }
 
     /// 设置优先级

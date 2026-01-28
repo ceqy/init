@@ -160,8 +160,12 @@ where
 
         let permission_codes: Vec<String> = permissions.iter().map(|p| p.code.clone()).collect();
 
-        // TODO: 获取角色代码
-        let role_codes: Vec<String> = Vec::new();
+        // 获取用户角色代码
+        let roles = self.auth_service
+            .get_user_roles(&req.user_id, &tenant_id)
+            .await
+            .map_err(|e| Status::from(e))?;
+        let role_codes: Vec<String> = roles.iter().map(|r| r.code.clone()).collect();
 
         Ok(Response::new(GetUserGrantedPermissionsResponse {
             permission_codes,
