@@ -99,8 +99,8 @@ impl PolicyEvaluator {
     pub fn evaluate(policies: &[Policy], request: &EvaluationRequest) -> EvaluationResult {
         let subject_patterns = request.get_subject_patterns();
 
-        // 收集匹配的策略
-        let mut matching_policies: Vec<&Policy> = policies
+        // 收集匹配基本属性的策略
+        let matching_policies: Vec<&Policy> = policies
             .iter()
             .filter(|p| {
                 p.is_active &&
@@ -110,11 +110,23 @@ impl PolicyEvaluator {
             })
             .collect();
 
+        // 进一步过滤满足条件的策略
+        let mut final_policies: Vec<&Policy> = matching_policies
+            .into_iter()
+            .filter(|p| {
+                if let Some(ref cond) = p.conditions {
+                    Self::evaluate_conditions(cond, request)
+                } else {
+                    true
+                }
+            })
+            .collect();
+
         // 按优先级降序排序
-        matching_policies.sort_by(|a, b| b.priority.cmp(&a.priority));
+        final_policies.sort_by(|a, b| b.priority.cmp(&a.priority));
 
         // Deny-Override: 检查是否有 Deny 策略
-        for policy in &matching_policies {
+        for policy in &final_policies {
             if policy.effect == Effect::Deny {
                 return EvaluationResult::deny(format!(
                     "Denied by policy: {}",
@@ -125,7 +137,7 @@ impl PolicyEvaluator {
         }
 
         // 检查是否有 Allow 策略
-        for policy in &matching_policies {
+        for policy in &final_policies {
             if policy.effect == Effect::Allow {
                 return EvaluationResult::allow()
                     .with_policy(policy.id.to_string());
@@ -134,6 +146,64 @@ impl PolicyEvaluator {
 
         // 默认拒绝
         EvaluationResult::deny("No matching policy found (deny by default)".to_string())
+    }
+
+    /// 评估条件表达式
+    fn evaluate_conditions(conditions_str: &str, request: &EvaluationRequest) -> bool {
+        let conditions: serde_json::Value = match serde_json::from_str(conditions_str) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
+
+        let context: serde_json::Value = request.context.as_ref()
+            .and_then(|ctx| serde_json::from_str(ctx).ok())
+            .unwrap_or(serde_json::Value::Null);
+
+        if let Some(obj) = conditions.as_object() {
+            for (key, expected_val) in obj {
+                let actual_val = Self::get_value(key, &context, request);
+                if !Self::match_value(expected_val, &actual_val, request) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    /// 从上下文或请求中获取值
+    fn get_value(key: &str, context: &serde_json::Value, request: &EvaluationRequest) -> serde_json::Value {
+        // 优先从 context 中查询 (支持级联 path: user.id)
+        let mut current = context;
+        for part in key.split('.') {
+            if let Some(next) = current.get(part) {
+                current = next;
+            } else {
+                // 没找到，尝试特殊变量
+                return match key {
+                    "subject.id" => serde_json::Value::String(request.subject.clone()),
+                    "resource.id" => serde_json::Value::String(request.resource.clone()),
+                    "action" => serde_json::Value::String(request.action.clone()),
+                    _ => serde_json::Value::Null,
+                };
+            }
+        }
+        current.clone()
+    }
+
+    /// 匹配值 (支持占位符 ${subject.id})
+    fn match_value(expected: &serde_json::Value, actual: &serde_json::Value, request: &EvaluationRequest) -> bool {
+        if let Some(s) = expected.as_str() {
+            if s.starts_with("${") && s.ends_with('}') {
+                let var_path = &s[2..s.len() - 1];
+                let var_val = match var_path {
+                    "subject.id" => request.subject.clone(),
+                    "resource.id" => request.resource.clone(),
+                    _ => return false,
+                };
+                return actual.as_str() == Some(&var_val);
+            }
+        }
+        expected == actual
     }
 
     /// 批量评估
@@ -219,6 +289,40 @@ mod tests {
         let result = PolicyEvaluator::evaluate(&policies, &request);
         assert!(!result.allowed);
         assert!(result.denied_reason.is_some());
+    }
+
+    #[test]
+    fn test_policy_with_conditions() {
+        let tenant_id = TenantId::new();
+        let policies = vec![
+            Policy::allow(
+                tenant_id.clone(),
+                "Owner Only".to_string(),
+                vec!["*".to_string()],
+                vec!["document:*".to_string()],
+                vec!["read".to_string()],
+            ).with_conditions(r#"{"owner_id": "${subject.id}"}"#.to_string()),
+        ];
+
+        // 匹配：owner_id 与 subject.id 相同
+        let request_ok = EvaluationRequest::new(
+            "user:123".to_string(),
+            "document:abc".to_string(),
+            "read".to_string(),
+        ).with_context(r#"{"owner_id": "user:123"}"#.to_string());
+
+        let result_ok = PolicyEvaluator::evaluate(&policies, &request_ok);
+        assert!(result_ok.allowed, "Should be allowed if owner_id matches subject.id");
+
+        // 不匹配：owner_id 与 subject.id 不同
+        let request_err = EvaluationRequest::new(
+            "user:456".to_string(),
+            "document:abc".to_string(),
+            "read".to_string(),
+        ).with_context(r#"{"owner_id": "user:123"}"#.to_string());
+
+        let result_err = PolicyEvaluator::evaluate(&policies, &request_err);
+        assert!(!result_err.allowed, "Should be denied if owner_id does not match subject.id");
     }
 
     #[test]

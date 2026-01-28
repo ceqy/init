@@ -3,5 +3,5 @@
 pub mod grpc;
 pub mod proto;
 
-pub use grpc::{RbacServiceImpl, AuthorizationServiceImpl};
-pub use proto::{rbac, policy, authorization};
+pub use grpc::{AuthorizationServiceImpl, PolicyServiceImpl, RbacServiceImpl};
+pub use proto::{authorization, policy, rbac};

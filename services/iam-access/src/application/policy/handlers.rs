@@ -4,30 +4,39 @@ use std::sync::Arc;
 
 use cuba_errors::{AppError, AppResult};
 
-use crate::domain::policy::{Effect, Policy, PolicyId, PolicyRepository};
 use super::commands::*;
+use crate::domain::policy::{Effect, Policy, PolicyId, events::PolicyEvent};
+use crate::domain::unit_of_work::UnitOfWorkFactory;
 
 /// 策略命令处理器
-pub struct PolicyCommandHandler<R: PolicyRepository> {
-    policy_repo: Arc<R>,
+pub struct PolicyCommandHandler {
+    uow_factory: Arc<dyn UnitOfWorkFactory>,
 }
 
-impl<R: PolicyRepository> PolicyCommandHandler<R> {
-    pub fn new(policy_repo: Arc<R>) -> Self {
-        Self { policy_repo }
+impl PolicyCommandHandler {
+    pub fn new(uow_factory: Arc<dyn UnitOfWorkFactory>) -> Self {
+        Self { uow_factory }
     }
 
     /// 创建策略
     pub async fn handle_create(&self, cmd: CreatePolicyCommand) -> AppResult<Policy> {
+        let uow = self.uow_factory.begin().await?;
+
         // 检查名称是否已存在
-        if self.policy_repo.exists_by_name(&cmd.tenant_id, &cmd.name).await? {
+        if uow
+            .policies()
+            .exists_by_name(&cmd.tenant_id, &cmd.name)
+            .await?
+        {
             return Err(AppError::conflict(format!(
                 "Policy with name '{}' already exists",
                 cmd.name
             )));
         }
 
-        let effect: Effect = cmd.effect.parse()
+        let effect: Effect = cmd
+            .effect
+            .parse()
             .map_err(|_| AppError::validation("Invalid effect, must be 'ALLOW' or 'DENY'"))?;
 
         let policy = Policy::new(
@@ -52,21 +61,39 @@ impl<R: PolicyRepository> PolicyCommandHandler<R> {
             policy
         };
 
-        self.policy_repo.create(&policy).await?;
+        uow.policies().create(&policy).await?;
+
+        // 记录 Outbox 事件
+        let event = PolicyEvent::created(&policy, "system"); // TODO: get performed_by
+        let payload = serde_json::to_string(&event)
+            .map_err(|e| AppError::internal(format!("Failed to serialize event: {}", e)))?;
+
+        uow.save_outbox_event("Policy", policy.id.0, "rbac.policy.created", &payload)
+            .await?;
+
+        uow.commit().await?;
 
         Ok(policy)
     }
 
     /// 更新策略
     pub async fn handle_update(&self, cmd: UpdatePolicyCommand) -> AppResult<Policy> {
-        let policy_id: PolicyId = cmd.policy_id.parse()
+        let uow = self.uow_factory.begin().await?;
+
+        let policy_id: PolicyId = cmd
+            .policy_id
+            .parse()
             .map_err(|_| AppError::validation("Invalid policy ID"))?;
 
-        let mut policy = self.policy_repo.find_by_id(&policy_id)
+        let mut policy = uow
+            .policies()
+            .find_by_id(&policy_id)
             .await?
             .ok_or_else(|| AppError::not_found("Policy not found"))?;
 
-        let effect: Effect = cmd.effect.parse()
+        let effect: Effect = cmd
+            .effect
+            .parse()
             .map_err(|_| AppError::validation("Invalid effect, must be 'ALLOW' or 'DENY'"))?;
 
         policy.name = cmd.name;
@@ -78,32 +105,64 @@ impl<R: PolicyRepository> PolicyCommandHandler<R> {
         policy.conditions = cmd.conditions;
         policy.priority = cmd.priority;
 
-        self.policy_repo.update(&policy).await?;
+        uow.policies().update(&policy).await?;
+
+        // 记录 Outbox 事件
+        let event = PolicyEvent::updated(&policy, "system"); // TODO: get performed_by
+        let payload = serde_json::to_string(&event)
+            .map_err(|e| AppError::internal(format!("Failed to serialize event: {}", e)))?;
+
+        uow.save_outbox_event("Policy", policy.id.0, "rbac.policy.updated", &payload)
+            .await?;
+
+        uow.commit().await?;
 
         Ok(policy)
     }
 
     /// 删除策略
     pub async fn handle_delete(&self, cmd: DeletePolicyCommand) -> AppResult<()> {
-        let policy_id: PolicyId = cmd.policy_id.parse()
+        let uow = self.uow_factory.begin().await?;
+
+        let policy_id: PolicyId = cmd
+            .policy_id
+            .parse()
             .map_err(|_| AppError::validation("Invalid policy ID"))?;
 
         // 检查策略是否存在
-        self.policy_repo.find_by_id(&policy_id)
+        let policy = uow
+            .policies()
+            .find_by_id(&policy_id)
             .await?
             .ok_or_else(|| AppError::not_found("Policy not found"))?;
 
-        self.policy_repo.delete(&policy_id).await?;
+        uow.policies().delete(&policy_id).await?;
+
+        // 记录 Outbox 事件
+        let event = PolicyEvent::deleted(policy.id.clone(), policy.tenant_id.clone(), "system"); // TODO: get performed_by
+        let payload = serde_json::to_string(&event)
+            .map_err(|e| AppError::internal(format!("Failed to serialize event: {}", e)))?;
+
+        uow.save_outbox_event("Policy", policy.id.0, "rbac.policy.deleted", &payload)
+            .await?;
+
+        uow.commit().await?;
 
         Ok(())
     }
 
     /// 激活/停用策略
     pub async fn handle_set_active(&self, cmd: SetPolicyActiveCommand) -> AppResult<Policy> {
-        let policy_id: PolicyId = cmd.policy_id.parse()
+        let uow = self.uow_factory.begin().await?;
+
+        let policy_id: PolicyId = cmd
+            .policy_id
+            .parse()
             .map_err(|_| AppError::validation("Invalid policy ID"))?;
 
-        let mut policy = self.policy_repo.find_by_id(&policy_id)
+        let mut policy = uow
+            .policies()
+            .find_by_id(&policy_id)
             .await?
             .ok_or_else(|| AppError::not_found("Policy not found"))?;
 
@@ -113,7 +172,17 @@ impl<R: PolicyRepository> PolicyCommandHandler<R> {
             policy.deactivate();
         }
 
-        self.policy_repo.update(&policy).await?;
+        uow.policies().update(&policy).await?;
+
+        // 记录 Outbox 事件
+        let event = PolicyEvent::updated(&policy, "system"); // TODO: get performed_by
+        let payload = serde_json::to_string(&event)
+            .map_err(|e| AppError::internal(format!("Failed to serialize event: {}", e)))?;
+
+        uow.save_outbox_event("Policy", policy.id.0, "rbac.policy.updated", &payload)
+            .await?;
+
+        uow.commit().await?;
 
         Ok(policy)
     }

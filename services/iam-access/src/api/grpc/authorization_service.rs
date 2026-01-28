@@ -58,7 +58,19 @@ where
         &self,
         request: Request<CheckRequest>,
     ) -> Result<Response<CheckResponse>, Status> {
+        // 创建追踪 Span
+        let span = crate::api::grpc::create_request_span(&request, "CheckPermission");
+        let _enter = span.enter();
+
         let req = request.into_inner();
+
+        tracing::info!(
+            tenant_id = %req.tenant_id,
+            subject = %req.subject,
+            resource = %req.resource,
+            action = %req.action,
+            "Authorization check request received"
+        );
 
         let tenant_id: TenantId = req.tenant_id.parse()
             .map_err(|_| Status::invalid_argument("Invalid tenant_id"))?;
@@ -66,14 +78,8 @@ where
         let user_id = extract_user_id(&req.subject);
 
         // 将 protobuf Struct 转换为 JSON 字符串
-        let context = req.context.and_then(|c| {
-            // 简单处理: 将 struct fields 转换为 JSON
-            if c.fields.is_empty() {
-                None
-            } else {
-                // 暂时使用 debug 格式
-                Some(format!("{:?}", c))
-            }
+        let context = req.context.map(|c| {
+            serde_json::to_string(&struct_to_json(c)).unwrap_or_default()
         });
 
         let check_request = AuthorizationCheckRequest {
@@ -87,6 +93,12 @@ where
         let result = self.auth_service.check(check_request).await
             .map_err(|e| Status::from(e))?;
 
+        tracing::info!(
+            allowed = result.allowed,
+            decision_source = ?result.decision_source,
+            "Authorization check finished"
+        );
+
         Ok(Response::new(CheckResponse {
             allowed: result.allowed,
             reason: result.denied_reason.unwrap_or_default(),
@@ -97,6 +109,9 @@ where
         &self,
         request: Request<BatchCheckRequest>,
     ) -> Result<Response<BatchCheckResponse>, Status> {
+        let span = crate::api::grpc::create_request_span(&request, "BatchCheckPermissions");
+        let _enter = span.enter();
+
         let req = request.into_inner();
 
         let tenant_id: TenantId = req.tenant_id.parse()
@@ -105,12 +120,8 @@ where
         let user_id = extract_user_id(&req.subject);
 
         // 将 protobuf Struct 转换为 JSON 字符串
-        let context = req.context.and_then(|c| {
-            if c.fields.is_empty() {
-                None
-            } else {
-                Some(format!("{:?}", c))
-            }
+        let context = req.context.map(|c| {
+            serde_json::to_string(&struct_to_json(c)).unwrap_or_default()
         });
 
         // 保存 checks 用于后续构建响应
@@ -171,5 +182,30 @@ where
             permission_codes,
             role_codes,
         }))
+    }
+}
+
+// ============ 辅助函数 ============
+
+fn struct_to_json(s: prost_types::Struct) -> serde_json::Value {
+    let mut map = serde_json::Map::new();
+    for (k, v) in s.fields {
+        map.insert(k, value_to_json(v));
+    }
+    serde_json::Value::Object(map)
+}
+
+fn value_to_json(v: prost_types::Value) -> serde_json::Value {
+    use prost_types::value::Kind;
+    match v.kind {
+        Some(Kind::NullValue(_)) => serde_json::Value::Null,
+        Some(Kind::NumberValue(n)) => serde_json::Value::Number(serde_json::Number::from_f64(n).unwrap_or(serde_json::Number::from(0))),
+        Some(Kind::StringValue(s)) => serde_json::Value::String(s),
+        Some(Kind::BoolValue(b)) => serde_json::Value::Bool(b),
+        Some(Kind::StructValue(s)) => struct_to_json(s),
+        Some(Kind::ListValue(l)) => {
+            serde_json::Value::Array(l.values.into_iter().map(value_to_json).collect())
+        }
+        None => serde_json::Value::Null,
     }
 }

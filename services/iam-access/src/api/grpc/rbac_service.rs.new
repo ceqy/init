@@ -1,0 +1,76 @@
+//! RBAC gRPC 服务实现
+
+use std::sync::Arc;
+use tonic::{Request, Response, Status};
+
+use cuba_common::TenantId;
+use cuba_errors::AppError;
+use cuba_ports::EventPublisher;
+
+use crate::domain::role::{
+    Role, RoleId, RoleRepository, PermissionRepository, RolePermissionRepository, UserRoleRepository,
+};
+use crate::application::role::{
+    RoleCommandHandler, RoleQueryHandler,
+    commands::{CreateRoleCommand, UpdateRoleCommand, DeleteRoleCommand, SetRoleActiveCommand},
+};
+use crate::api::grpc::v1::{
+    rbac_service_server::RbacService,
+    Role as ProtoRole, Permission as ProtoPermission,
+    CreateRoleRequest, CreateRoleResponse,
+    UpdateRoleRequest, UpdateRoleResponse,
+    DeleteRoleRequest, DeleteRoleResponse,
+    GetRoleRequest, GetRoleResponse,
+    ListRolesRequest, ListRolesResponse,
+    SearchRolesRequest, SearchRolesResponse,
+    AssignPermissionsRequest, AssignPermissionsResponse,
+    RemovePermissionsRequest, RemovePermissionsResponse,
+    GetUserRolesRequest, GetUserRolesResponse,
+    GetUserPermissionsRequest, GetUserPermissionsResponse,
+};
+
+pub mod interceptor;
+
+/// RBAC gRPC 服务
+pub struct RbacServiceImpl<R, P, UR, RP, EP>
+where
+    R: RoleRepository + Send + Sync + 'static,
+    P: PermissionRepository + Send + Sync + 'static,
+    UR: UserRoleRepository + Send + Sync + 'static,
+    RP: RolePermissionRepository + Send + Sync + 'static,
+    EP: EventPublisher + Send + Sync + 'static,
+{
+    role_cmd_handler: RoleCommandHandler,
+    role_query_handler: RoleQueryHandler<R, UR>,
+    permission_repo: Arc<P>,
+    role_permission_repo: Arc<RP>,
+    user_role_repo: Arc<UR>,
+}
+
+use crate::domain::unit_of_work::UnitOfWorkFactory;
+
+impl<R, P, UR, RP, EP> RbacServiceImpl<R, P, UR, RP, EP>
+where
+    R: RoleRepository + Send + Sync + 'static,
+    P: PermissionRepository + Send + Sync + 'static,
+    UR: UserRoleRepository + Send + Sync + 'static,
+    RP: RolePermissionRepository + Send + Sync + 'static,
+    EP: EventPublisher + Send + Sync + 'static,
+{
+    pub fn new(
+        role_repo: Arc<R>,
+        permission_repo: Arc<P>,
+        user_role_repo: Arc<UR>,
+        role_permission_repo: Arc<RP>,
+        _event_publisher: Arc<EP>,
+        uow_factory: Arc<dyn UnitOfWorkFactory>,
+    ) -> Self {
+        Self {
+            role_cmd_handler: RoleCommandHandler::new(uow_factory),
+            role_query_handler: RoleQueryHandler::new(role_repo, user_role_repo.clone()),
+            permission_repo,
+            role_permission_repo,
+            user_role_repo,
+        }
+    }
+}
