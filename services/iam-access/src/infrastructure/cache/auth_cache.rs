@@ -53,4 +53,41 @@ impl AuthCache {
         let key = Self::user_roles_key(tenant_id, user_id);
         self.cache.delete(&key).await
     }
+
+    // ============ Policy 缓存 ============
+
+    fn tenant_policies_key(tenant_id: &TenantId) -> String {
+        format!("iam:access:policies:{}", tenant_id)
+    }
+
+    /// 获取租户策略缓存
+    pub async fn get_tenant_policies(&self, tenant_id: &TenantId) -> AppResult<Option<Vec<crate::domain::policy::Policy>>> {
+        let key = Self::tenant_policies_key(tenant_id);
+        let data = self.cache.get(&key).await?;
+        
+        match data {
+            Some(json) => {
+                let policies: Vec<crate::domain::policy::Policy> = serde_json::from_str(&json)
+                    .map_err(|e| cuba_errors::AppError::internal(format!("Failed to deserialize policies from cache: {}", e)))?;
+                Ok(Some(policies))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// 设置租户策略缓存 (TTL: 10分钟)
+    pub async fn set_tenant_policies(&self, tenant_id: &TenantId, policies: &[crate::domain::policy::Policy]) -> AppResult<()> {
+        let key = Self::tenant_policies_key(tenant_id);
+        let json = serde_json::to_string(policies)
+            .map_err(|e| cuba_errors::AppError::internal(format!("Failed to serialize policies for cache: {}", e)))?;
+        
+        // 策略缓存使用较长的 TTL (10分钟)
+        self.cache.set(&key, &json, Some(Duration::from_secs(600))).await
+    }
+
+    /// 失效租户策略缓存
+    pub async fn invalidate_tenant_policies(&self, tenant_id: &TenantId) -> AppResult<()> {
+        let key = Self::tenant_policies_key(tenant_id);
+        self.cache.delete(&key).await
+    }
 }

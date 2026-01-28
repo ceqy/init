@@ -26,6 +26,9 @@ impl PostgresRolePermissionRepository {
 #[async_trait]
 impl RolePermissionRepository for PostgresRolePermissionRepository {
     async fn assign_permissions(&self, role_id: &RoleId, permission_ids: &[PermissionId]) -> AppResult<()> {
+        // 使用事务保证原子性
+        let mut tx = self.pool.begin().await.map_err(map_sqlx_error)?;
+        
         for perm_id in permission_ids {
             sqlx::query(
                 r#"
@@ -37,11 +40,12 @@ impl RolePermissionRepository for PostgresRolePermissionRepository {
             .bind(role_id.0)
             .bind(perm_id.0)
             .bind(Utc::now())
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(map_sqlx_error)?;
         }
 
+        tx.commit().await.map_err(map_sqlx_error)?;
         Ok(())
     }
 

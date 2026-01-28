@@ -77,6 +77,7 @@ where
 {
     policy_repo: Arc<PR>,
     user_role_repo: Arc<UR>,
+    cache: Option<Arc<crate::infrastructure::cache::AuthCache>>,
 }
 
 impl<PR, UR> AuthorizationService<PR, UR>
@@ -88,7 +89,13 @@ where
         Self {
             policy_repo,
             user_role_repo,
+            cache: None,
         }
+    }
+
+    pub fn with_cache(mut self, cache: Arc<crate::infrastructure::cache::AuthCache>) -> Self {
+        self.cache = Some(cache);
+        self
     }
 
     /// 执行授权检查
@@ -123,10 +130,9 @@ where
         
         let role_codes: Vec<String> = user_roles.iter().map(|r| r.code.clone()).collect();
 
-        // 2. 加载所有激活的策略
-        let policies = self.policy_repo
-            .list_active_by_tenant(&request.tenant_id)
-            .await?;
+        // 2. 加载所有激活的策略 (优先使用缓存)
+        let policies = self.get_cached_policies(&request.tenant_id).await?;
+
 
         // 3. 构建策略评估请求
         let eval_request = EvaluationRequest::new(
@@ -232,6 +238,28 @@ where
         self.user_role_repo
             .get_user_roles(user_id, tenant_id)
             .await
+    }
+
+    /// 获取策略 (优先使用缓存)
+    async fn get_cached_policies(&self, tenant_id: &TenantId) -> AppResult<Vec<crate::domain::policy::Policy>> {
+        // 尝试从缓存获取
+        if let Some(cache) = &self.cache {
+            if let Ok(Some(policies)) = cache.get_tenant_policies(tenant_id).await {
+                return Ok(policies);
+            }
+        }
+
+        // 缓存未命中，从数据库加载
+        let policies = self.policy_repo
+            .list_active_by_tenant(tenant_id)
+            .await?;
+
+        // 写入缓存
+        if let Some(cache) = &self.cache {
+            let _ = cache.set_tenant_policies(tenant_id, &policies).await;
+        }
+
+        Ok(policies)
     }
 }
 
