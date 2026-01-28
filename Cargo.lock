@@ -1623,6 +1623,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "iam-access"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "hex",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "iam-identity"
 version = "0.1.0"
 dependencies = [

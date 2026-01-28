@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package cuba.iam.authorization;
+
+option go_package = "github.com/cuba-erp/api/iam/authorization";
+
+import "google/protobuf/struct.proto";
+
+// ============ 统一鉴权服务 ============
+// 该服务作为鉴权的统一入口，内部会综合 RBAC (角色权限) 和 Policy (策略) 的结果。
+
+service AuthorizationService {
+  // === 核心鉴权 ===
+  
+  // Check 检查用户是否有权限执行特定操作
+  // 逻辑: RBAC Permission OR Policy Allow (通常 Policy 优先或采用 Deny-override 策略)
+  rpc Check(CheckRequest) returns (CheckResponse);
+
+  // BatchCheck 批量检查权限 (常用于列表页的按钮显隐控制)
+  rpc BatchCheck(BatchCheckRequest) returns (BatchCheckResponse);
+
+  // === 权限查询 ===
+
+  // GetUserGrantedPermissions 获取用户拥有的所有权限标识 (用于前端初始化)
+  // 包含: 直接分配的权限 + 角色包含的权限
+  rpc GetUserGrantedPermissions(GetUserGrantedPermissionsRequest) returns (GetUserGrantedPermissionsResponse);
+}
+
+// ============ 消息定义 ============
+
+message CheckRequest {
+  string tenant_id = 1;
+  string subject = 2;          // 主体 (e.g. "user:uuid")
+  string resource = 3;         // 资源 (e.g. "order:123")
+  string action = 4;           // 操作 (e.g. "read", "write")
+  google.protobuf.Struct context = 5; // 上下文 (用于 Policy 评估, e.g. ip, time)
+}
+
+message CheckResponse {
+  bool allowed = 1;
+  string reason = 2;           // 拒绝原因 (可选)
+}
+
+message BatchCheckRequest {
+  string tenant_id = 1;
+  string subject = 2;
+  repeated ResourceAction checks = 3; // 需要检查的 [资源, 操作] 列表
+  google.protobuf.Struct context = 4;
+}
+
+message ResourceAction {
+  string resource = 1;
+  string action = 2;
+}
+
+message BatchCheckResponse {
+  repeated CheckResult results = 1;
+}
+
+message CheckResult {
+  string resource = 1;
+  string action = 2;
+  bool allowed = 3;
+}
+
+message GetUserGrantedPermissionsRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+}
+
+message GetUserGrantedPermissionsResponse {
+  repeated string permission_codes = 1; // e.g. ["user:read", "order:write"]
+  repeated string role_codes = 2;       // e.g. ["admin", "editor"]
+}
