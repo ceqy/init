@@ -7,6 +7,7 @@ mod grpc;
 mod middleware;
 mod rate_limit;
 mod routing;
+mod security_headers;
 mod ws;
 
 use std::sync::Arc;
@@ -17,6 +18,7 @@ use cuba_auth_core::TokenService;
 use cuba_telemetry::init_tracing;
 use std::net::SocketAddr;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use futures::StreamExt;
@@ -198,6 +200,8 @@ fn create_app(state: AppState, config: &config::GatewayConfig) -> Router {
     public_routes
         .merge(protected_routes.with_state(state.grpc_clients))
         .merge(stateless_routes)
+        .layer(axum_middleware::from_fn(security_headers::security_headers_middleware))
+        .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024))  // 10 MB 请求体限制
         .layer(TraceLayer::new_for_http())
         .layer(cors)
 }

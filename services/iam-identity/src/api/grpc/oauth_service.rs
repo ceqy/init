@@ -89,12 +89,15 @@ impl OAuthServiceTrait for OAuthServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        let client_id_parsed = OAuthClientId::from_str(&client_id)
+            .map_err(|e| Status::invalid_argument(format!("Invalid client ID: {}", e)))?;
+        
+        let tenant_id_parsed = TenantId::from_str(&tenant_id)
+            .map_err(|e| Status::invalid_argument(format!("Invalid tenant ID: {}", e)))?;
+
         let client = self
             .client_repo
-            .find_by_id(
-                &OAuthClientId::from_str(&client_id).unwrap(),
-                &TenantId::from_str(&tenant_id.clone()).unwrap(),
-            )
+            .find_by_id(&client_id_parsed, &tenant_id_parsed)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("Client not found"))?;

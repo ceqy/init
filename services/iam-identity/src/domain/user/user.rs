@@ -177,7 +177,7 @@ impl User {
         tracing::warn!(
             user_id = %self.id,
             locked_until = ?self.locked_until,
-            reason = %self.lock_reason.as_ref().unwrap(),
+            reason = %self.lock_reason.as_deref().unwrap_or("Unknown"),
             "User account locked"
         );
     }

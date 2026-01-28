@@ -72,7 +72,12 @@ impl RedisEventPublisher {
             }
         }
 
-        Err(last_error.unwrap())
+        Err(last_error.unwrap_or_else(|| {
+            redis::RedisError::from((
+                redis::ErrorKind::IoError,
+                "Failed to publish event after retries",
+            ))
+        }))
     }
 }
 

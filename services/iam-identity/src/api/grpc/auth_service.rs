@@ -607,15 +607,16 @@ impl AuthService for AuthServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 如果用户不存在，也返回成功（安全考虑，不泄露用户是否存在）
-        if user.is_none() {
-            tracing::warn!(email = %req.email, "User not found for password reset");
-            return Ok(Response::new(RequestPasswordResetResponse {
-                success: true,
-                message: "If the email exists, a password reset link has been sent.".to_string(),
-            }));
-        }
-
-        let user = user.unwrap();
+        let user = match user {
+            Some(u) => u,
+            None => {
+                tracing::warn!(email = %req.email, "User not found for password reset");
+                return Ok(Response::new(RequestPasswordResetResponse {
+                    success: true,
+                    message: "If the email exists, a password reset link has been sent.".to_string(),
+                }));
+            }
+        };
 
         // 3. 检查限流（防止滥用）
         let unused_count = self
