@@ -5,17 +5,18 @@ mod auth;
 mod config;
 mod grpc;
 mod middleware;
+mod rate_limit;
 mod routing;
 mod ws;
 
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
-use axum::{middleware as axum_middleware, Router};
+use axum::{http::HeaderValue, middleware as axum_middleware, Router};
 use cuba_auth_core::TokenService;
 use cuba_telemetry::init_tracing;
 use std::net::SocketAddr;
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use futures::StreamExt;
@@ -26,6 +27,7 @@ struct AppState {
     grpc_clients: grpc::GrpcClients,
     token_service: TokenService,
     notify_tx: Arc<broadcast::Sender<String>>,
+    rate_limit_config: Arc<rate_limit::RateLimitConfig>,
 }
 
 
@@ -54,6 +56,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grpc_clients = grpc::GrpcClients::new(config.iam_endpoint.clone())
         .await
         .expect("Failed to connect to IAM service");
+    
+    // 创建限流配置
+    let rate_limit_config = Arc::new(rate_limit::RateLimitConfig::new(
+        config.redis_url.clone(),
+        60,   // 时间窗口：60 秒
+        100,  // 最大请求数：100 次/分钟
+    ));
+    
     // 创建广播通道 (容量 100)
     let (notify_tx, _rx) = broadcast::channel::<String>(100);
     let notify_tx = Arc::new(notify_tx);
@@ -75,7 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Note: get_async_connection() is deprecated but required for pubsub functionality
         // The recommended get_multiplexed_async_connection() doesn't support into_pubsub()
         #[allow(deprecated)]
-        let mut con = match client.get_async_connection().await {
+        let con = match client.get_async_connection().await {
             Ok(c) => c,
             Err(e) => {
                 info!("Failed to connect to Redis for pubsub: {}", e);
@@ -105,10 +115,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         grpc_clients,
         token_service,
         notify_tx,
+        rate_limit_config,
     };
 
 
-    let app = create_app(state);
+    let app = create_app(state, &config);
 
     // 启动服务器
     let addr: SocketAddr = format!("{}:{}", config.host, config.port)
@@ -123,13 +134,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn create_app(state: AppState) -> Router {
+fn create_app(state: AppState, config: &config::GatewayConfig) -> Router {
     // 构建路由
     // 无状态的路由（健康检查等）
     let stateless_routes = routing::api_routes();
 
-    // 公共路由（不需要认证）
-    let public_routes = auth::auth_routes().with_state(state.grpc_clients.clone());
+    // 公共路由（不需要认证，但需要限流保护）
+    let public_routes = auth::auth_routes()
+        .layer(axum_middleware::from_fn_with_state(
+            state.rate_limit_config.clone(),
+            rate_limit::rate_limit_middleware,
+        ))
+        .with_state(state.grpc_clients.clone());
 
     // 受保护的路由（需要认证）
     let ws_state = ws::WsState {
@@ -141,17 +157,49 @@ fn create_app(state: AppState) -> Router {
         .route("/api/auth/me", axum::routing::get(auth::get_current_user))
         .nest("/api/audit", audit::audit_routes())
         .route("/ws/events", axum::routing::get(ws::websocket_handler).with_state(ws_state))
-        .route_layer(axum_middleware::from_fn_with_state(
+        .layer(axum_middleware::from_fn_with_state(
             state.token_service.clone(),
             middleware::auth_middleware,
         ));
+
+    // 配置 CORS
+    let cors = if config.cors_allowed_origins.is_empty() {
+        // 开发模式：允许所有来源
+        info!("CORS: Permissive mode (allowing all origins)");
+        CorsLayer::permissive()
+    } else {
+        // 生产模式：只允许配置的来源
+        info!("CORS: Restricted mode, allowed origins: {:?}", config.cors_allowed_origins);
+        let origins: Vec<HeaderValue> = config
+            .cors_allowed_origins
+            .iter()
+            .filter_map(|origin| origin.parse().ok())
+            .collect();
+        
+        CorsLayer::new()
+            .allow_origin(AllowOrigin::list(origins))
+            .allow_methods([
+                axum::http::Method::GET,
+                axum::http::Method::POST,
+                axum::http::Method::PUT,
+                axum::http::Method::DELETE,
+                axum::http::Method::PATCH,
+                axum::http::Method::OPTIONS,
+            ])
+            .allow_headers([
+                axum::http::header::AUTHORIZATION,
+                axum::http::header::CONTENT_TYPE,
+                axum::http::header::ACCEPT,
+            ])
+            .allow_credentials(true)
+    };
 
     // 合并所有路由：先合并带状态的路由，再合并无状态路由，最后应用中间件
     public_routes
         .merge(protected_routes.with_state(state.grpc_clients))
         .merge(stateless_routes)
         .layer(TraceLayer::new_for_http())
-        .layer(CorsLayer::permissive())
+        .layer(cors)
 }
 
 #[cfg(test)]
@@ -163,33 +211,64 @@ mod tests {
     };
     use tower::ServiceExt;
     use tonic::transport::Channel;
-    use crate::grpc::{auth::auth_service_client::AuthServiceClient, user::user_service_client::UserServiceClient};
+    use crate::grpc::{
+        auth::auth_service_client::AuthServiceClient,
+        user::user_service_client::UserServiceClient,
+        audit::audit_service_client::AuditServiceClient,
+    };
 
     fn create_test_state() -> AppState {
-        let token_service = TokenService::new("test_secret", 3600, 3600);
+        let token_service = TokenService::new(
+            "test_secret_at_least_32_characters_long",
+            3600,
+            3600,
+            "test-issuer".to_string(),
+            "test-audience".to_string(),
+        );
         // Create a lazy channel that doesn't strictly connect immediately
         let channel = Channel::from_static("http://[::1]:50051").connect_lazy();
         
         let grpc_clients = grpc::GrpcClients {
             auth: AuthServiceClient::new(channel.clone()),
-            user: UserServiceClient::new(channel),
+            user: UserServiceClient::new(channel.clone()),
+            audit: AuditServiceClient::new(channel),
         };
 
         // Mock broadcast channel for tests
         let (notify_tx, _rx) = broadcast::channel::<String>(100);
         let notify_tx = Arc::new(notify_tx);
 
+        // Mock rate limit config for tests
+        let rate_limit_config = Arc::new(rate_limit::RateLimitConfig::new(
+            "redis://localhost:6379".to_string(),
+            60,
+            100,
+        ));
+
         AppState {
             grpc_clients,
             token_service,
             notify_tx,
+            rate_limit_config,
+        }
+    }
+
+    fn create_test_config() -> config::GatewayConfig {
+        config::GatewayConfig {
+            host: "127.0.0.1".to_string(),
+            port: 8080,
+            jwt_secret: "test_secret_at_least_32_characters_long".to_string(),
+            iam_endpoint: "http://127.0.0.1:50051".to_string(),
+            redis_url: "redis://localhost:6379".to_string(),
+            cors_allowed_origins: vec!["http://localhost:3000".to_string()],
         }
     }
 
     #[tokio::test]
     async fn test_health_check_public() {
         let state = create_test_state();
-        let app = create_app(state);
+        let config = create_test_config();
+        let app = create_app(state, &config);
 
         let req = Request::builder()
             .uri("/health")
@@ -203,7 +282,8 @@ mod tests {
     #[tokio::test]
     async fn test_login_public_no_auth_required() {
         let state = create_test_state();
-        let app = create_app(state);
+        let config = create_test_config();
+        let app = create_app(state, &config);
 
         // POST to login, should reach handler, not be blocked by 401
         // Since we send empty body, likely 400 or 422 or 500, but NOT 401
@@ -221,7 +301,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_current_user_protected_no_token() {
         let state = create_test_state();
-        let app = create_app(state);
+        let config = create_test_config();
+        let app = create_app(state, &config);
 
         // Access protected route without token
         let req = Request::builder()

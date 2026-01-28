@@ -35,7 +35,7 @@ impl RateLimitConfig {
 
 /// 限流中间件
 pub async fn rate_limit_middleware(
-    config: Arc<RateLimitConfig>,
+    axum::extract::State(config): axum::extract::State<Arc<RateLimitConfig>>,
     req: Request,
     next: Next,
 ) -> Response {

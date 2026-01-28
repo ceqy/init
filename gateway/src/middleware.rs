@@ -220,9 +220,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_auth_middleware_expired_token() {
-        let secret = "test_secret";
+        let secret = "test_secret_at_least_32_characters_long";
         // Create a token service with very short expiration
-        let token_service = TokenService::new(secret, -3600, -3600); 
+        let token_service = TokenService::new(
+            secret,
+            -3600,
+            -3600,
+            "cuba-iam".to_string(),
+            "cuba-api".to_string(),
+        ); 
         let user_id = UserId::new();
         let tenant_id = TenantId::new();
         // Generate a token that is already expired
@@ -250,7 +256,13 @@ mod tests {
         let secret = "correct_secret";
         let token_service = TokenService::new(secret, 3600, 3600, "cuba-iam".to_string(), "cuba-api".to_string());
         
-        let wrong_secret_service = TokenService::new("wrong_secret", 3600, 3600);
+        let wrong_secret_service = TokenService::new(
+            "wrong_secret_at_least_32_characters",
+            3600,
+            3600,
+            "cuba-iam".to_string(),
+            "cuba-api".to_string(),
+        );
         let user_id = UserId::new();
         let tenant_id = TenantId::new();
         let token = wrong_secret_service
