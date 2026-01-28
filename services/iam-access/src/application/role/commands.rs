@@ -1,6 +1,7 @@
 //! 角色相关命令定义
 
 use cuba_common::TenantId;
+use uuid::Uuid;
 
 /// 创建角色命令
 #[derive(Debug, Clone)]
@@ -10,6 +11,8 @@ pub struct CreateRoleCommand {
     pub name: String,
     pub description: Option<String>,
     pub is_system: bool,
+    /// 执行操作的用户 ID (用于审计)
+    pub performed_by: Option<Uuid>,
 }
 
 /// 更新角色命令
@@ -18,12 +21,16 @@ pub struct UpdateRoleCommand {
     pub role_id: String,
     pub name: String,
     pub description: Option<String>,
+    /// 执行操作的用户 ID (用于审计)
+    pub performed_by: Option<Uuid>,
 }
 
 /// 删除角色命令
 #[derive(Debug, Clone)]
 pub struct DeleteRoleCommand {
     pub role_id: String,
+    /// 执行操作的用户 ID (用于审计)
+    pub performed_by: Option<Uuid>,
 }
 
 /// 激活/停用角色命令

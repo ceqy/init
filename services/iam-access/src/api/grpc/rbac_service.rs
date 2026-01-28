@@ -147,6 +147,7 @@ where
             name: req.name,
             description: if req.description.is_empty() { None } else { Some(req.description) },
             is_system: false,
+            performed_by: None, // TODO: extract from request metadata
         };
 
         let role = self.role_cmd_handler.handle_create(cmd).await
@@ -167,6 +168,7 @@ where
             role_id: req.id,
             name: req.name,
             description: if req.description.is_empty() { None } else { Some(req.description) },
+            performed_by: None, // TODO: extract from request metadata
         };
 
         let role = self.role_cmd_handler.handle_update(cmd).await
@@ -185,6 +187,7 @@ where
 
         let cmd = DeleteRoleCommand {
             role_id: req.id,
+            performed_by: None, // TODO: extract from request metadata
         };
 
         self.role_cmd_handler.handle_delete(cmd).await

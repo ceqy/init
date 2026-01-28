@@ -53,7 +53,7 @@ where
             tenant_id: role.tenant_id.0,
             code: role.code.clone(),
             name: role.name.clone(),
-            by: None, // TODO: capture user context
+            by: cmd.performed_by,
         };
         self.event_publisher.publish("rbac.role.created", &event).await
             .map_err(|e| AppError::internal(e.to_string()))?;
@@ -77,7 +77,7 @@ where
         let event = RbacEvent::RoleUpdated {
             id: role.id.0,
             tenant_id: role.tenant_id.0,
-            by: None,
+            by: cmd.performed_by,
         };
         self.event_publisher.publish("rbac.role.updated", &event).await
             .map_err(|e| AppError::internal(e.to_string()))?;
@@ -105,7 +105,7 @@ where
         let event = RbacEvent::RoleDeleted {
             id: role.id.0,
             tenant_id: role.tenant_id.0,
-            by: None,
+            by: cmd.performed_by,
         };
         self.event_publisher.publish("rbac.role.deleted", &event).await
             .map_err(|e| AppError::internal(e.to_string()))?;
