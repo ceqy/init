@@ -56,8 +56,11 @@ impl EventPublisher for KafkaEventPublisher {
     async fn publish<E: Serialize + Send + Sync>(&self, topic: &str, event: &E) -> AppResult<()> {
         let payload = serde_json::to_string(event)
             .map_err(|e| AppError::internal(format!("Failed to serialize event: {}", e)))?;
+        self.publish_raw(topic, &payload).await
+    }
 
-        let record: FutureRecord<'_, str, str> = FutureRecord::to(topic).payload(&payload);
+    async fn publish_raw(&self, topic: &str, payload: &str) -> AppResult<()> {
+        let record: FutureRecord<'_, str, str> = FutureRecord::to(topic).payload(payload);
 
         self.producer
             .send(record, Duration::from_secs(5))

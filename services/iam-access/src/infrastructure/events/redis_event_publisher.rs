@@ -24,15 +24,14 @@ impl RedisEventPublisher {
 impl EventPublisher for RedisEventPublisher {
     async fn publish<E: Serialize + Send + Sync>(&self, topic: &str, event: &E) -> AppResult<()> {
         let payload = serde_json::to_string(event).map_err(|e| cuba_errors::AppError::internal(e.to_string()))?;
-        
-        // Use topic as the channel, or append to base_channel?
-        // For simplicity, use the provided topic as the Redis channel.
-        let channel = topic;
+        self.publish_raw(topic, &payload).await
+    }
 
+    async fn publish_raw(&self, topic: &str, payload: &str) -> AppResult<()> {
         let mut conn = self.client.get_multiplexed_async_connection().await
             .map_err(|e| cuba_errors::AppError::internal(format!("Redis connection failed: {}", e)))?;
         
-        conn.publish::<_, _, ()>(channel, payload).await
+        conn.publish::<_, _, ()>(topic, payload).await
             .map_err(|e| cuba_errors::AppError::internal(format!("Redis publish failed: {}", e)))?;
 
         Ok(())
