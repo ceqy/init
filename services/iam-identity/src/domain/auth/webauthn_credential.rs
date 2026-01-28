@@ -87,20 +87,10 @@ impl WebAuthnCredential {
 
     /// 转换为 webauthn-rs 的 Passkey 格式
     pub fn to_passkey(&self) -> Result<Passkey, WebAuthnCredentialError> {
-        // 解析 credential_id
-        let _cred_id = CredentialID::try_from(self.credential_id.clone())
-            .map_err(|_| WebAuthnCredentialError::InvalidCredentialId)?;
-
-        // 解析公钥
-        let _passkey: Passkey = serde_cbor::from_slice(&self.public_key)
-            .map_err(|e| WebAuthnCredentialError::InvalidPublicKey(e.to_string()))?;
-
-        // webauthn-rs 0.5 Passkey 构造可能不同，暂时使用 unsafe 的 mem::transmute 或者构建器如果存在
-        // 由于无法确定 0.5 的确切字段，这里我们注释掉导致错误的部分，等待进一步确认 API
-        // 或者尝试使用 new 方法
-        
-        // 临时解决方案：返回错误说明需要修复
-        Err(WebAuthnCredentialError::SerializationError("Passkey conversion not implemented for this version".to_string()))
+        // 反序列化存储的 Passkey
+        // 注意：我们在 from_passkey 中使用 serde_json 序列化了整个 Passkey
+        serde_json::from_slice(&self.public_key)
+            .map_err(|e| WebAuthnCredentialError::SerializationError(e.to_string()))
     }
 
     /// 从 webauthn-rs 的 Passkey 创建
@@ -114,24 +104,45 @@ impl WebAuthnCredential {
     ) -> Result<Self, WebAuthnCredentialError> {
         // 使用方法访问器而不是字段
         let credential_id = passkey.cred_id().clone().into();
-        // 尝试获取公钥，如果 impossible 则暂时留空
-        // 注意：这里假设 passkey 有 public_key() 方法或者类似机制
-        // 由于字段私有且未知访问器，我们暂时使用空数据占位，让编译并通过，后续运行时再修
-        let public_key = vec![]; 
-        
+
+        // 序列化公钥
+        let public_key = serde_json::to_vec(passkey.get_public_key())
+            .map_err(|e| WebAuthnCredentialError::SerializationError(e.to_string()))?;
+
         Ok(Self::new(
             user_id,
             credential_id,
             public_key,
-            0, // passkey.sign_count not found, default to 0
-
+            0, // Initial counter
             name,
             aaguid,
             transports,
-            false, // backup_eligible fixme
-            false, // backup_state fixme
+            false, // backup_eligible - will be updated on first auth
+            false, // backup_state - will be updated on first auth
             tenant_id,
         ))
+    }
+
+    /// 从认证结果更新凭证
+    pub fn update_from_authentication(&mut self, auth_result: &AuthenticationResult) {
+        // 更新计数器
+        if auth_result.counter() > self.counter {
+            self.counter = auth_result.counter();
+        }
+
+        // 更新备份状态
+        self.backup_state = auth_result.backup_state();
+        if auth_result.backup_eligible() {
+            self.backup_eligible = true;
+        }
+
+        // 更新最后使用时间
+        self.last_used_at = Some(Utc::now());
+    }
+
+    /// 获取凭证 ID
+    pub fn credential_id(&self) -> Vec<u8> {
+        self.credential_id.clone()
     }
 }
 
@@ -175,5 +186,11 @@ pub enum WebAuthnCredentialError {
 
     #[error("Counter mismatch: expected > {expected}, got {actual}")]
     CounterMismatch { expected: u32, actual: u32 },
+}
+
+impl From<WebAuthnCredentialError> for cuba_errors::AppError {
+    fn from(err: WebAuthnCredentialError) -> Self {
+        cuba_errors::AppError::validation(err.to_string())
+    }
 }
 

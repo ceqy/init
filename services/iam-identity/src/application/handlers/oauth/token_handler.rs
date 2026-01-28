@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -25,10 +26,10 @@ impl CommandHandler<TokenCommand> for TokenHandler {
     async fn handle(&self, command: TokenCommand) -> AppResult<(String, String, i64)> {
         info!("Processing token request: grant_type={}", command.grant_type);
 
-        let client_id = OAuthClientId::from_string(&command.client_id)
+        let client_id = OAuthClientId::from_str(&command.client_id)
             .map_err(|e| AppError::validation(format!("Invalid client_id: {}", e)))?;
 
-        let tenant_id = TenantId::from_string(&command.tenant_id)
+        let tenant_id = TenantId::from_str(&command.tenant_id)
             .map_err(|e| AppError::validation(format!("Invalid tenant_id: {}", e)))?;
 
         let (access_token, refresh_token) = match command.grant_type.as_str() {

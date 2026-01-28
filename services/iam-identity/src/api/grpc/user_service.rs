@@ -2,6 +2,7 @@
 //!
 //! 提供用户管理相关的 gRPC 接口
 
+use std::str::FromStr;
 use std::sync::Arc;
 
 use tonic::{Request, Response, Status};
@@ -132,7 +133,7 @@ impl UserService for UserServiceImpl {
         info!("Registering new user: {}", req.username);
 
         // 解析租户 ID
-        let tenant_id = TenantId::from_string(&req.tenant_id)
+        let tenant_id = TenantId::from_str(&req.tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
         // 创建值对象
@@ -210,12 +211,12 @@ impl UserService for UserServiceImpl {
         request: Request<GetUserRequest>,
     ) -> Result<Response<GetUserResponse>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let req = request.into_inner();
 
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         let user = self
@@ -243,10 +244,10 @@ impl UserService for UserServiceImpl {
             .validate_token(&req.access_token)
             .map_err(|e| Status::unauthenticated(format!("Invalid token: {}", e)))?;
 
-        let user_id = UserId::from_string(&claims.sub)
+        let user_id = UserId::from_str(&claims.sub)
             .map_err(|e| Status::internal(format!("Invalid user_id in token: {}", e)))?;
 
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let user = self
@@ -267,12 +268,12 @@ impl UserService for UserServiceImpl {
         request: Request<UpdateUserRequest>,
     ) -> Result<Response<UpdateUserResponse>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let req = request.into_inner();
 
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         let mut user = self
@@ -360,7 +361,7 @@ impl UserService for UserServiceImpl {
         request: Request<UpdateProfileRequest>,
     ) -> Result<Response<UpdateProfileResponse>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         // 验证用户只能更新自己的资料
@@ -369,7 +370,7 @@ impl UserService for UserServiceImpl {
             return Err(Status::permission_denied("Cannot update other user's profile"));
         }
 
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         let mut user = self
@@ -440,12 +441,12 @@ impl UserService for UserServiceImpl {
         request: Request<DeleteUserRequest>,
     ) -> Result<Response<()>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let req = request.into_inner();
 
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         self.user_repo
@@ -464,7 +465,7 @@ impl UserService for UserServiceImpl {
         request: Request<ListUsersRequest>,
     ) -> Result<Response<ListUsersResponse>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let req = request.into_inner();
@@ -531,12 +532,12 @@ impl UserService for UserServiceImpl {
         request: Request<ActivateUserRequest>,
     ) -> Result<Response<ActivateUserResponse>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let req = request.into_inner();
 
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         let mut user = self
@@ -564,12 +565,12 @@ impl UserService for UserServiceImpl {
         request: Request<DeactivateUserRequest>,
     ) -> Result<Response<DeactivateUserResponse>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let req = request.into_inner();
 
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         let mut user = self
@@ -599,12 +600,12 @@ impl UserService for UserServiceImpl {
         request: Request<LockUserRequest>,
     ) -> Result<Response<LockUserResponse>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let req = request.into_inner();
 
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         let mut user = self
@@ -634,12 +635,12 @@ impl UserService for UserServiceImpl {
         request: Request<UnlockUserRequest>,
     ) -> Result<Response<UnlockUserResponse>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let req = request.into_inner();
 
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         let mut user = self
@@ -669,12 +670,12 @@ impl UserService for UserServiceImpl {
         request: Request<AssignRolesRequest>,
     ) -> Result<Response<AssignRolesResponse>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let req = request.into_inner();
 
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         let mut user = self
@@ -704,12 +705,12 @@ impl UserService for UserServiceImpl {
         request: Request<RemoveRolesRequest>,
     ) -> Result<Response<RemoveRolesResponse>, Status> {
         let claims = self.validate_request_token(&request)?;
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let req = request.into_inner();
 
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid user_id: {}", e)))?;
 
         let mut user = self
@@ -738,8 +739,9 @@ impl UserService for UserServiceImpl {
         &self,
         _request: Request<GetUserRolesRequest>,
     ) -> Result<Response<GetUserRolesResponse>, Status> {
-        // TODO: 需要实现角色查询逻辑，可能需要调用 RBAC 服务
-        Err(Status::unimplemented("GetUserRoles not yet implemented"))
+        // 角色管理由独立的 RBAC 服务负责
+        // 当 RBAC 服务实现后，这里应该通过 gRPC 调用 RBAC 服务
+        Err(Status::unimplemented("GetUserRoles is managed by RBAC service"))
     }
 
     /// 发送邮箱验证码

@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -34,7 +35,7 @@ impl CommandHandler<CreateClientCommand> for CreateClientHandler {
     async fn handle(&self, command: CreateClientCommand) -> AppResult<(String, Option<String>)> {
         info!("Creating OAuth client: {}", command.name);
 
-        let tenant_id = TenantId::from_string(&command.tenant_id)
+        let tenant_id = TenantId::from_str(&command.tenant_id)
             .map_err(|e| AppError::validation(format!("Invalid tenant_id: {}", e)))?;
 
         // TODO: owner_id should come from command context/claims (authenticated user)
@@ -55,9 +56,11 @@ impl CommandHandler<CreateClientCommand> for CreateClientHandler {
             use crate::domain::services::auth::PasswordService;
 
             let username = Username::new(format!("admin_{}", &tenant_id.0.to_string()[..8]))
-                .unwrap_or_else(|_| Username::new("admin".to_string()).unwrap());
+                .or_else(|_| Username::new("admin".to_string()))
+                .map_err(|e| AppError::validation(format!("Failed to create username: {}", e)))?;
             let email = Email::new(format!("admin_{}@temp.local", &tenant_id.0.to_string()[..8]))
-                .unwrap_or_else(|_| Email::new("admin@temp.local".to_string()).unwrap());
+                .or_else(|_| Email::new("admin@temp.local".to_string()))
+                .map_err(|e| AppError::validation(format!("Failed to create email: {}", e)))?;
             let password_hash = PasswordService::hash_password("temp_password_123")
                 .map_err(|e| AppError::validation(format!("Failed to hash password: {}", e)))?;
 

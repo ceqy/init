@@ -60,12 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let notify_tx_clone = notify_tx.clone();
 
     // 启动 Redis 订阅任务
-    let redis_url = config.redis_url.clone(); 
-    // 注意：GatewayConfig 可能还没暴露 redis_url，假设它有。如果没有，需要先去 config.rs 添加。
-    // 假设 config.rs 还没有 redis_url，我们这里先用硬编码或者稍后修改 config.rs。
-    // 为了稳妥，先假设需要修改 config.rs。此处先留个 TODO 或者直接假装 config 有。
-    // 实际上我们在上一步并没有修改 GatewayConfig，所以这里肯定会报错。
-    // 我们先写好逻辑，下一步修 config。
+    let redis_url = config.redis_url.clone();
     tokio::spawn(async move {
         // 连接 Redis
         let client = match redis::Client::open(redis_url) {
@@ -134,10 +129,15 @@ fn create_app(state: AppState) -> Router {
     let public_routes = auth::auth_routes().with_state(state.grpc_clients.clone());
 
     // 受保护的路由（需要认证）
+    let ws_state = ws::WsState {
+        notify_tx: state.notify_tx.clone(),
+        token_service: state.token_service.clone(),
+    };
+
     let protected_routes = Router::new()
         .route("/api/auth/me", axum::routing::get(auth::get_current_user))
         .nest("/api/audit", audit::audit_routes())
-        .route("/ws/events", axum::routing::get(ws::websocket_handler).with_state(state.notify_tx))
+        .route("/ws/events", axum::routing::get(ws::websocket_handler).with_state(ws_state))
         .route_layer(axum_middleware::from_fn_with_state(
             state.token_service.clone(),
             middleware::auth_middleware,

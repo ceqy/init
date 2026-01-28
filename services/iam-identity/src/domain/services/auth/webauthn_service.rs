@@ -91,7 +91,7 @@ impl WebAuthnService {
             .map_err(|e| AppError::validation(format!("Registration verification failed: {}", e)))?;
 
         // 提取传输方式
-        let transports = reg
+        let transports: Vec<String> = reg
             .response
             .transports
             .as_ref()
@@ -103,7 +103,7 @@ impl WebAuthnService {
             user_id,
             credential_name,
             &passkey,
-            None, // aaguid
+            None, // aaguid - not easily accessible in webauthn-rs 0.5
             transports,
             tenant_id.clone(),
         )
@@ -175,8 +175,8 @@ impl WebAuthnService {
             .await?
             .ok_or_else(|| AppError::not_found("Credential not found"))?;
 
-        // 更新计数器
-        credential.update_counter(0); // auth_result.counter() access issues, placeholder
+        // 更新凭证
+        credential.update_from_authentication(&auth_result);
         self.credential_repo.update(&credential).await?;
 
         info!("WebAuthn authentication successful for user: {}", credential.user_id);

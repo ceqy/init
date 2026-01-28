@@ -126,14 +126,16 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
             r#"
             UPDATE webauthn_credentials
             SET counter = $2,
-                name = $3,
-                last_used_at = $4
-            WHERE id = $1 AND tenant_id = $5
+                backup_eligible = $3,
+                backup_state = $4,
+                last_used_at = $5
+            WHERE id = $1 AND tenant_id = $6
             "#,
         )
         .bind(credential.id.0)
         .bind(credential.counter as i64)
-        .bind(&credential.name)
+        .bind(credential.backup_eligible)
+        .bind(credential.backup_state)
         .bind(credential.last_used_at)
         .bind(credential.tenant_id.0)
         .execute(&self.pool)

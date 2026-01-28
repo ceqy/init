@@ -1,5 +1,6 @@
 //! AuthService gRPC 实现
 
+use std::str::FromStr;
 use std::sync::Arc;
 
 use chrono::{Duration, Utc};
@@ -326,7 +327,7 @@ impl AuthService for AuthServiceImpl {
         let now = Utc::now().timestamp();
         let ttl_secs = (claims.exp - now).max(0) as u64;
 
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID in token"))?;
 
         if req.logout_all_devices {
@@ -392,7 +393,7 @@ impl AuthService for AuthServiceImpl {
             .map_err(|_| Status::unauthenticated("Invalid refresh token"))?;
 
         // 2. 计算 token hash 并查找 session
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID in token"))?;
         let token_hash = sha256_hash(&req.refresh_token);
         let session = self
@@ -511,7 +512,7 @@ impl AuthService for AuthServiceImpl {
         if claims.sub != req.user_id {
             return Err(Status::permission_denied("Cannot change other user's password"));
         }
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         // 1. 解析用户 ID
@@ -808,7 +809,7 @@ impl AuthService for AuthServiceImpl {
         let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Get active sessions request");
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
@@ -843,7 +844,7 @@ impl AuthService for AuthServiceImpl {
         let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, session_id = %req.session_id, "Revoke session request");
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         let session_id = SessionId(
@@ -893,7 +894,7 @@ impl AuthService for AuthServiceImpl {
         let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, method = %req.method, "Enable 2FA request");
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
@@ -901,7 +902,7 @@ impl AuthService for AuthServiceImpl {
         }
 
         // 1. 解析用户 ID
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
 
         // 2. 获取用户
@@ -1000,7 +1001,7 @@ impl AuthService for AuthServiceImpl {
         tracing::info!(user_id = %req.user_id, "Verify 2FA request");
 
         // 1. 解析用户 ID
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
 
         // 2. 获取用户
@@ -1098,7 +1099,7 @@ impl AuthService for AuthServiceImpl {
         let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Disable 2FA request");
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
@@ -1106,7 +1107,7 @@ impl AuthService for AuthServiceImpl {
         }
 
         // 1. 解析用户 ID
-        let user_id = UserId::from_string(&req.user_id)
+        let user_id = UserId::from_str(&req.user_id)
             .map_err(|_| Status::invalid_argument("Invalid user ID"))?;
 
         // 2. 获取用户
@@ -1165,7 +1166,7 @@ impl AuthService for AuthServiceImpl {
         let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, credential_name = %req.credential_name, "Start WebAuthn registration");
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
@@ -1231,7 +1232,7 @@ impl AuthService for AuthServiceImpl {
         let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, credential_name = %req.credential_name, "Finish WebAuthn registration");
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
@@ -1417,7 +1418,7 @@ impl AuthService for AuthServiceImpl {
         let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "List WebAuthn credentials");
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
@@ -1468,7 +1469,7 @@ impl AuthService for AuthServiceImpl {
         let claims = self.validate_request_token(&request)?;
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, credential_id = %req.credential_id, "Delete WebAuthn credential");
-        let tenant_id = TenantId::from_string(&claims.tenant_id)
+        let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {

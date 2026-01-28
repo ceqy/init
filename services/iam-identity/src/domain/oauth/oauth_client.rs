@@ -3,6 +3,7 @@
 use chrono::{DateTime, Utc};
 use cuba_common::{TenantId, UserId};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use uuid::Uuid;
 
 /// OAuth Client ID
@@ -25,8 +26,10 @@ impl Default for OAuthClientId {
     }
 }
 
-impl OAuthClientId {
-    pub fn from_string(s: &str) -> Result<Self, uuid::Error> {
+impl FromStr for OAuthClientId {
+    type Err = uuid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(Uuid::parse_str(s)?))
     }
 }

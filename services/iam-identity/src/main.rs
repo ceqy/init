@@ -55,14 +55,15 @@ use infrastructure::persistence::user::{
 };
 use infrastructure::events::{
     EventPublisher, PostgresEventStore, PostgresEventStoreRepository, EventStoreRepository,
-    BroadcastEventPublisher, RedisEventPublisher,
+    BroadcastEventPublisher, RedisEventPublisher, OutboxProcessor, OutboxProcessorConfig,
 };
 use async_trait::async_trait;
 use secrecy::ExposeSecret;
 use cuba_adapter_email::{EmailClient, EmailSender};
 use cuba_bootstrap::{run_with_services, Infrastructure};
+use cuba_adapter_postgres::PostgresOutbox;
 
-use cuba_ports::CachePort;
+use cuba_ports::{CachePort, OutboxPort};
 use tonic::transport::Server;
 use tonic_reflection::server::Builder as ReflectionBuilder;
 
@@ -115,6 +116,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let redis_event_publisher = RedisEventPublisher::new(config.redis.url.expose_secret(), "domain_events")
             .map_err(|e| cuba_errors::AppError::internal(format!("Failed to connect to Redis: {}", e)))?;
         let redis_event_publisher: Arc<dyn EventPublisher> = Arc::new(redis_event_publisher);
+
+        // 克隆一份用于 Outbox 处理器
+        let redis_event_publisher_for_outbox = redis_event_publisher.clone();
 
         // 组装广播事件发布器（组合 EventStore, Listener, Redis）
         let event_publisher: Arc<dyn EventPublisher> = Arc::new(BroadcastEventPublisher::new(vec![
@@ -256,6 +260,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 组装 AuditService
         let event_store_repo: Arc<dyn EventStoreRepository> = Arc::new(PostgresEventStoreRepository::new(pool.clone()));
         let audit_service = AuditServiceImpl::new(event_store_repo);
+
+        // 组装 Outbox 和后台处理器
+        let outbox: Arc<dyn OutboxPort> = Arc::new(PostgresOutbox::new(pool.clone()));
+        let outbox_processor = Arc::new(OutboxProcessor::new(
+            outbox,
+            redis_event_publisher_for_outbox,
+            OutboxProcessorConfig::default(),
+        ));
+
+        // 启动 Outbox 后台处理任务
+        let _outbox_handle = outbox_processor.clone().start();
+        tracing::info!("Outbox processor started");
 
         server
             .add_service(AuthServiceServer::new(auth_service))

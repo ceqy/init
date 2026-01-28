@@ -5,6 +5,7 @@ use cuba_errors::AppResult;
 use sqlx::{PgConnection, PgPool};
 
 /// 设置当前租户上下文（用于 RLS）
+#[allow(dead_code)]
 pub async fn set_tenant_context(conn: &mut PgConnection, tenant_id: &TenantId) -> AppResult<()> {
     sqlx::query(&format!(
         "SET LOCAL app.current_tenant_id = '{}'",
@@ -18,6 +19,7 @@ pub async fn set_tenant_context(conn: &mut PgConnection, tenant_id: &TenantId) -
 }
 
 /// 在事务中执行带租户上下文的操作
+#[allow(dead_code)]
 pub async fn with_tenant_context<F, T>(
     pool: &PgPool,
     tenant_id: &TenantId,

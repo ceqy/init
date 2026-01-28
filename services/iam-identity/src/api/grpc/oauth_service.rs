@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use tonic::{Request, Response, Status};
@@ -91,8 +92,8 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let client = self
             .client_repo
             .find_by_id(
-                &OAuthClientId::from_string(&client_id).unwrap(),
-                &TenantId::from_string(&tenant_id.clone()).unwrap(),
+                &OAuthClientId::from_str(&client_id).unwrap(),
+                &TenantId::from_str(&tenant_id.clone()).unwrap(),
             )
             .await
             .map_err(|e| Status::internal(e.to_string()))?
@@ -124,10 +125,10 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let tenant_id = Self::extract_tenant_id(&request)?;
         let req = request.into_inner();
 
-        let client_id = OAuthClientId::from_string(&req.client_id)
+        let client_id = OAuthClientId::from_str(&req.client_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid client_id: {}", e)))?;
 
-        let tenant_id = TenantId::from_string(&tenant_id)
+        let tenant_id = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
         let client = self
@@ -161,10 +162,10 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let tenant_id = Self::extract_tenant_id(&request)?;
         let req = request.into_inner();
 
-        let client_id = OAuthClientId::from_string(&req.client_id)
+        let client_id = OAuthClientId::from_str(&req.client_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid client_id: {}", e)))?;
 
-        let tenant_id = TenantId::from_string(&tenant_id)
+        let tenant_id = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
         let mut client = self
@@ -221,10 +222,10 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let tenant_id = Self::extract_tenant_id(&request)?;
         let req = request.into_inner();
 
-        let client_id = OAuthClientId::from_string(&req.client_id)
+        let client_id = OAuthClientId::from_str(&req.client_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid client_id: {}", e)))?;
 
-        let tenant_id = TenantId::from_string(&tenant_id)
+        let tenant_id = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
         self.client_repo
@@ -242,7 +243,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let tenant_id = Self::extract_tenant_id(&request)?;
         let req = request.into_inner();
 
-        let tenant_id = TenantId::from_string(&tenant_id)
+        let tenant_id = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
         let page = if req.page > 0 { req.page as i64 } else { 1 };
@@ -441,7 +442,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let tenant_id = Self::extract_tenant_id(&request)?;
         let req = request.into_inner();
 
-        let tenant_id = TenantId::from_string(&tenant_id)
+        let tenant_id = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
         self.oauth_service
@@ -459,7 +460,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let tenant_id = Self::extract_tenant_id(&request)?;
         let req = request.into_inner();
 
-        let tenant_id = TenantId::from_string(&tenant_id)
+        let tenant_id = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
         let token = self

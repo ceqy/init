@@ -24,6 +24,7 @@ pub struct AuthContext {
 ///
 /// 用于从请求中获取已验证的 Claims
 /// 应该在 auth_middleware 之后使用
+#[allow(dead_code)]
 pub struct AuthClaims(pub Claims);
 
 impl<S> FromRequestParts<S> for AuthClaims

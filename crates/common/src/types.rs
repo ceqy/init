@@ -3,6 +3,7 @@
 use chrono::{DateTime, Utc};
 use derive_more::{Display, From};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use uuid::Uuid;
 
 /// 租户 ID
@@ -18,13 +19,13 @@ impl TenantId {
     pub fn from_uuid(uuid: Uuid) -> Self {
         Self(uuid)
     }
+}
 
-    pub fn from_string(s: &str) -> Result<Self, uuid::Error> {
+impl FromStr for TenantId {
+    type Err = uuid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(Uuid::parse_str(s)?))
-    }
-    
-    pub fn from_str(s: &str) -> Result<Self, uuid::Error> {
-        Self::from_string(s)
     }
 }
 
@@ -47,8 +48,12 @@ impl UserId {
     pub fn from_uuid(uuid: Uuid) -> Self {
         Self(uuid)
     }
+}
 
-    pub fn from_string(s: &str) -> Result<Self, uuid::Error> {
+impl FromStr for UserId {
+    type Err = uuid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(Uuid::parse_str(s)?))
     }
 }

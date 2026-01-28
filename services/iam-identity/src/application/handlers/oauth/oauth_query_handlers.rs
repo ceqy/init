@@ -1,5 +1,6 @@
 //! OAuth 查询处理器
 
+use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -34,7 +35,7 @@ impl QueryHandler<GetOAuthClientByIdQuery> for GetOAuthClientByIdHandler {
             "Handling GetOAuthClientByIdQuery"
         );
 
-        let client_id = OAuthClientId::from_string(&query.client_id)
+        let client_id = OAuthClientId::from_str(&query.client_id)
             .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?;
 
         let client = self.client_repository

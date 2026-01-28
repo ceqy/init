@@ -52,6 +52,7 @@ base64 = { workspace = true }
 serde_cbor = { workspace = true }
 redis = { workspace = true, features = ["tokio-comp", "aio"] }
 secrecy.workspace = true
+email_address.workspace = true
 
 [build-dependencies]
 tonic-build = { workspace = true }

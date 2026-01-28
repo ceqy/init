@@ -1,5 +1,6 @@
 //! 重置密码处理器
 
+use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;

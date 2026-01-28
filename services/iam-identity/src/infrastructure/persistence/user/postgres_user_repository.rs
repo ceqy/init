@@ -28,7 +28,9 @@ impl UserRepository for PostgresUserRepository {
             SELECT id, username, email, password_hash, display_name, phone, avatar_url,
                    tenant_id, role_ids, status, language, timezone, two_factor_enabled,
                    two_factor_secret, last_login_at, email_verified, email_verified_at,
-                   failed_login_count, locked_until, last_password_change_at,
+                   phone_verified, phone_verified_at,
+                   failed_login_count, locked_until, lock_reason, last_failed_login_at,
+                   last_password_change_at,
                    created_at, created_by, updated_at, updated_by
             FROM users
             WHERE id = $1 AND tenant_id = $2
@@ -40,7 +42,10 @@ impl UserRepository for PostgresUserRepository {
         .await
         .map_err(|e| AppError::database(format!("Failed to find user: {}", e)))?;
 
-        Ok(row.map(|r| r.into_user()))
+        match row {
+            Some(r) => Ok(Some(r.into_user().map_err(|e| AppError::database(e))?)),
+            None => Ok(None),
+        }
     }
 
     async fn find_by_username(&self, username: &Username, tenant_id: &TenantId) -> AppResult<Option<User>> {
@@ -49,7 +54,9 @@ impl UserRepository for PostgresUserRepository {
             SELECT id, username, email, password_hash, display_name, phone, avatar_url,
                    tenant_id, role_ids, status, language, timezone, two_factor_enabled,
                    two_factor_secret, last_login_at, email_verified, email_verified_at,
-                   failed_login_count, locked_until, last_password_change_at,
+                   phone_verified, phone_verified_at,
+                   failed_login_count, locked_until, lock_reason, last_failed_login_at,
+                   last_password_change_at,
                    created_at, created_by, updated_at, updated_by
             FROM users
             WHERE username = $1 AND tenant_id = $2
@@ -61,7 +68,10 @@ impl UserRepository for PostgresUserRepository {
         .await
         .map_err(|e| AppError::database(format!("Failed to find user: {}", e)))?;
 
-        Ok(row.map(|r| r.into_user()))
+        match row {
+            Some(r) => Ok(Some(r.into_user().map_err(|e| AppError::database(e))?)),
+            None => Ok(None),
+        }
     }
 
     async fn find_by_email(&self, email: &Email, tenant_id: &TenantId) -> AppResult<Option<User>> {
@@ -70,7 +80,9 @@ impl UserRepository for PostgresUserRepository {
             SELECT id, username, email, password_hash, display_name, phone, avatar_url,
                    tenant_id, role_ids, status, language, timezone, two_factor_enabled,
                    two_factor_secret, last_login_at, email_verified, email_verified_at,
-                   failed_login_count, locked_until, last_password_change_at,
+                   phone_verified, phone_verified_at,
+                   failed_login_count, locked_until, lock_reason, last_failed_login_at,
+                   last_password_change_at,
                    created_at, created_by, updated_at, updated_by
             FROM users
             WHERE email = $1 AND tenant_id = $2
@@ -82,7 +94,10 @@ impl UserRepository for PostgresUserRepository {
         .await
         .map_err(|e| AppError::database(format!("Failed to find user: {}", e)))?;
 
-        Ok(row.map(|r| r.into_user()))
+        match row {
+            Some(r) => Ok(Some(r.into_user().map_err(|e| AppError::database(e))?)),
+            None => Ok(None),
+        }
     }
 
     async fn save(&self, user: &User) -> AppResult<()> {
@@ -91,9 +106,11 @@ impl UserRepository for PostgresUserRepository {
             INSERT INTO users (id, username, email, password_hash, display_name, phone, avatar_url,
                               tenant_id, role_ids, status, language, timezone, two_factor_enabled,
                               two_factor_secret, last_login_at, email_verified, email_verified_at,
-                              failed_login_count, locked_until, last_password_change_at,
+                              phone_verified, phone_verified_at,
+                              failed_login_count, locked_until, lock_reason, last_failed_login_at,
+                              last_password_change_at,
                               created_at, created_by, updated_at, updated_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
             "#,
         )
         .bind(user.id.0)
@@ -113,8 +130,12 @@ impl UserRepository for PostgresUserRepository {
         .bind(user.last_login_at)
         .bind(user.email_verified)
         .bind(user.email_verified_at)
+        .bind(user.phone_verified)
+        .bind(user.phone_verified_at)
         .bind(user.failed_login_count)
         .bind(user.locked_until)
+        .bind(&user.lock_reason)
+        .bind(user.last_failed_login_at)
         .bind(user.last_password_change_at)
         .bind(user.audit_info.created_at)
         .bind(user.audit_info.created_by.as_ref().map(|u| u.0))
@@ -134,8 +155,9 @@ impl UserRepository for PostgresUserRepository {
                 username = $2, email = $3, password_hash = $4, display_name = $5, phone = $6,
                 avatar_url = $7, role_ids = $8, status = $9, language = $10, timezone = $11,
                 two_factor_enabled = $12, two_factor_secret = $13, last_login_at = $14,
-                email_verified = $15, email_verified_at = $16, failed_login_count = $17,
-                locked_until = $18, last_password_change_at = $19, updated_at = $20, updated_by = $21
+                email_verified = $15, email_verified_at = $16, phone_verified = $17, phone_verified_at = $18,
+                failed_login_count = $19, locked_until = $20, lock_reason = $21, last_failed_login_at = $22,
+                last_password_change_at = $23, updated_at = $24, updated_by = $25
             WHERE id = $1
             "#,
         )
@@ -155,8 +177,12 @@ impl UserRepository for PostgresUserRepository {
         .bind(user.last_login_at)
         .bind(user.email_verified)
         .bind(user.email_verified_at)
+        .bind(user.phone_verified)
+        .bind(user.phone_verified_at)
         .bind(user.failed_login_count)
         .bind(user.locked_until)
+        .bind(&user.lock_reason)
+        .bind(user.last_failed_login_at)
         .bind(user.last_password_change_at)
         .bind(user.audit_info.updated_at)
         .bind(user.audit_info.updated_by.as_ref().map(|u| u.0))
@@ -230,7 +256,9 @@ impl UserRepository for PostgresUserRepository {
             SELECT id, username, email, password_hash, display_name, phone, avatar_url,
                    tenant_id, role_ids, status, language, timezone, two_factor_enabled,
                    two_factor_secret, last_login_at, email_verified, email_verified_at,
-                   failed_login_count, locked_until, last_password_change_at,
+                   phone_verified, phone_verified_at,
+                   failed_login_count, locked_until, lock_reason, last_failed_login_at,
+                   last_password_change_at,
                    created_at, created_by, updated_at, updated_by
             FROM users
             WHERE tenant_id = $1
@@ -245,7 +273,8 @@ impl UserRepository for PostgresUserRepository {
         .await
         .map_err(|e| AppError::database(format!("Failed to list users: {}", e)))?;
 
-        let users = rows.into_iter().map(|r| r.into_user()).collect();
+        let users: Result<Vec<_>, _> = rows.into_iter().map(|r| r.into_user()).collect();
+        let users = users.map_err(|e| AppError::database(e))?;
 
         Ok((users, total.0))
     }
@@ -282,8 +311,12 @@ struct UserRow {
     last_login_at: Option<chrono::DateTime<chrono::Utc>>,
     email_verified: bool,
     email_verified_at: Option<chrono::DateTime<chrono::Utc>>,
+    phone_verified: bool,
+    phone_verified_at: Option<chrono::DateTime<chrono::Utc>>,
     failed_login_count: i32,
     locked_until: Option<chrono::DateTime<chrono::Utc>>,
+    lock_reason: Option<String>,
+    last_failed_login_at: Option<chrono::DateTime<chrono::Utc>>,
     last_password_change_at: Option<chrono::DateTime<chrono::Utc>>,
     created_at: chrono::DateTime<chrono::Utc>,
     created_by: Option<Uuid>,
@@ -292,11 +325,17 @@ struct UserRow {
 }
 
 impl UserRow {
-    fn into_user(self) -> User {
-        User {
+    fn into_user(self) -> Result<User, String> {
+        let username = Username::new(&self.username)
+            .map_err(|e| format!("Invalid username in database for user {}: {}", self.id, e))?;
+
+        let email = Email::new(&self.email)
+            .map_err(|e| format!("Invalid email in database for user {}: {}", self.id, e))?;
+
+        Ok(User {
             id: UserId::from_uuid(self.id),
-            username: Username::new(&self.username).unwrap(),
-            email: Email::new(&self.email).unwrap(),
+            username,
+            email,
             password_hash: HashedPassword::from_hash(self.password_hash),
             display_name: self.display_name,
             phone: self.phone,
@@ -316,12 +355,12 @@ impl UserRow {
             last_login_at: self.last_login_at,
             email_verified: self.email_verified,
             email_verified_at: self.email_verified_at,
-            phone_verified: false, // Default to false for now
-            phone_verified_at: None, // Default to None for now
+            phone_verified: self.phone_verified,
+            phone_verified_at: self.phone_verified_at,
             failed_login_count: self.failed_login_count,
             locked_until: self.locked_until,
-            lock_reason: None, // Missing from DB row, maybe added later?
-            last_failed_login_at: None, // Missing from DB row
+            lock_reason: self.lock_reason,
+            last_failed_login_at: self.last_failed_login_at,
             last_password_change_at: self.last_password_change_at,
             audit_info: cuba_common::AuditInfo {
                 created_at: self.created_at,
@@ -329,6 +368,6 @@ impl UserRow {
                 updated_at: self.updated_at,
                 updated_by: self.updated_by.map(UserId::from_uuid),
             },
-        }
+        })
     }
 }

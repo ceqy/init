@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -29,13 +30,13 @@ impl CommandHandler<AuthorizeCommand> for AuthorizeHandler {
             return Err(AppError::validation("Only 'code' response type is supported"));
         }
 
-        let client_id = OAuthClientId::from_string(&command.client_id)
+        let client_id = OAuthClientId::from_str(&command.client_id)
             .map_err(|e| AppError::validation(format!("Invalid client_id: {}", e)))?;
 
-        let user_id = UserId::from_string(&command.user_id)
+        let user_id = UserId::from_str(&command.user_id)
             .map_err(|e| AppError::validation(format!("Invalid user_id: {}", e)))?;
 
-        let tenant_id = TenantId::from_string(&command.tenant_id)
+        let tenant_id = TenantId::from_str(&command.tenant_id)
             .map_err(|e| AppError::validation(format!("Invalid tenant_id: {}", e)))?;
 
         let code = self

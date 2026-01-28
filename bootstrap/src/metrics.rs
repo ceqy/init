@@ -95,6 +95,54 @@ pub fn set_active_connections(pool_name: &str, count: usize) {
     gauge!("connection_pool_active", &labels).set(count as f64);
 }
 
+/// 记录连接获取等待时间
+pub fn record_connection_acquire_duration(pool_name: &str, duration_ms: f64, success: bool) {
+    let labels = [
+        ("pool", pool_name.to_string()),
+        ("success", success.to_string()),
+    ];
+    histogram!("connection_acquire_duration_ms", &labels).record(duration_ms);
+}
+
+/// 记录连接获取失败
+pub fn record_connection_acquire_failure(pool_name: &str, reason: &str) {
+    let labels = [
+        ("pool", pool_name.to_string()),
+        ("reason", reason.to_string()),
+    ];
+    counter!("connection_acquire_failures_total", &labels).increment(1);
+}
+
+/// 记录连接超时
+pub fn record_connection_timeout(pool_name: &str) {
+    let labels = [("pool", pool_name.to_string())];
+    counter!("connection_timeouts_total", &labels).increment(1);
+}
+
+/// 设置连接池使用率
+pub fn set_pool_utilization(pool_name: &str, utilization: f64) {
+    let labels = [("pool", pool_name.to_string())];
+    gauge!("connection_pool_utilization", &labels).set(utilization);
+}
+
+/// 记录事件发布
+pub fn record_event_publish(event_type: &str, publisher: &str, success: bool, duration_ms: f64) {
+    let labels = [
+        ("event_type", event_type.to_string()),
+        ("publisher", publisher.to_string()),
+        ("success", success.to_string()),
+    ];
+    counter!("event_publish_total", &labels).increment(1);
+    histogram!("event_publish_duration_ms", &labels).record(duration_ms);
+}
+
+/// 记录 Outbox 处理
+pub fn record_outbox_processing(batch_size: usize, processed: usize, failed: usize) {
+    gauge!("outbox_batch_size").set(batch_size as f64);
+    counter!("outbox_messages_processed_total").increment(processed as u64);
+    counter!("outbox_messages_failed_total").increment(failed as u64);
+}
+
 /// 请求计时器
 pub struct RequestTimer {
     start: Instant,
@@ -208,6 +256,14 @@ pub fn record_postgres_pool_metrics(status: &PoolStatus) {
     gauge!("postgres_pool_size", &labels).set(status.size as f64);
     gauge!("postgres_pool_idle", &labels).set(status.idle as f64);
     gauge!("postgres_pool_active", &labels).set(status.active as f64);
+
+    // 计算使用率百分比
+    let utilization = if status.size > 0 {
+        (status.active as f64 / status.size as f64) * 100.0
+    } else {
+        0.0
+    };
+    set_pool_utilization("postgres", utilization);
 }
 
 /// 记录 Redis 连接状态

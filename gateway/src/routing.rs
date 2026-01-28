@@ -35,7 +35,8 @@ pub struct ServiceCheck {
 }
 
 async fn readiness_check() -> Json<ReadinessResponse> {
-    // TODO: 检查各个服务的连接状态
+    // 简化的就绪检查，实际生产环境应该检查各个服务的连接状态
+    // 可以通过 gRPC health check 协议来实现
     Json(ReadinessResponse {
         ready: true,
         checks: vec![

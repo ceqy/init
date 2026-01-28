@@ -7,8 +7,6 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::infrastructure::events::IamDomainEvent;
-
 /// 存储的领域事件
 #[derive(Debug, Clone)]
 pub struct StoredEvent {
