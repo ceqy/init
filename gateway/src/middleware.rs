@@ -156,7 +156,7 @@ mod tests {
     #[tokio::test]
     async fn test_auth_middleware_valid_token() {
         let secret = "test_secret";
-        let token_service = TokenService::new(secret, 3600, 3600);
+        let token_service = TokenService::new(secret, 3600, 3600, "cuba-iam".to_string(), "cuba-api".to_string());
         let user_id = UserId::new();
         let tenant_id = TenantId::new();
         let token = token_service
@@ -181,7 +181,7 @@ mod tests {
     #[tokio::test]
     async fn test_auth_middleware_invalid_token() {
         let secret = "test_secret";
-        let token_service = TokenService::new(secret, 3600, 3600);
+        let token_service = TokenService::new(secret, 3600, 3600, "cuba-iam".to_string(), "cuba-api".to_string());
         
         let app = Router::new()
             .route("/", get(handler))
@@ -201,7 +201,7 @@ mod tests {
     #[tokio::test]
     async fn test_auth_middleware_missing_header() {
         let secret = "test_secret";
-        let token_service = TokenService::new(secret, 3600, 3600);
+        let token_service = TokenService::new(secret, 3600, 3600, "cuba-iam".to_string(), "cuba-api".to_string());
         
         let app = Router::new()
             .route("/", get(handler))
@@ -247,7 +247,7 @@ mod tests {
     #[tokio::test]
     async fn test_auth_middleware_wrong_secret() {
         let secret = "correct_secret";
-        let token_service = TokenService::new(secret, 3600, 3600);
+        let token_service = TokenService::new(secret, 3600, 3600, "cuba-iam".to_string(), "cuba-api".to_string());
         
         let wrong_secret_service = TokenService::new("wrong_secret", 3600, 3600);
         let user_id = UserId::new();

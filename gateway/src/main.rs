@@ -10,8 +10,6 @@ mod ws;
 
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use redis::AsyncCommands;
-use secrecy::ExposeSecret;
 
 use axum::{middleware as axum_middleware, Router};
 use cuba_auth_core::TokenService;
@@ -47,6 +45,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &config.jwt_secret,
         3600,  // access_token_expires_in: 1 小时
         86400 * 7,  // refresh_token_expires_in: 7 天
+        "cuba-gateway".to_string(),  // issuer
+        "cuba-api".to_string(),  // audience
     );
 
     // 初始化 gRPC 客户端
@@ -76,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
         
-        // 订阅
+        // 订阅 - MultiplexedConnection 不支持 pubsub，需要使用普通连接
         let mut con = match client.get_async_connection().await {
             Ok(c) => c,
             Err(e) => {

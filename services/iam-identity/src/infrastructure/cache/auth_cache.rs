@@ -1,6 +1,6 @@
 //! 认证缓存实现
 //!
-//! 提供 Token 黑名单和用户信息缓存
+//! 提供 Token 黑名单和用户信息缓存，使用原子操作防止竞态条件
 
 use async_trait::async_trait;
 use cuba_errors::AppResult;
@@ -71,9 +71,14 @@ impl RedisAuthCache {
 impl AuthCache for RedisAuthCache {
     async fn blacklist_token(&self, jti: &str, ttl_secs: u64) -> AppResult<()> {
         let key = Self::blacklist_key(jti);
-        self.cache
-            .set(&key, "1", Some(Duration::from_secs(ttl_secs)))
-            .await
+
+        // 使用 SETNX 确保原子性，防止覆盖已存在的黑名单条目
+        // 如果键已存在（已被加入黑名单），返回 false 但不报错
+        let _ = self.cache
+            .set_nx(&key, "1", Duration::from_secs(ttl_secs))
+            .await?;
+
+        Ok(())
     }
 
     async fn is_token_blacklisted(&self, jti: &str) -> AppResult<bool> {
@@ -112,9 +117,21 @@ impl AuthCache for RedisAuthCache {
         let key = Self::user_blacklist_key(user_id);
         // 存储当前时间戳，用于判断 Token 是否在此时间之前签发
         let timestamp = chrono::Utc::now().timestamp().to_string();
-        self.cache
-            .set(&key, &timestamp, Some(Duration::from_secs(ttl_secs)))
-            .await
+
+        // 使用 SETNX 确保原子性
+        // 如果键已存在，不覆盖（保留最早的撤销时间戳）
+        let set = self.cache
+            .set_nx(&key, &timestamp, Duration::from_secs(ttl_secs))
+            .await?;
+
+        if !set {
+            tracing::debug!(
+                user_id = %user_id,
+                "User tokens already blacklisted, keeping existing timestamp"
+            );
+        }
+
+        Ok(())
     }
 
     async fn is_user_tokens_blacklisted(&self, user_id: &str) -> AppResult<bool> {

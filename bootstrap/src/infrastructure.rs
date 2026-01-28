@@ -77,6 +77,8 @@ impl Infrastructure {
             config.jwt.secret.expose_secret(),
             config.jwt.expires_in as i64,
             config.jwt.refresh_expires_in as i64,
+            "cuba-iam".to_string(), // issuer
+            "cuba-api".to_string(), // audience
         ));
 
         // 4. 创建 Kafka Producer（可选，带重试）
