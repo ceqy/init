@@ -5,9 +5,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     let proto_files = &[
-        "../../proto/iam/rbac.proto",
-        "../../proto/iam/policy.proto",
-        "../../proto/iam/authorization.proto",
+        "../../proto/iam/v1/rbac.proto",
+        "../../proto/iam/v1/policy.proto",
+        "../../proto/iam/v1/authorization.proto",
     ];
 
     tonic_build::configure()

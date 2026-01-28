@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package cuba.iam.user;
+package cuba.iam.user.v1;
 
-option go_package = "github.com/cuba-erp/api/iam/user";
+option go_package = "github.com/cuba-erp/api/iam/user/v1";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
