@@ -29,7 +29,17 @@ fn main() {
         .compile_protos(&["../../proto/iam/oauth.proto"], &["../../proto"])
         .expect("Failed to compile oauth.proto");
 
+    // 编译 audit.proto
+    tonic_build::configure()
+        .build_server(true)
+        .build_client(false)
+        .file_descriptor_set_path("src/api/grpc/proto_gen/audit_descriptor.bin")
+        .out_dir("src/api/grpc/proto_gen")
+        .compile_protos(&["../../proto/iam/audit.proto"], &["../../proto"])
+        .expect("Failed to compile audit.proto");
+
     println!("cargo:rerun-if-changed=../../proto/iam/auth.proto");
     println!("cargo:rerun-if-changed=../../proto/iam/user.proto");
     println!("cargo:rerun-if-changed=../../proto/iam/oauth.proto");
+    println!("cargo:rerun-if-changed=../../proto/iam/audit.proto");
 }

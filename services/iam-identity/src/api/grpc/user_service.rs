@@ -27,10 +27,14 @@ use super::user_proto::{
     self, user_service_server::UserService, *,
 };
 
+use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
+use chrono::Utc;
+
 /// UserService 实现
 pub struct UserServiceImpl {
     user_repo: Arc<dyn UserRepository>,
     token_service: Arc<TokenService>,
+    event_publisher: Arc<dyn EventPublisher>,
     send_email_verification_handler: Arc<SendEmailVerificationHandler>,
     verify_email_handler: Arc<VerifyEmailHandler>,
     send_phone_verification_handler: Arc<SendPhoneVerificationHandler>,
@@ -41,6 +45,7 @@ impl UserServiceImpl {
     pub fn new(
         user_repo: Arc<dyn UserRepository>,
         token_service: Arc<TokenService>,
+        event_publisher: Arc<dyn EventPublisher>,
         send_email_verification_handler: Arc<SendEmailVerificationHandler>,
         verify_email_handler: Arc<VerifyEmailHandler>,
         send_phone_verification_handler: Arc<SendPhoneVerificationHandler>,
@@ -49,6 +54,7 @@ impl UserServiceImpl {
         Self {
             user_repo,
             token_service,
+            event_publisher,
             send_email_verification_handler,
             verify_email_handler,
             send_phone_verification_handler,
@@ -181,6 +187,15 @@ impl UserService for UserServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        // 发布用户创建事件
+        self.event_publisher.publish(IamDomainEvent::UserCreated {
+            user_id: user.id.clone(),
+            tenant_id: user.tenant_id.clone(),
+            username: user.username.as_str().to_string(),
+            email: user.email.as_str().to_string(),
+            timestamp: Utc::now(),
+        }).await;
+
         info!("User registered successfully: {}", user.id);
 
         Ok(Response::new(RegisterResponse {
@@ -279,23 +294,23 @@ impl UserService for UserServiceImpl {
         }
 
         if !req.display_name.is_empty() {
-            user.display_name = Some(req.display_name);
+            user.display_name = Some(req.display_name.clone());
         }
 
         if !req.phone.is_empty() {
-            user.phone = Some(req.phone);
+            user.phone = Some(req.phone.clone());
         }
 
         if !req.avatar_url.is_empty() {
-            user.avatar_url = Some(req.avatar_url);
+            user.avatar_url = Some(req.avatar_url.clone());
         }
 
         if !req.language.is_empty() {
-            user.language = req.language;
+            user.language = req.language.clone();
         }
 
         if !req.timezone.is_empty() {
-            user.timezone = req.timezone;
+            user.timezone = req.timezone.clone();
         }
 
         if !req.status.is_empty() {
@@ -312,6 +327,27 @@ impl UserService for UserServiceImpl {
             .update(&user)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 收集更新的字段作为审计记录
+        let mut updated_fields = Vec::new();
+        if !req.username.is_empty() { updated_fields.push("username".to_string()); }
+        if !req.email.is_empty() { updated_fields.push("email".to_string()); }
+        if !req.display_name.is_empty() { updated_fields.push("display_name".to_string()); }
+        if !req.phone.is_empty() { updated_fields.push("phone".to_string()); }
+        if !req.avatar_url.is_empty() { updated_fields.push("avatar_url".to_string()); }
+        if !req.language.is_empty() { updated_fields.push("language".to_string()); }
+        if !req.timezone.is_empty() { updated_fields.push("timezone".to_string()); }
+        if !req.status.is_empty() { updated_fields.push("status".to_string()); }
+
+        // 发布用户更新事件
+        if !updated_fields.is_empty() {
+            self.event_publisher.publish(IamDomainEvent::UserUpdated {
+                user_id: user.id.clone(),
+                tenant_id: user.tenant_id.clone(),
+                updated_fields,
+                timestamp: Utc::now(),
+            }).await;
+        }
 
         Ok(Response::new(UpdateUserResponse {
             user: Some(self.user_to_proto(&user)),
@@ -345,7 +381,7 @@ impl UserService for UserServiceImpl {
 
         // 只更新个人资料相关字段
         if !req.display_name.is_empty() {
-            user.display_name = Some(req.display_name);
+            user.display_name = Some(req.display_name.clone());
         }
 
         if !req.email.is_empty() {
@@ -354,25 +390,44 @@ impl UserService for UserServiceImpl {
         }
 
         if !req.phone.is_empty() {
-            user.phone = Some(req.phone);
+            user.phone = Some(req.phone.clone());
         }
 
         if !req.avatar_url.is_empty() {
-            user.avatar_url = Some(req.avatar_url);
+            user.avatar_url = Some(req.avatar_url.clone());
         }
 
         if !req.language.is_empty() {
-            user.language = req.language;
+            user.language = req.language.clone();
         }
 
         if !req.timezone.is_empty() {
-            user.timezone = req.timezone;
+            user.timezone = req.timezone.clone();
         }
 
         self.user_repo
             .update(&user)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 收集更新的字段
+        let mut updated_fields = Vec::new();
+        if !req.display_name.is_empty() { updated_fields.push("display_name".to_string()); }
+        if !req.email.is_empty() { updated_fields.push("email".to_string()); }
+        if !req.phone.is_empty() { updated_fields.push("phone".to_string()); }
+        if !req.avatar_url.is_empty() { updated_fields.push("avatar_url".to_string()); }
+        if !req.language.is_empty() { updated_fields.push("language".to_string()); }
+        if !req.timezone.is_empty() { updated_fields.push("timezone".to_string()); }
+
+        // 发布用户资料更新事件
+        if !updated_fields.is_empty() {
+            self.event_publisher.publish(IamDomainEvent::UserProfileUpdated {
+                user_id: user.id.clone(),
+                tenant_id: user.tenant_id.clone(),
+                updated_fields,
+                timestamp: Utc::now(),
+            }).await;
+        }
 
         Ok(Response::new(UpdateProfileResponse {
             user: Some(self.user_to_proto(&user)),

@@ -50,6 +50,8 @@ webauthn-rs = { workspace = true }
 webauthn-rs-proto = { workspace = true }
 base64 = { workspace = true }
 serde_cbor = { workspace = true }
+redis = { workspace = true, features = ["tokio-comp", "aio"] }
+secrecy.workspace = true
 
 [build-dependencies]
 tonic-build = { workspace = true }

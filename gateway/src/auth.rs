@@ -6,7 +6,7 @@ use axum::{
     routing::post,
     Router,
 };
-use crate::middleware::AuthClaims;
+use crate::middleware::AuthToken;
 use crate::grpc::{self, GrpcClients};
 use serde::{Deserialize, Serialize};
 use tonic::{metadata::MetadataValue, Request};
@@ -260,32 +260,24 @@ pub struct UserResponse {
 
 /// 获取当前用户信息
 ///
-/// 需要认证（使用 AuthClaims 提取器）
+/// 需要认证（使用 AuthToken 提取器）
 pub async fn get_current_user(
     State(clients): State<GrpcClients>,
-    AuthClaims(claims): AuthClaims,
+    AuthToken(auth_context): AuthToken,
 ) -> Result<Json<UserResponse>, (StatusCode, String)> {
     debug!(
-        user_id = %claims.sub,
+        user_id = %auth_context.claims.sub,
         "Getting current user information"
     );
 
-    let mut grpc_req = Request::new(grpc::user::GetUserRequest {
-        user_id: claims.sub.clone(),
+    // 使用 GetCurrentUser gRPC 接口，传递 access_token
+    let grpc_req = Request::new(grpc::user::GetCurrentUserRequest {
+        access_token: auth_context.token,
     });
 
-    // 添加 tenant-id metadata
-    grpc_req.metadata_mut().insert(
-        "tenant-id",
-        MetadataValue::try_from(&claims.tenant_id).map_err(|e| {
-            error!("Failed to create metadata: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string())
-        })?,
-    );
-
     let mut client = clients.user.clone();
-    let response = client.get_user(grpc_req).await.map_err(|e| {
-        error!("gRPC get_user failed: {}", e);
+    let response = client.get_current_user(grpc_req).await.map_err(|e| {
+        error!("gRPC get_current_user failed: {}", e);
         let status = match e.code() {
             tonic::Code::NotFound => StatusCode::NOT_FOUND,
             tonic::Code::Unauthenticated => StatusCode::UNAUTHORIZED,
@@ -314,3 +306,4 @@ pub async fn get_current_user(
         },
     }))
 }
+

@@ -11,6 +11,15 @@ use tracing::{debug, warn, info};
 
 
 
+/// 认证上下文
+///
+/// 包含已验证的 Claims 和原始 token
+#[derive(Clone, Debug)]
+pub struct AuthContext {
+    pub claims: Claims,
+    pub token: String,
+}
+
 /// 认证 Claims 提取器
 ///
 /// 用于从请求中获取已验证的 Claims
@@ -29,12 +38,38 @@ where
     ) -> Result<Self, Self::Rejection> {
         parts
             .extensions
-            .get::<Claims>()
-            .cloned()
-            .map(AuthClaims)
+            .get::<AuthContext>()
+            .map(|ctx| AuthClaims(ctx.claims.clone()))
             .ok_or((
                 StatusCode::UNAUTHORIZED,
                 "Missing claims in request extensions (auth_middleware may not have run)",
+            ))
+    }
+}
+
+/// 认证上下文提取器
+///
+/// 用于从请求中获取 Claims 和原始 token
+pub struct AuthToken(pub AuthContext);
+
+impl<S> FromRequestParts<S> for AuthToken
+where
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, &'static str);
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<AuthContext>()
+            .cloned()
+            .map(AuthToken)
+            .ok_or((
+                StatusCode::UNAUTHORIZED,
+                "Missing auth context in request extensions",
             ))
     }
 }
@@ -65,9 +100,13 @@ pub async fn auth_middleware(
                         "Token validated successfully"
                     );
 
-                    // 将 claims 注入到请求扩展中
+                    // 将 AuthContext (claims + token) 注入到请求扩展中
+                    let auth_context = AuthContext {
+                        claims,
+                        token: token.to_string(),
+                    };
                     let mut request = request;
-                    request.extensions_mut().insert(claims);
+                    request.extensions_mut().insert(auth_context);
 
                     Ok(next.run(request).await)
                 }

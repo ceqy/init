@@ -16,9 +16,11 @@ use std::sync::Arc;
 
 use api::grpc::{
     auth_service::AuthServiceImpl,
+    audit_service::AuditServiceImpl,
     oauth_service::OAuthServiceImpl,
     user_service::UserServiceImpl,
     auth_proto::auth_service_server::AuthServiceServer,
+    audit_proto::audit_service_server::AuditServiceServer,
     oauth_proto::o_auth_service_server::OAuthServiceServer,
     user_proto::user_service_server::UserServiceServer,
 };
@@ -28,6 +30,7 @@ use application::handlers::user::{
     SendEmailVerificationHandler, SendPhoneVerificationHandler, VerifyEmailHandler,
     VerifyPhoneHandler,
 };
+use application::listeners::NotificationListener;
 use domain::repositories::auth::{
     BackupCodeRepository, PasswordResetRepository, SessionRepository, WebAuthnCredentialRepository,
 };
@@ -50,8 +53,12 @@ use infrastructure::persistence::oauth::{
 use infrastructure::persistence::user::{
     PostgresEmailVerificationRepository, PostgresPhoneVerificationRepository, PostgresUserRepository,
 };
-use infrastructure::events::{EventPublisher, LoggingEventPublisher};
+use infrastructure::events::{
+    EventPublisher, PostgresEventStore, PostgresEventStoreRepository, EventStoreRepository,
+    BroadcastEventPublisher, RedisEventPublisher,
+};
 use async_trait::async_trait;
+use secrecy::ExposeSecret;
 use cuba_adapter_email::{EmailClient, EmailSender};
 use cuba_bootstrap::{run_with_services, Infrastructure};
 
@@ -81,8 +88,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let cache: Arc<dyn CachePort> = Arc::new(infra.redis_cache());
         let auth_cache: Arc<dyn AuthCache> = Arc::new(RedisAuthCache::new(cache));
 
-        // 组装事件发布器
-        let event_publisher: Arc<dyn EventPublisher> = Arc::new(LoggingEventPublisher);
+        // 组装事件存储 (持久化到 PostgreSQL)
+        let event_store_publisher: Arc<dyn EventPublisher> = Arc::new(PostgresEventStore::new(pool.clone()));
 
         // 组装 TOTP 服务
         let totp_service = Arc::new(TotpService::new("Cuba ERP".to_string()));
@@ -100,6 +107,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         let email_client = Arc::new(EmailClient::new(email_config));
         let email_sender: Arc<dyn EmailSender> = email_client;
+
+        // 组装事件监听器
+        let notification_listener: Arc<dyn EventPublisher> = Arc::new(NotificationListener::new(email_sender.clone()));
+
+        // 组装 Redis 事件发布器
+        let redis_event_publisher = RedisEventPublisher::new(config.redis.url.expose_secret(), "domain_events")
+            .map_err(|e| cuba_errors::AppError::internal(format!("Failed to connect to Redis: {}", e)))?;
+        let redis_event_publisher: Arc<dyn EventPublisher> = Arc::new(redis_event_publisher);
+
+        // 组装广播事件发布器（组合 EventStore, Listener, Redis）
+        let event_publisher: Arc<dyn EventPublisher> = Arc::new(BroadcastEventPublisher::new(vec![
+            event_store_publisher,
+            notification_listener,
+            redis_event_publisher,
+        ]));
 
         // 密码重置配置
         let password_reset_config = config.password_reset.clone();
@@ -138,6 +160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             webauthn_service,
             email_sender.clone(),
             auth_cache,
+            event_publisher.clone(),
             config.jwt.refresh_expires_in as i64,
             password_reset_config,
         );
@@ -180,6 +203,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let user_service = UserServiceImpl::new(
             user_repo.clone(),
             token_service.clone(),
+            event_publisher.clone(),
             send_email_verification_handler,
             verify_email_handler,
             send_phone_verification_handler,
@@ -225,13 +249,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .register_encoded_file_descriptor_set(api::grpc::auth_proto::FILE_DESCRIPTOR_SET)
             .register_encoded_file_descriptor_set(api::grpc::user_proto::FILE_DESCRIPTOR_SET)
             .register_encoded_file_descriptor_set(api::grpc::oauth_proto::FILE_DESCRIPTOR_SET)
+            .register_encoded_file_descriptor_set(api::grpc::audit_proto::FILE_DESCRIPTOR_SET)
             .build_v1()
             .map_err(|e| cuba_errors::AppError::internal(format!("Failed to build reflection service: {}", e)))?;
+
+        // 组装 AuditService
+        let event_store_repo: Arc<dyn EventStoreRepository> = Arc::new(PostgresEventStoreRepository::new(pool.clone()));
+        let audit_service = AuditServiceImpl::new(event_store_repo);
 
         server
             .add_service(AuthServiceServer::new(auth_service))
             .add_service(UserServiceServer::new(user_service))
             .add_service(OAuthServiceServer::new(oauth_service_impl))
+            .add_service(AuditServiceServer::new(audit_service))
             .add_service(reflection_service)
             .serve_with_shutdown(addr, cuba_bootstrap::shutdown_signal())
             .await

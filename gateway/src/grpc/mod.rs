@@ -8,8 +8,13 @@ pub mod user {
     tonic::include_proto!("cuba.iam.user");
 }
 
+pub mod audit {
+    tonic::include_proto!("cuba.iam.audit");
+}
+
 use auth::auth_service_client::AuthServiceClient;
 use user::user_service_client::UserServiceClient;
+use audit::audit_service_client::AuditServiceClient;
 use tonic::transport::Channel;
 
 /// gRPC 客户端集合
@@ -17,6 +22,7 @@ use tonic::transport::Channel;
 pub struct GrpcClients {
     pub auth: AuthServiceClient<Channel>,
     pub user: UserServiceClient<Channel>,
+    pub audit: AuditServiceClient<Channel>,
 }
 
 impl GrpcClients {
@@ -28,7 +34,8 @@ impl GrpcClients {
 
         Ok(Self {
             auth: AuthServiceClient::new(channel.clone()),
-            user: UserServiceClient::new(channel),
+            user: UserServiceClient::new(channel.clone()),
+            audit: AuditServiceClient::new(channel),
         })
     }
 }

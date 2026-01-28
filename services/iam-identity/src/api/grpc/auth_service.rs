@@ -24,6 +24,8 @@ use cuba_adapter_email::EmailSender;
 use super::auth_proto::{self, auth_service_server::AuthService};
 use super::auth_proto::*;
 
+use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
+
 
 
 /// AuthService 实现
@@ -37,6 +39,7 @@ pub struct AuthServiceImpl {
     webauthn_service: Arc<WebAuthnService>,
     email_sender: Arc<dyn EmailSender>,
     auth_cache: Arc<dyn AuthCache>,
+    event_publisher: Arc<dyn EventPublisher>,
     refresh_token_expires_in: i64,
     password_reset_config: cuba_config::PasswordResetConfig,
 }
@@ -53,6 +56,7 @@ impl AuthServiceImpl {
         webauthn_service: Arc<WebAuthnService>,
         email_sender: Arc<dyn EmailSender>,
         auth_cache: Arc<dyn AuthCache>,
+        event_publisher: Arc<dyn EventPublisher>,
         refresh_token_expires_in: i64,
         password_reset_config: cuba_config::PasswordResetConfig,
     ) -> Self {
@@ -66,6 +70,7 @@ impl AuthServiceImpl {
             webauthn_service,
             email_sender,
             auth_cache,
+            event_publisher,
             refresh_token_expires_in,
             password_reset_config,
         }
@@ -270,6 +275,23 @@ impl AuthService for AuthServiceImpl {
         updated_user.record_login();
         let _ = self.user_repo.update(&updated_user).await;
 
+        // 10. 发布登录事件
+        self.event_publisher.publish(IamDomainEvent::UserLoggedIn {
+            user_id: user.id.clone(),
+            tenant_id: user.tenant_id.clone(),
+            ip_address: if req.ip_address.is_empty() { None } else { Some(req.ip_address.clone()) },
+            user_agent: None,
+            timestamp: Utc::now(),
+        }).await;
+
+        // 11. 发布会话创建事件
+        self.event_publisher.publish(IamDomainEvent::SessionCreated {
+            session_id: session.id.0.to_string(),
+            user_id: user.id.clone(),
+            tenant_id: user.tenant_id.clone(),
+            timestamp: Utc::now(),
+        }).await;
+
         tracing::info!(username = %req.username, user_id = %user.id.0, "Login successful");
 
         Ok(Response::new(LoginResponse {
@@ -326,6 +348,14 @@ impl AuthService for AuthServiceImpl {
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
 
+            // 发布登出事件
+            self.event_publisher.publish(IamDomainEvent::UserLoggedOut {
+                user_id: user_id.clone(),
+                tenant_id: tenant_id.clone(),
+                session_id: "all".to_string(),
+                timestamp: Utc::now(),
+            }).await;
+
             tracing::info!(user_id = %user_id.0, "All sessions revoked and tokens blacklisted");
         } else {
             // 只将当前 Token 加入黑名单
@@ -333,6 +363,15 @@ impl AuthService for AuthServiceImpl {
                 .blacklist_token(&claims.jti, ttl_secs)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
+
+            // 发布登出事件
+            self.event_publisher.publish(IamDomainEvent::UserLoggedOut {
+                user_id: user_id.clone(),
+                tenant_id: tenant_id.clone(),
+                session_id: claims.jti.clone(),
+                timestamp: Utc::now(),
+            }).await;
+
             tracing::info!(jti = %claims.jti, "Token blacklisted");
         }
 
@@ -527,6 +566,13 @@ impl AuthService for AuthServiceImpl {
             .invalidate_user_cache(&req.user_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 9. 发布密码变更事件
+        self.event_publisher.publish(IamDomainEvent::PasswordChanged {
+            user_id: user_id.clone(),
+            tenant_id: tenant_id.clone(),
+            timestamp: Utc::now(),
+        }).await;
 
         tracing::info!(user_id = %req.user_id, "Password changed successfully, all tokens invalidated");
 
@@ -827,6 +873,14 @@ impl AuthService for AuthServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        // 发布会话撤销事件
+        self.event_publisher.publish(IamDomainEvent::SessionRevoked {
+            session_id: req.session_id.clone(),
+            user_id: session.user_id.clone(),
+            tenant_id: tenant_id.clone(),
+            timestamp: Utc::now(),
+        }).await;
+
         tracing::info!(session_id = %req.session_id, "Session revoked");
 
         Ok(Response::new(RevokeSessionResponse { success: true }))
@@ -908,6 +962,14 @@ impl AuthService for AuthServiceImpl {
                 .update(&user)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
+
+            // 10. 发布 2FA 启用事件
+            self.event_publisher.publish(IamDomainEvent::TwoFactorEnabled {
+                user_id: user_id.clone(),
+                tenant_id: tenant_id.clone(),
+                method: "TOTP".to_string(),
+                timestamp: Utc::now(),
+            }).await;
 
             tracing::info!(user_id = %req.user_id, "2FA enabled successfully");
 
@@ -1077,6 +1139,13 @@ impl AuthService for AuthServiceImpl {
             .delete_by_user_id(&user_id, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 6. 发布 2FA 禁用事件
+        self.event_publisher.publish(IamDomainEvent::TwoFactorDisabled {
+            user_id: user_id.clone(),
+            tenant_id: tenant_id.clone(),
+            timestamp: Utc::now(),
+        }).await;
 
         tracing::info!(user_id = %req.user_id, "2FA disabled successfully");
 

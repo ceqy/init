@@ -66,6 +66,18 @@ pub enum IamDomainEvent {
         tenant_id: TenantId,
         timestamp: DateTime<Utc>,
     },
+    UserUpdated {
+        user_id: UserId,
+        tenant_id: TenantId,
+        updated_fields: Vec<String>,
+        timestamp: DateTime<Utc>,
+    },
+    UserProfileUpdated {
+        user_id: UserId,
+        tenant_id: TenantId,
+        updated_fields: Vec<String>,
+        timestamp: DateTime<Utc>,
+    },
 }
 
 impl IamDomainEvent {
@@ -80,6 +92,8 @@ impl IamDomainEvent {
             Self::OAuthClientCreated { .. } => "OAuthClientCreated",
             Self::SessionCreated { .. } => "SessionCreated",
             Self::SessionRevoked { .. } => "SessionRevoked",
+            Self::UserUpdated { .. } => "UserUpdated",
+            Self::UserProfileUpdated { .. } => "UserProfileUpdated",
         }
     }
 
@@ -90,7 +104,9 @@ impl IamDomainEvent {
             | Self::UserLoggedOut { .. }
             | Self::PasswordChanged { .. }
             | Self::TwoFactorEnabled { .. }
-            | Self::TwoFactorDisabled { .. } => "User",
+            | Self::TwoFactorDisabled { .. }
+            | Self::UserUpdated { .. }
+            | Self::UserProfileUpdated { .. } => "User",
             Self::OAuthClientCreated { .. } => "OAuthClient",
             Self::SessionCreated { .. }
             | Self::SessionRevoked { .. } => "Session",
@@ -107,7 +123,9 @@ impl IamDomainEvent {
             | Self::TwoFactorDisabled { timestamp, .. }
             | Self::OAuthClientCreated { timestamp, .. }
             | Self::SessionCreated { timestamp, .. }
-            | Self::SessionRevoked { timestamp, .. } => *timestamp,
+            | Self::SessionRevoked { timestamp, .. } 
+            | Self::UserUpdated { timestamp, .. }
+            | Self::UserProfileUpdated { timestamp, .. } => *timestamp,
         }
     }
 }

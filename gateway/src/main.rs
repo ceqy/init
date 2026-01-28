@@ -1,5 +1,6 @@
 //! Cuba ERP API Gateway
 
+mod audit;
 mod auth;
 mod config;
 mod grpc;
@@ -74,6 +75,7 @@ fn create_app(state: AppState) -> Router {
     // 受保护的路由（需要认证）
     let protected_routes = Router::new()
         .route("/api/auth/me", axum::routing::get(auth::get_current_user))
+        .nest("/api/audit", audit::audit_routes())
         .route_layer(axum_middleware::from_fn_with_state(
             state.token_service.clone(),
             middleware::auth_middleware,
