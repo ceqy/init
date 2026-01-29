@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iam-access
+  namespace: cuba-system
+  labels:
+    app: iam-access
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: iam-access
+  template:
+    metadata:
+      labels:
+        app: iam-access
+    spec:
+      containers:
+        - name: iam-access
+          image: cuba-iam-access:latest # 修改为您的私有仓库地址
+          ports:
+            - containerPort: 50051
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: database-url
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+          livenessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iam-access
+  namespace: cuba-system
+spec:
+  selector:
+    app: iam-access
+  ports:
+    - protocol: TCP
+      port: 50051
+      targetPort: 50051
+  type: ClusterIP

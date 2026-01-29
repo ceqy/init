@@ -1,0 +1,37 @@
+name: Cuba ERP CD (k3s)
+
+on:
+  push:
+    branches: [ "init" ] # 仅在主分支合并时触发自动部署
+
+jobs:
+  deploy:
+    name: Build and Deploy to k3s
+    runs-on: self-hosted # 在局域网 Ubuntu 服务器上运行
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Namespace
+        run: kubectl create namespace cuba-system --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Build Docker Images (Local)
+        run: |
+          docker build -t cuba-iam-access:latest -f services/iam-access/Dockerfile .
+          docker build -t cuba-gateway:latest -f gateway/Dockerfile .
+
+      - name: Import Images to k3s
+        run: |
+          # 将本地 Docker 镜像导入 k3s (k3s 使用 containerd)
+          docker save cuba-iam-access:latest | sudo k3s ctr images import -
+          docker save cuba-gateway:latest | sudo k3s ctr images import -
+
+      - name: Deploy Manifests
+        run: |
+          kubectl apply -f deploy/k3s/services/
+          kubectl apply -f deploy/k3s/ingress.yaml
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/iam-access -n cuba-system
+          kubectl rollout status deployment/gateway -n cuba-system
