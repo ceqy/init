@@ -26,6 +26,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libssl-dev pkg-config protobuf-compiler librdkafka-dev cmake
 
+      - name: Override cargo config (use default crates.io)
+        run: |
+          # 移除中国镜像源配置，使用默认 crates.io
+          mkdir -p ~/.cargo
+          cat > ~/.cargo/config.toml << 'EOF'
+          [net]
+          git-fetch-with-cli = true
+          EOF
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
