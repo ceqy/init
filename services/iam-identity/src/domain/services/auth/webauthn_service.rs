@@ -58,7 +58,7 @@ impl WebAuthnService {
         // 转换为 CredentialID 格式
         let exclude_credentials: Vec<CredentialID> = existing_credentials
             .iter()
-            .filter_map(|c| Some(CredentialID::from(c.credential_id.clone())))
+            .map(|c| CredentialID::from(c.credential_id.clone()))
             .collect();
 
         // 创建注册挑战
