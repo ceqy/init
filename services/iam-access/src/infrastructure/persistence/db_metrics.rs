@@ -1,7 +1,7 @@
 //! 数据库连接池监控
 
+use metrics::{counter, gauge, histogram};
 use sqlx::PgPool;
-use metrics::{gauge, counter, histogram};
 use std::time::Instant;
 
 /// 数据库监控工具
@@ -10,10 +10,8 @@ pub struct DbMetrics;
 impl DbMetrics {
     /// 记录连接池状态
     pub fn record_pool_state(pool: &PgPool, pool_name: &str) {
-        gauge!("db_pool_size", "pool" => pool_name.to_string())
-            .set(pool.size() as f64);
-        gauge!("db_pool_idle", "pool" => pool_name.to_string())
-            .set(pool.num_idle() as f64);
+        gauge!("db_pool_size", "pool" => pool_name.to_string()).set(pool.size() as f64);
+        gauge!("db_pool_idle", "pool" => pool_name.to_string()).set(pool.num_idle() as f64);
     }
 
     /// 记录查询（计时）
@@ -22,13 +20,15 @@ impl DbMetrics {
             "db_query_duration_ms",
             "table" => table.to_string(),
             "operation" => operation.to_string()
-        ).record(start.elapsed().as_millis() as f64);
-        
+        )
+        .record(start.elapsed().as_millis() as f64);
+
         counter!(
             "db_queries_total",
             "table" => table.to_string(),
             "operation" => operation.to_string()
-        ).increment(1);
+        )
+        .increment(1);
     }
 
     /// 记录查询错误
@@ -37,7 +37,8 @@ impl DbMetrics {
             "db_query_errors_total",
             "table" => table.to_string(),
             "operation" => operation.to_string()
-        ).increment(1);
+        )
+        .increment(1);
     }
 }
 
@@ -58,12 +59,40 @@ impl QueryTimer {
     }
 
     pub fn finish(self) {
+        let duration_ms = self.start.elapsed().as_millis();
         DbMetrics::record_query(self.start, &self.table, &self.operation);
+
+        // 慢查询日志 (阈值: 100ms)
+        if duration_ms > 100 {
+            tracing::warn!(
+                table = %self.table,
+                operation = %self.operation,
+                duration_ms = %duration_ms,
+                "Slow query detected"
+            );
+            counter!(
+                "db_slow_queries_total",
+                "table" => self.table.clone(),
+                "operation" => self.operation.clone()
+            )
+            .increment(1);
+        }
     }
 
     pub fn finish_with_error(self) {
+        let duration_ms = self.start.elapsed().as_millis();
         DbMetrics::record_query(self.start, &self.table, &self.operation);
         DbMetrics::record_error(&self.table, &self.operation);
+
+        // 慢查询日志
+        if duration_ms > 100 {
+            tracing::warn!(
+                table = %self.table,
+                operation = %self.operation,
+                duration_ms = %duration_ms,
+                "Slow query detected (with error)"
+            );
+        }
     }
 }
 

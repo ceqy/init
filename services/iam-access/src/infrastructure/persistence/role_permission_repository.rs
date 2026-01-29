@@ -25,41 +25,49 @@ impl PostgresRolePermissionRepository {
 
 #[async_trait]
 impl RolePermissionRepository for PostgresRolePermissionRepository {
-    async fn assign_permissions(&self, role_id: &RoleId, permission_ids: &[PermissionId]) -> AppResult<()> {
-        // 使用事务保证原子性
-        let mut tx = self.pool.begin().await.map_err(map_sqlx_error)?;
-        
-        for perm_id in permission_ids {
-            sqlx::query(
-                r#"
-                INSERT INTO role_permissions (role_id, permission_id, assigned_at)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (role_id, permission_id) DO NOTHING
-                "#,
-            )
-            .bind(role_id.0)
-            .bind(perm_id.0)
-            .bind(Utc::now())
-            .execute(&mut *tx)
-            .await
-            .map_err(map_sqlx_error)?;
+    async fn assign_permissions(
+        &self,
+        role_id: &RoleId,
+        permission_ids: &[PermissionId],
+    ) -> AppResult<()> {
+        if permission_ids.is_empty() {
+            return Ok(());
         }
 
-        tx.commit().await.map_err(map_sqlx_error)?;
+        // 批量插入优化: 构建 VALUES 子句
+        let now = Utc::now();
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "INSERT INTO role_permissions (role_id, permission_id, assigned_at) ",
+        );
+
+        query_builder.push_values(permission_ids.iter(), |mut b, perm_id| {
+            b.push_bind(role_id.0).push_bind(perm_id.0).push_bind(now);
+        });
+
+        query_builder.push(" ON CONFLICT (role_id, permission_id) DO NOTHING");
+
+        query_builder
+            .build()
+            .execute(&self.pool)
+            .await
+            .map_err(map_sqlx_error)?;
+
         Ok(())
     }
 
-    async fn remove_permissions(&self, role_id: &RoleId, permission_ids: &[PermissionId]) -> AppResult<()> {
+    async fn remove_permissions(
+        &self,
+        role_id: &RoleId,
+        permission_ids: &[PermissionId],
+    ) -> AppResult<()> {
         let perm_uuids: Vec<Uuid> = permission_ids.iter().map(|p| p.0).collect();
 
-        sqlx::query(
-            "DELETE FROM role_permissions WHERE role_id = $1 AND permission_id = ANY($2)",
-        )
-        .bind(role_id.0)
-        .bind(&perm_uuids)
-        .execute(&self.pool)
-        .await
-        .map_err(map_sqlx_error)?;
+        sqlx::query("DELETE FROM role_permissions WHERE role_id = $1 AND permission_id = ANY($2)")
+            .bind(role_id.0)
+            .bind(&perm_uuids)
+            .execute(&self.pool)
+            .await
+            .map_err(map_sqlx_error)?;
 
         Ok(())
     }

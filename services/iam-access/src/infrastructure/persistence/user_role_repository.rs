@@ -14,19 +14,31 @@ fn map_sqlx_error(e: sqlx::Error) -> AppError {
     AppError::database(e.to_string())
 }
 
+use super::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use crate::infrastructure::cache::AuthCache;
 use std::sync::Arc;
+use std::time::Duration;
 
 pub struct PostgresUserRoleRepository {
     pool: PgPool,
     auth_cache: Option<Arc<AuthCache>>,
+    circuit_breaker: CircuitBreaker,
 }
 
 impl PostgresUserRoleRepository {
     pub fn new(pool: PgPool) -> Self {
+        let config = CircuitBreakerConfig {
+            failure_threshold: 5,
+            success_threshold: 2,
+            reset_timeout: Duration::from_secs(30),
+        };
+
+        let circuit_breaker = CircuitBreaker::new(config);
+
         Self {
             pool,
             auth_cache: None,
+            circuit_breaker,
         }
     }
 
@@ -48,22 +60,30 @@ impl UserRoleRepository for PostgresUserRoleRepository {
             .parse()
             .map_err(|_| AppError::validation("Invalid user_id"))?;
 
-        for role_id in role_ids {
-            sqlx::query(
-                r#"
-                INSERT INTO user_roles (user_id, tenant_id, role_id, assigned_at)
-                VALUES ($1, $2, $3, $4)
-                ON CONFLICT (user_id, tenant_id, role_id) DO NOTHING
-                "#,
-            )
-            .bind(user_uuid)
-            .bind(tenant_id.0)
-            .bind(role_id.0)
-            .bind(Utc::now())
+        if role_ids.is_empty() {
+            return Ok(());
+        }
+
+        // 批量插入优化
+        let now = Utc::now();
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "INSERT INTO user_roles (user_id, tenant_id, role_id, assigned_at) ",
+        );
+
+        query_builder.push_values(role_ids.iter(), |mut b, role_id| {
+            b.push_bind(user_uuid)
+                .push_bind(tenant_id.0)
+                .push_bind(role_id.0)
+                .push_bind(now);
+        });
+
+        query_builder.push(" ON CONFLICT (user_id, tenant_id, role_id) DO NOTHING");
+
+        query_builder
+            .build()
             .execute(&self.pool)
             .await
             .map_err(map_sqlx_error)?;
-        }
 
         if let Some(cache) = &self.auth_cache {
             let _ = cache
@@ -117,7 +137,8 @@ impl UserRoleRepository for PostgresUserRoleRepository {
             }
         }
 
-        let rows = sqlx::query_as::<_, RoleRow>(
+        let pool = self.pool.clone();
+        let query = format!(
             r#"
             SELECT r.id, r.tenant_id, r.code, r.name, r.description, r.is_system, r.is_active,
                    r.created_at, r.created_by, r.updated_at, r.updated_by
@@ -125,13 +146,27 @@ impl UserRoleRepository for PostgresUserRoleRepository {
             INNER JOIN user_roles ur ON r.id = ur.role_id
             WHERE ur.user_id = $1 AND ur.tenant_id = $2 AND r.is_active = TRUE
             ORDER BY r.is_system DESC, r.name
-            "#,
-        )
-        .bind(user_uuid)
-        .bind(tenant_id.0)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(map_sqlx_error)?;
+            "#
+        );
+        let user_uuid_copy = user_uuid;
+        let tenant_id_copy = tenant_id.clone();
+
+        let rows = self
+            .circuit_breaker
+            .call(move || {
+                let pool = pool.clone();
+                let query = query.clone();
+                let tenant_id = tenant_id_copy.clone();
+                async move {
+                    sqlx::query_as::<_, RoleRow>(&query)
+                        .bind(user_uuid_copy)
+                        .bind(tenant_id.0)
+                        .fetch_all(&pool)
+                        .await
+                        .map_err(map_sqlx_error)
+                }
+            })
+            .await?;
 
         // 批量加载所有角色的权限 (修复 N+1 查询)
         let role_ids: Vec<Uuid> = rows.iter().map(|r| r.id).collect();

@@ -62,7 +62,7 @@ impl std::fmt::Display for DecisionSource {
 }
 
 /// 授权服务
-/// 
+///
 /// 决策逻辑:
 /// 1. 首先检查 Policy (ABAC) - Deny 优先
 /// 2. 如果 Policy 返回 Deny，直接拒绝
@@ -99,40 +99,58 @@ where
     }
 
     /// 执行授权检查
-    pub async fn check(&self, request: AuthorizationCheckRequest) -> AppResult<AuthorizationCheckResult> {
+    pub async fn check(
+        &self,
+        request: AuthorizationCheckRequest,
+    ) -> AppResult<AuthorizationCheckResult> {
         use metrics::{counter, histogram};
         let start = std::time::Instant::now();
-        
+
         let result = self.check_internal(&request).await;
-        
+
         // 记录指标
         if let Ok(ref res) = result {
-            counter!("authorization_checks_total", 
+            counter!("authorization_checks_total",
                 "decision" => res.decision_source.to_string(),
                 "allowed" => res.allowed.to_string()
-            ).increment(1);
+            )
+            .increment(1);
         } else {
             counter!("authorization_checks_errors_total").increment(1);
         }
-        
-        histogram!("authorization_check_duration_ms")
-            .record(start.elapsed().as_millis() as f64);
-        
+
+        histogram!("authorization_check_duration_ms").record(start.elapsed().as_millis() as f64);
+
         result
     }
 
     /// 内部授权检查逻辑
-    async fn check_internal(&self, request: &AuthorizationCheckRequest) -> AppResult<AuthorizationCheckResult> {
+    async fn check_internal(
+        &self,
+        request: &AuthorizationCheckRequest,
+    ) -> AppResult<AuthorizationCheckResult> {
         // 1. 获取用户的角色
-        let user_roles = self.user_role_repo
+        let user_roles = self
+            .user_role_repo
             .get_user_roles(&request.user_id, &request.tenant_id)
             .await?;
-        
+
         let role_codes: Vec<String> = user_roles.iter().map(|r| r.code.clone()).collect();
 
         // 2. 加载所有激活的策略 (优先使用缓存)
-        let policies = self.get_cached_policies(&request.tenant_id).await?;
-
+        // 优雅降级: 如果策略加载失败，降级为仅 RBAC
+        let policies = match self.get_cached_policies(&request.tenant_id).await {
+            Ok(policies) => policies,
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    tenant_id = %request.tenant_id,
+                    "Failed to load policies, falling back to RBAC only"
+                );
+                metrics::counter!("authorization_policy_fallback_total").increment(1);
+                vec![]
+            }
+        };
 
         // 3. 构建策略评估请求
         let eval_request = EvaluationRequest::new(
@@ -165,7 +183,8 @@ where
 
         // 6. 策略无匹配，检查 RBAC
         let permission_code = format!("{}:{}", request.resource, request.action);
-        let has_permission = self.user_role_repo
+        let has_permission = self
+            .user_role_repo
             .user_has_permission(&request.user_id, &request.tenant_id, &permission_code)
             .await?;
 
@@ -181,7 +200,8 @@ where
 
         // 7. 检查通配符权限 (resource:*)
         let wildcard_permission = format!("{}:*", request.resource);
-        let has_wildcard = self.user_role_repo
+        let has_wildcard = self
+            .user_role_repo
             .user_has_permission(&request.user_id, &request.tenant_id, &wildcard_permission)
             .await?;
 
@@ -206,15 +226,18 @@ where
     }
 
     /// 批量检查 (并发执行)
-    pub async fn batch_check(&self, requests: Vec<AuthorizationCheckRequest>) -> AppResult<Vec<AuthorizationCheckResult>> {
+    pub async fn batch_check(
+        &self,
+        requests: Vec<AuthorizationCheckRequest>,
+    ) -> AppResult<Vec<AuthorizationCheckResult>> {
         use futures::stream::{self, StreamExt};
-        
+
         let results: Vec<AppResult<AuthorizationCheckResult>> = stream::iter(requests)
             .map(|req| self.check(req))
             .buffer_unordered(10) // 最多 10 个并发
             .collect()
             .await;
-        
+
         results.into_iter().collect()
     }
 
@@ -235,13 +258,14 @@ where
         user_id: &str,
         tenant_id: &TenantId,
     ) -> AppResult<Vec<crate::domain::role::Role>> {
-        self.user_role_repo
-            .get_user_roles(user_id, tenant_id)
-            .await
+        self.user_role_repo.get_user_roles(user_id, tenant_id).await
     }
 
     /// 获取策略 (优先使用缓存)
-    async fn get_cached_policies(&self, tenant_id: &TenantId) -> AppResult<Vec<crate::domain::policy::Policy>> {
+    async fn get_cached_policies(
+        &self,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<crate::domain::policy::Policy>> {
         // 尝试从缓存获取
         if let Some(cache) = &self.cache {
             if let Ok(Some(policies)) = cache.get_tenant_policies(tenant_id).await {
@@ -250,9 +274,7 @@ where
         }
 
         // 缓存未命中，从数据库加载
-        let policies = self.policy_repo
-            .list_active_by_tenant(tenant_id)
-            .await?;
+        let policies = self.policy_repo.list_active_by_tenant(tenant_id).await?;
 
         // 写入缓存
         if let Some(cache) = &self.cache {
@@ -266,9 +288,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
-    use crate::domain::role::{Role, RoleId};
     use crate::domain::policy::Policy;
+    use crate::domain::role::{Role, RoleId};
+    use async_trait::async_trait;
 
     // --- Mocks ---
 
@@ -278,20 +300,50 @@ mod tests {
 
     #[async_trait]
     impl PolicyRepository for MockPolicyRepository {
-        async fn create(&self, _policy: &Policy) -> AppResult<()> { Ok(()) }
-        async fn update(&self, _policy: &Policy) -> AppResult<()> { Ok(()) }
-        async fn delete(&self, _id: &crate::domain::policy::PolicyId) -> AppResult<()> { Ok(()) }
-        async fn find_by_id(&self, _id: &crate::domain::policy::PolicyId) -> AppResult<Option<Policy>> { Ok(None) }
+        async fn create(&self, _policy: &Policy) -> AppResult<()> {
+            Ok(())
+        }
+        async fn update(&self, _policy: &Policy) -> AppResult<()> {
+            Ok(())
+        }
+        async fn delete(&self, _id: &crate::domain::policy::PolicyId) -> AppResult<()> {
+            Ok(())
+        }
+        async fn find_by_id(
+            &self,
+            _id: &crate::domain::policy::PolicyId,
+        ) -> AppResult<Option<Policy>> {
+            Ok(None)
+        }
         async fn list_active_by_tenant(&self, _tenant_id: &TenantId) -> AppResult<Vec<Policy>> {
             Ok(self.policies.clone())
         }
-        
-        async fn list_by_tenant(&self, _tenant_id: &TenantId, _page: u32, _page_size: u32) -> AppResult<(Vec<Policy>, i64)> {
+
+        async fn list_by_tenant(
+            &self,
+            _tenant_id: &TenantId,
+            _page: u32,
+            _page_size: u32,
+        ) -> AppResult<(Vec<Policy>, i64)> {
             Ok((self.policies.clone(), self.policies.len() as i64))
         }
-        async fn find_by_subject(&self, _tenant_id: &TenantId, _subject: &str) -> AppResult<Vec<Policy>> { Ok(vec![]) }
-        async fn find_by_resource(&self, _tenant_id: &TenantId, _resource: &str) -> AppResult<Vec<Policy>> { Ok(vec![]) }
-        async fn exists_by_name(&self, _tenant_id: &TenantId, _name: &str) -> AppResult<bool> { Ok(false) }
+        async fn find_by_subject(
+            &self,
+            _tenant_id: &TenantId,
+            _subject: &str,
+        ) -> AppResult<Vec<Policy>> {
+            Ok(vec![])
+        }
+        async fn find_by_resource(
+            &self,
+            _tenant_id: &TenantId,
+            _resource: &str,
+        ) -> AppResult<Vec<Policy>> {
+            Ok(vec![])
+        }
+        async fn exists_by_name(&self, _tenant_id: &TenantId, _name: &str) -> AppResult<bool> {
+            Ok(false)
+        }
     }
 
     struct MockUserRoleRepository {
@@ -301,17 +353,53 @@ mod tests {
 
     #[async_trait]
     impl UserRoleRepository for MockUserRoleRepository {
-        async fn assign_roles(&self, _user_id: &str, _tenant_id: &TenantId, _role_ids: &[RoleId]) -> AppResult<()> { Ok(()) }
-        async fn remove_roles(&self, _user_id: &str, _tenant_id: &TenantId, _role_ids: &[RoleId]) -> AppResult<()> { Ok(()) }
-        async fn get_user_roles(&self, _user_id: &str, _tenant_id: &TenantId) -> AppResult<Vec<Role>> {
+        async fn assign_roles(
+            &self,
+            _user_id: &str,
+            _tenant_id: &TenantId,
+            _role_ids: &[RoleId],
+        ) -> AppResult<()> {
+            Ok(())
+        }
+        async fn remove_roles(
+            &self,
+            _user_id: &str,
+            _tenant_id: &TenantId,
+            _role_ids: &[RoleId],
+        ) -> AppResult<()> {
+            Ok(())
+        }
+        async fn get_user_roles(
+            &self,
+            _user_id: &str,
+            _tenant_id: &TenantId,
+        ) -> AppResult<Vec<Role>> {
             Ok(self.roles.clone())
         }
-        async fn get_user_permissions(&self, _user_id: &str, _tenant_id: &TenantId) -> AppResult<Vec<Permission>> {
+        async fn get_user_permissions(
+            &self,
+            _user_id: &str,
+            _tenant_id: &TenantId,
+        ) -> AppResult<Vec<Permission>> {
             Ok(self.permissions.clone())
         }
-        async fn clear_user_roles(&self, _user_id: &str, _tenant_id: &TenantId) -> AppResult<()> { Ok(()) }
-        async fn user_has_role(&self, _user_id: &str, _tenant_id: &TenantId, _role_id: &RoleId) -> AppResult<bool> { Ok(false) }
-        async fn user_has_permission(&self, _user_id: &str, _tenant_id: &TenantId, _permission_code: &str) -> AppResult<bool> {
+        async fn clear_user_roles(&self, _user_id: &str, _tenant_id: &TenantId) -> AppResult<()> {
+            Ok(())
+        }
+        async fn user_has_role(
+            &self,
+            _user_id: &str,
+            _tenant_id: &TenantId,
+            _role_id: &RoleId,
+        ) -> AppResult<bool> {
+            Ok(false)
+        }
+        async fn user_has_permission(
+            &self,
+            _user_id: &str,
+            _tenant_id: &TenantId,
+            _permission_code: &str,
+        ) -> AppResult<bool> {
             Ok(self.permissions.iter().any(|p| p.code == _permission_code))
         }
     }
@@ -321,19 +409,26 @@ mod tests {
     #[tokio::test]
     async fn test_rbac_allow() {
         let tenant_id = TenantId::new();
-        
+
         // Setup Roles & Permissions
-        let perm = Permission::new("res:read".to_string(), "name".to_string(), None, "res".to_string(), "read".to_string(), "mod".to_string());
+        let perm = Permission::new(
+            "res:read".to_string(),
+            "name".to_string(),
+            None,
+            "res".to_string(),
+            "read".to_string(),
+            "mod".to_string(),
+        );
         let mock_user_role_repo = Arc::new(MockUserRoleRepository {
             roles: vec![],
             permissions: vec![perm],
         });
-        
+
         // Setup Policies (Empty)
         let mock_policy_repo = Arc::new(MockPolicyRepository { policies: vec![] });
-        
+
         let service = AuthorizationService::new(mock_policy_repo, mock_user_role_repo);
-        
+
         let req = AuthorizationCheckRequest {
             user_id: "user1".to_string(),
             tenant_id,
@@ -341,7 +436,7 @@ mod tests {
             action: "read".to_string(),
             context: None,
         };
-        
+
         let result = service.check(req).await.unwrap();
         assert!(result.allowed);
         assert!(matches!(result.decision_source, DecisionSource::Rbac));
@@ -350,23 +445,35 @@ mod tests {
     #[tokio::test]
     async fn test_policy_deny_override() {
         let tenant_id = TenantId::new();
-        
+
         // RBAC allows
-        let perm = Permission::new("code".to_string(), "name".to_string(), None, "res".to_string(), "read".to_string(), "mod".to_string());
+        let perm = Permission::new(
+            "code".to_string(),
+            "name".to_string(),
+            None,
+            "res".to_string(),
+            "read".to_string(),
+            "mod".to_string(),
+        );
         let mock_user_role_repo = Arc::new(MockUserRoleRepository {
             roles: vec![],
             permissions: vec![perm],
         });
-        
+
         // Policy denies
         let policy = Policy::deny(
-            tenant_id.clone(), "deny-all".to_string(), 
-            vec!["*".to_string()], vec!["*".to_string()], vec!["*".to_string()]
+            tenant_id.clone(),
+            "deny-all".to_string(),
+            vec!["*".to_string()],
+            vec!["*".to_string()],
+            vec!["*".to_string()],
         );
-        let mock_policy_repo = Arc::new(MockPolicyRepository { policies: vec![policy] });
-        
+        let mock_policy_repo = Arc::new(MockPolicyRepository {
+            policies: vec![policy],
+        });
+
         let service = AuthorizationService::new(mock_policy_repo, mock_user_role_repo);
-        
+
         let req = AuthorizationCheckRequest {
             user_id: "user1".to_string(),
             tenant_id,
@@ -374,7 +481,7 @@ mod tests {
             action: "read".to_string(),
             context: None,
         };
-        
+
         let result = service.check(req).await.unwrap();
         assert!(!result.allowed);
         assert!(matches!(result.decision_source, DecisionSource::Policy));
@@ -383,16 +490,16 @@ mod tests {
     #[tokio::test]
     async fn test_default_deny() {
         let tenant_id = TenantId::new();
-        
+
         // No RBAC, No Policies
         let mock_user_role_repo = Arc::new(MockUserRoleRepository {
             roles: vec![],
             permissions: vec![],
         });
         let mock_policy_repo = Arc::new(MockPolicyRepository { policies: vec![] });
-        
+
         let service = AuthorizationService::new(mock_policy_repo, mock_user_role_repo);
-        
+
         let req = AuthorizationCheckRequest {
             user_id: "user1".to_string(),
             tenant_id,
@@ -400,9 +507,12 @@ mod tests {
             action: "read".to_string(),
             context: None,
         };
-        
+
         let result = service.check(req).await.unwrap();
         assert!(!result.allowed);
-        assert!(matches!(result.decision_source, DecisionSource::DefaultDeny));
+        assert!(matches!(
+            result.decision_source,
+            DecisionSource::DefaultDeny
+        ));
     }
 }

@@ -303,6 +303,11 @@ where
             total: result.total as i32,
             page: result.page as i32,
             page_size: result.page_size as i32,
+            next_cursor: result
+                .roles
+                .last()
+                .map(|r| r.id.to_string())
+                .unwrap_or_default(),
         }))
     }
 
@@ -710,5 +715,27 @@ where
         }
 
         Ok(Response::new(CheckPermissionsResponse { results }))
+    }
+
+    // ===== 导入导出 (待实现) =====
+
+    type ExportRolesStream = std::pin::Pin<
+        Box<dyn futures::Stream<Item = Result<crate::api::proto::rbac::Role, Status>> + Send>,
+    >;
+
+    async fn export_roles(
+        &self,
+        _request: Request<crate::api::proto::rbac::ExportRolesRequest>,
+    ) -> Result<Response<Self::ExportRolesStream>, Status> {
+        // TODO: Implement streaming export
+        Err(Status::unimplemented("ExportRoles is not yet implemented"))
+    }
+
+    async fn import_roles(
+        &self,
+        _request: Request<tonic::Streaming<crate::api::proto::rbac::ImportRoleRequest>>,
+    ) -> Result<Response<crate::api::proto::rbac::ImportRolesResponse>, Status> {
+        // TODO: Implement streaming import
+        Err(Status::unimplemented("ImportRoles is not yet implemented"))
     }
 }

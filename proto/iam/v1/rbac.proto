@@ -38,6 +38,10 @@ service RBACService {
   // ===== 权限检查 =====
   rpc CheckPermission(CheckPermissionRequest) returns (CheckPermissionResponse);
   rpc CheckPermissions(CheckPermissionsRequest) returns (CheckPermissionsResponse);
+
+  // ===== 数据导入导出 (流式) =====
+  rpc ExportRoles(ExportRolesRequest) returns (stream Role);
+  rpc ImportRoles(stream ImportRoleRequest) returns (ImportRolesResponse);
 }
 
 // ============ 角色消息 ============
@@ -86,6 +90,7 @@ message ListRolesRequest {
   int32 page = 2;
   int32 page_size = 3;
   string search = 4;
+  string cursor = 5;  // 游标分页: 上一页最后一条记录的 ID
 }
 
 message ListRolesResponse {
@@ -93,6 +98,32 @@ message ListRolesResponse {
   int32 total = 2;
   int32 page = 3;
   int32 page_size = 4;
+  string next_cursor = 5;  // 下一页游标
+}
+
+// ============ 导入导出消息 ============
+
+message ExportRolesRequest {
+  string tenant_id = 1;
+  bool include_permissions = 2;  // 是否包含权限
+}
+
+message ImportRoleRequest {
+  Role role = 1;
+  ImportMode mode = 2;
+}
+
+enum ImportMode {
+  IMPORT_MODE_UNSPECIFIED = 0;
+  IMPORT_MODE_SKIP = 1;     // 跳过已存在
+  IMPORT_MODE_OVERWRITE = 2; // 覆盖已存在
+}
+
+message ImportRolesResponse {
+  int32 imported_count = 1;
+  int32 skipped_count = 2;
+  int32 error_count = 3;
+  repeated string errors = 4;
 }
 
 // ============ 权限消息 ============
