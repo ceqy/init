@@ -12,7 +12,7 @@ use secrecy::Secret;
 #[derive(Debug, Error)]
 pub enum ConfigError {
     #[error("Failed to load config: {0}")]
-    Load(#[from] figment::Error),
+    Load(#[from] Box<figment::Error>),
 }
 
 /// 数据库配置
@@ -171,7 +171,8 @@ impl AppConfig {
             .merge(Toml::file(format!("{}/default.toml", config_dir)))
             .merge(Toml::file(format!("{}/{}.toml", config_dir, env)))
             .merge(Env::prefixed("").split("_"))
-            .extract()?;
+            .extract()
+            .map_err(Box::new)?;
 
         Ok(config)
     }
