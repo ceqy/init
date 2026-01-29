@@ -156,7 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let rp_origin = config.webauthn.rp_origin
             .parse()
             .map_err(|e| cuba_errors::AppError::internal(format!("Invalid RP origin: {}", e)))?;
-        
+
         let webauthn_service = Arc::new(
             WebAuthnService::new(rp_id, rp_origin, webauthn_credential_repo)
                 .map_err(|e| cuba_errors::AppError::internal(format!("Failed to create WebAuthn service: {}", e)))?,
@@ -198,7 +198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
              user_repo.clone(),
              sms_sender,
         ));
-        
+
         // Handlers
         let send_email_verification_handler = Arc::new(SendEmailVerificationHandler::new(
             email_verification_service.clone(),
