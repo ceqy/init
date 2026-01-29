@@ -40,6 +40,7 @@ pub struct Claims {
 }
 
 impl Claims {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         user_id: &UserId,
         tenant_id: &TenantId,
