@@ -5,6 +5,7 @@ use cuba_errors::AppError;
 use tonic::{Request, Status};
 
 /// 认证拦截器
+#[allow(clippy::result_large_err)]
 pub fn auth_interceptor(
     token_service: &TokenService,
     mut request: Request<()>,
@@ -21,6 +22,7 @@ pub fn auth_interceptor(
 }
 
 /// 从请求中提取 token
+#[allow(clippy::result_large_err)]
 fn extract_token<T>(request: &Request<T>) -> Result<String, Status> {
     let auth_header = request
         .metadata()
