@@ -14,9 +14,6 @@ jobs:
   check-and-test:
     name: Check, Lint and Test
     runs-on: ubuntu-latest
-    env:
-      # 清除 macOS 路径，使用系统 OpenSSL
-      OPENSSL_DIR: ""
     
     steps:
       - uses: actions/checkout@v4
@@ -26,9 +23,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libssl-dev pkg-config protobuf-compiler librdkafka-dev cmake
 
-      - name: Override cargo config (use default crates.io)
+      - name: Remove project cargo config (macOS specific)
         run: |
-          # 移除中国镜像源配置，使用默认 crates.io
+          # 删除项目中包含 macOS 特定配置的 .cargo/config.toml
+          rm -f .cargo/config.toml
+          # 创建干净的 cargo 配置
           mkdir -p ~/.cargo
           cat > ~/.cargo/config.toml << 'EOF'
           [net]
