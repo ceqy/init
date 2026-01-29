@@ -38,6 +38,9 @@ pub trait PasswordResetRepository: Send + Sync {
     /// 删除过期的令牌（带租户隔离）
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64>;
 
+    /// 删除所有过期的令牌 (全局清理)
+    async fn delete_all_expired(&self) -> AppResult<u64>;
+
     /// 统计用户未使用的令牌数量（带租户隔离）
     async fn count_unused_by_user_id(
         &self,

@@ -89,11 +89,17 @@ async fn handle_socket(
         }
     });
 
+    // 增加连接计数
+    metrics::gauge!("gateway.ws.active_connections").increment(1.0);
+
     // 等待任一任务结束
     tokio::select! {
         _ = (&mut send_task) => recv_task.abort(),
         _ = (&mut recv_task) => send_task.abort(),
     };
+
+    // 减少连接计数
+    metrics::gauge!("gateway.ws.active_connections").decrement(1.0);
 
     info!(
         user_id = %user_id,

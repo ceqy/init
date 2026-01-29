@@ -1105,6 +1105,25 @@ impl EmailVerificationRepository for TxEmailVerificationRepository {
         Ok(result.rows_affected())
     }
 
+    async fn delete_all_expired(&self) -> AppResult<u64> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
+        let result = sqlx::query("DELETE FROM email_verifications WHERE expires_at < NOW()")
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| {
+                AppError::database(format!(
+                    "Failed to delete all expired email verifications: {}",
+                    e
+                ))
+            })?;
+
+        Ok(result.rows_affected())
+    }
+
     async fn count_today_by_user(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64> {
         let mut guard = self.tx.lock().await;
         let tx = guard
@@ -1272,6 +1291,25 @@ impl PhoneVerificationRepository for TxPhoneVerificationRepository {
                 e
             ))
         })?;
+
+        Ok(result.rows_affected())
+    }
+
+    async fn delete_all_expired(&self) -> AppResult<u64> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
+        let result = sqlx::query("DELETE FROM phone_verifications WHERE expires_at < NOW()")
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| {
+                AppError::database(format!(
+                    "Failed to delete all expired phone verifications: {}",
+                    e
+                ))
+            })?;
 
         Ok(result.rows_affected())
     }
@@ -1959,6 +1997,22 @@ impl PasswordResetRepository for TxPasswordResetRepository {
         .execute(&mut **tx)
         .await
         .map_err(|e| AppError::database(format!("Failed to delete expired tokens: {}", e)))?;
+
+        Ok(result.rows_affected())
+    }
+
+    async fn delete_all_expired(&self) -> AppResult<u64> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
+        let result = sqlx::query("DELETE FROM password_reset_tokens WHERE expires_at < NOW()")
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| {
+                AppError::database(format!("Failed to delete all expired tokens: {}", e))
+            })?;
 
         Ok(result.rows_affected())
     }

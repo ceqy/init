@@ -250,16 +250,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let oauth_service_impl = OAuthServiceImpl::new(oauth_client_repo, oauth_service, create_client_handler, authorize_handler, token_handler, uow_factory.clone());
 
-        // 注册多个服务并启动
-        // 构建反射服务
-        let reflection_service = ReflectionBuilder::configure()
-            .register_encoded_file_descriptor_set(api::grpc::auth_proto::FILE_DESCRIPTOR_SET)
-            .register_encoded_file_descriptor_set(api::grpc::user_proto::FILE_DESCRIPTOR_SET)
-            .register_encoded_file_descriptor_set(api::grpc::oauth_proto::FILE_DESCRIPTOR_SET)
-            .register_encoded_file_descriptor_set(api::grpc::audit_proto::FILE_DESCRIPTOR_SET)
-            .build_v1()
-            .map_err(|e| cuba_errors::AppError::internal(format!("Failed to build reflection service: {}", e)))?;
-
         // 组装 AuditService
         let event_store_repo: Arc<dyn EventStoreRepository> = Arc::new(PostgresEventStoreRepository::new(pool.clone()));
         let audit_service = AuditServiceImpl::new(event_store_repo);
@@ -273,15 +263,66 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ));
 
         // 启动 Outbox 后台处理任务
-        let _outbox_handle = outbox_processor.clone().start();
+        use tokio_util::sync::CancellationToken;
+        let shutdown_token = CancellationToken::new();
+        let outbox_shutdown_token = shutdown_token.clone();
+
+        let outbox_handle = outbox_processor.clone().start(outbox_shutdown_token);
         tracing::info!("Outbox processor started");
 
-        Ok(server
+        // 组装 CleanupTask
+        let cleanup_task = Arc::new(infrastructure::cleanup::CleanupTask::new(
+            email_verification_repo.clone(),
+            phone_verification_repo.clone(),
+            password_reset_repo.clone(),
+            Duration::from_secs(3600), // 每小时清理一次
+        ));
+        let cleanup_shutdown_token = shutdown_token.clone();
+        let _cleanup_handle = cleanup_task.start(cleanup_shutdown_token);
+        tracing::info!("Periodic cleanup task started");
+
+        // 注册多个服务并启动
+        // 构建反射服务
+        let reflection_service = ReflectionBuilder::configure()
+            .register_encoded_file_descriptor_set(api::grpc::auth_proto::FILE_DESCRIPTOR_SET)
+            .register_encoded_file_descriptor_set(api::grpc::user_proto::FILE_DESCRIPTOR_SET)
+            .register_encoded_file_descriptor_set(api::grpc::oauth_proto::FILE_DESCRIPTOR_SET)
+            .register_encoded_file_descriptor_set(api::grpc::audit_proto::FILE_DESCRIPTOR_SET)
+            .build_v1()
+            .map_err(|e| cuba_errors::AppError::internal(format!("Failed to build reflection service: {}", e)))?;
+
+        let router = server
             .add_service(AuthServiceServer::new(auth_service))
             .add_service(UserServiceServer::new(user_service))
             .add_service(OAuthServiceServer::new(oauth_service_impl))
             .add_service(AuditServiceServer::new(audit_service))
-            .add_service(reflection_service))
+            .add_service(reflection_service);
+
+        // 使用 tokio::select 等待服务器运行完成
+        // 注意：run_server 会调用 serve_with_shutdown(addr, shutdown_signal())
+        // 所以我们在这里只是返回 router，但我们需要在 bootstrap 结束后清理
+        // 实际上 run_server 的逻辑是：
+        // router.serve_with_shutdown(addr, shutdown_signal()).await?;
+        // info!("Service stopped");
+
+        // 为了在这里能清理 background tasks，我们可能需要修改 run_server 或者
+        // 让 background tasks 监听同样的 shutdown_signal()。
+        // 但 shutdown_signal() 返回的是一个 future，只能 await 一次? 
+        // 实际上 tokio::signal 相关的 future 可以被多个地方 await 吗?
+        // 不，通常是一个。
+
+        // 方案：我们手动创建一个 shutdown 任务
+        let shutdown_token_spawn = shutdown_token.clone();
+        tokio::spawn(async move {
+            cuba_bootstrap::shutdown_signal().await;
+            tracing::info!("Shutdown signal received, cancelling background tasks...");
+            shutdown_token_spawn.cancel();
+        });
+
+        Ok(router)
     })
-    .await
+    .await?;
+
+    info!("Iam Identity Service stopped");
+    Ok(())
 }

@@ -276,6 +276,27 @@ impl EmailVerificationRepository for PostgresEmailVerificationRepository {
         Ok(deleted)
     }
 
+    async fn delete_all_expired(&self) -> AppResult<u64> {
+        debug!("Deleting all expired email verifications");
+
+        let result = sqlx::query!(
+            r#"
+            DELETE FROM email_verifications
+            WHERE expires_at < NOW()
+            "#
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| {
+            warn!(error = %e, "Failed to delete all expired email verifications");
+            AppError::database(format!("Failed to delete all expired verifications: {}", e))
+        })?;
+
+        let deleted = result.rows_affected();
+        debug!(deleted = deleted, "All expired email verifications deleted");
+        Ok(deleted)
+    }
+
     async fn count_today_by_user(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64> {
         debug!(user_id = %user_id, tenant_id = %tenant_id, "Counting today's email verifications");
 

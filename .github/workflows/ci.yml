@@ -101,3 +101,34 @@ jobs:
         run: cargo test --workspace
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/cuba_test
+
+  deploy:
+    name: Build and Deploy (K3s)
+    needs: check-and-test
+    if: github.ref == 'refs/heads/init' && github.event_name == 'push'
+    runs-on: self-hosted
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Gateway Image
+        run: |
+          docker build -t cuba-gateway:latest -f gateway/Dockerfile .
+          sudo k3s ctr images import <(docker save cuba-gateway:latest) || true
+          # 或者如果 k3s ctr 直接支持从 docker 读取
+          # sudo k3s ctr images import cuba-gateway:latest
+
+      - name: Build IAM Identity Image
+        run: |
+          docker build -t cuba-iam-identity:latest -f services/iam-identity/Dockerfile .
+          sudo k3s ctr images import <(docker save cuba-iam-identity:latest) || true
+
+      - name: Build IAM Access Image
+        run: |
+          docker build -t cuba-iam-access:latest -f services/iam-access/Dockerfile .
+          sudo k3s ctr images import <(docker save cuba-iam-access:latest) || true
+
+      - name: Deploy to K3s
+        run: |
+          kubectl apply -f deploy/k3s/ingress.yaml
+          kubectl apply -f deploy/k3s/services/

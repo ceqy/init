@@ -8,7 +8,7 @@ use crate::rate_limit::config::ConfigManager;
 use crate::rate_limit::limiter::RateLimiter;
 use crate::rate_limit::types::{RateLimitResult, UserTier};
 use axum::{
-    extract::Request,
+    extract::{Request, State},
     http::{HeaderValue, StatusCode, header},
     middleware::Next,
     response::{IntoResponse, Response},
@@ -41,48 +41,7 @@ impl RateLimitMiddleware {
         }
     }
 
-    /// 处理限流检查
-    pub async fn check_rate_limit(&self, req: &Request) -> RateLimitResult {
-        // 检查是否启用限流
-        if !self.config_manager.is_enabled().await {
-            return RateLimitResult {
-                allowed: true,
-                count: 0,
-                remaining: u64::MAX,
-                limit: u64::MAX,
-                reset_at: 0,
-                retry_after: None,
-            };
-        }
-
-        // 提取客户端标识符
-        let identifier = self.extract_identifier(req);
-
-        // 检测用户等级
-        let tier = self.detect_user_tier(req);
-
-        // 分类接口类型
-        let endpoint_type = self.classifier.classify(req.uri(), req.method());
-
-        // 获取限流规则
-        let rule = self
-            .config_manager
-            .get_rule(tier.as_str(), endpoint_type.as_str())
-            .await;
-
-        // 获取 Redis 键前缀
-        let key_prefix = self.config_manager.get_key_prefix().await;
-
-        // 执行限流检查
-        self.rate_limiter
-            .check(&key_prefix, &identifier, &rule)
-            .await
-    }
-
-    /// 提取客户端标识符
-    ///
-    /// - 已认证用户: `user:{user_id}`
-    /// - 未认证用户: `ip:{ip}`
+    /// 提取客户端标识符 (Sync)
     fn extract_identifier(&self, req: &Request) -> String {
         // 检查是否已认证
         if let Some(ctx) = req.extensions().get::<AuthContext>() {
@@ -109,7 +68,7 @@ impl RateLimitMiddleware {
         format!("ip:{}", ip)
     }
 
-    /// 检测用户等级
+    /// 检测用户等级 (Sync)
     fn detect_user_tier(&self, req: &Request) -> UserTier {
         UserTier::from_auth_context(req.extensions().get::<AuthContext>())
     }
@@ -118,22 +77,22 @@ impl RateLimitMiddleware {
     fn add_rate_limit_headers(response: &mut Response, result: &RateLimitResult) {
         let headers = response.headers_mut();
 
-        // X-RateLimit-Limit: 限制的最大请求数
+        // X-RateLimit-Limit
         if let Ok(val) = HeaderValue::from_str(&result.limit.to_string()) {
             headers.insert("X-RateLimit-Limit", val);
         }
 
-        // X-RateLimit-Remaining: 剩余请求数
+        // X-RateLimit-Remaining
         if let Ok(val) = HeaderValue::from_str(&result.remaining.to_string()) {
             headers.insert("X-RateLimit-Remaining", val);
         }
 
-        // X-RateLimit-Reset: 窗口重置时间
+        // X-RateLimit-Reset
         if let Ok(val) = HeaderValue::from_str(&result.reset_at.to_string()) {
             headers.insert("X-RateLimit-Reset", val);
         }
 
-        // Retry-After: 建议重试等待时间（仅在拒绝时）
+        // Retry-After
         if let Some(val) = result
             .retry_after
             .and_then(|ra| HeaderValue::from_str(&ra.to_string()).ok())
@@ -145,17 +104,38 @@ impl RateLimitMiddleware {
 
 /// Axum 中间件函数
 pub async fn rate_limit_middleware(
-    axum::extract::State(state): axum::extract::State<Arc<RateLimitMiddleware>>,
+    State(mw): State<Arc<RateLimitMiddleware>>,
     request: Request,
     next: Next,
 ) -> Response {
-    // 检查限流
-    let result = state.check_rate_limit(&request).await;
+    // 1. 在第一个 await 之前提取所有需要的数据
+    // 这样我们就不会在跨 await 点时持有非 Sync 的 Request 引用
+    let identifier = mw.extract_identifier(&request);
+    let tier = mw.detect_user_tier(&request);
+    let endpoint_type = mw.classifier.classify(request.uri(), request.method());
+
+    // 2. 检查限流（异步）
+    // 注意：不再将 &request 传递给异步函数
+    // 检查是否启用限流
+    if !mw.config_manager.is_enabled().await {
+        return next.run(request).await;
+    }
+
+    // 获取限流规则
+    let rule = mw
+        .config_manager
+        .get_rule(tier.as_str(), endpoint_type.as_str())
+        .await;
+
+    // 获取 Redis 键前缀
+    let key_prefix = mw.config_manager.get_key_prefix().await;
+
+    // 执行限流检查
+    let result = mw.rate_limiter.check(&key_prefix, &identifier, &rule).await;
 
     if !result.allowed {
-        // 限流触发，返回 429
         warn!(
-            identifier = %state.extract_identifier(&request),
+            %identifier,
             endpoint = %request.uri().path(),
             method = %request.method(),
             "Rate limit exceeded"
@@ -167,15 +147,12 @@ pub async fn rate_limit_middleware(
         )
             .into_response();
 
-        // 添加限流头
         RateLimitMiddleware::add_rate_limit_headers(&mut response, &result);
-
         return response;
     }
 
-    // 允许请求通过
     debug!(
-        identifier = %state.extract_identifier(&request),
+        %identifier,
         endpoint = %request.uri().path(),
         method = %request.method(),
         count = result.count,
@@ -183,7 +160,7 @@ pub async fn rate_limit_middleware(
         "Request allowed"
     );
 
-    // 继续处理请求
+    // 允许请求通过
     let mut response = next.run(request).await;
 
     // 添加限流头

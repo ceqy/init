@@ -50,21 +50,6 @@ impl EndpointClassifier {
             _ => EndpointType::Query, // 其他方法按 Query 处理
         }
     }
-
-    /// 仅根据路径分类（不使用 HTTP 方法）
-    pub fn classify_by_path(&self, uri: &Uri) -> EndpointType {
-        let path = uri.path();
-
-        if AUTH_PATH_REGEX.is_match(path) {
-            return EndpointType::Auth;
-        }
-
-        if ADMIN_PATH_REGEX.is_match(path) {
-            return EndpointType::Admin;
-        }
-
-        EndpointType::Query
-    }
 }
 
 impl Default for EndpointClassifier {

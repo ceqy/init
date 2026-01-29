@@ -2,7 +2,6 @@
 //!
 //! 使用滑动窗口算法和 Lua 脚本实现原子操作
 
-use crate::rate_limit::config::ConfigManager;
 use crate::rate_limit::types::{RateLimitResult, RateLimitRule};
 use redis::Script;
 use redis::aio::ConnectionManager;

@@ -214,6 +214,28 @@ impl RoleRepository for TxRoleRepository {
 
         Ok(row.0)
     }
+
+    async fn list_active_tenants(&self) -> AppResult<Vec<TenantId>> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
+        let rows = sqlx::query_as::<_, TenantIdRow>("SELECT DISTINCT tenant_id FROM roles")
+            .fetch_all(&mut **tx)
+            .await
+            .map_err(map_sqlx_error)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| TenantId::from_uuid(r.tenant_id))
+            .collect())
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct TenantIdRow {
+    tenant_id: Uuid,
 }
 
 impl TxRoleRepository {

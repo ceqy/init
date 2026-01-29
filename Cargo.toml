@@ -30,6 +30,7 @@ repository = "https://github.com/ceqy/init"
 [workspace.dependencies]
 # Async runtime
 tokio = { version = "1.49", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt"] }
 
 # Web framework
 axum = { version = "0.8" }

@@ -60,7 +60,10 @@ impl OutboxProcessor {
     }
 
     /// 启动后台处理任务
-    pub fn start(self: Arc<Self>) -> tokio::task::JoinHandle<()> {
+    pub fn start(
+        self: Arc<Self>,
+        shutdown: tokio_util::sync::CancellationToken,
+    ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             info!("Outbox processor started");
             let mut scan_ticker = interval(self.config.scan_interval);
@@ -78,8 +81,13 @@ impl OutboxProcessor {
                             error!(error = %e, "Failed to cleanup processed messages");
                         }
                     }
+                    _ = shutdown.cancelled() => {
+                        info!("Outbox processor received shutdown signal");
+                        break;
+                    }
                 }
             }
+            info!("Outbox processor stopped");
         })
     }
 
