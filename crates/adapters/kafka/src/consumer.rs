@@ -1,11 +1,11 @@
 //! Kafka Consumer
 
 use cuba_errors::{AppError, AppResult};
+use futures_util::StreamExt;
 use rdkafka::config::ClientConfig;
-use rdkafka::consumer::{Consumer, CommitMode, StreamConsumer};
+use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 use rdkafka::message::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
-use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::{error, info, warn};
@@ -144,19 +144,27 @@ impl KafkaEventConsumer {
                         Some(Err(e)) => {
                             error!("Failed to deserialize message payload: {}", e);
                             // 反序列化失败，直接发送到 DLQ
-                            if let Err(dlq_err) = self.send_to_dlq(
-                                &topic,
-                                partition,
-                                offset,
-                                "",
-                                &format!("Deserialization error: {}", e),
-                                0,
-                            ).await {
+                            if let Err(dlq_err) = self
+                                .send_to_dlq(
+                                    &topic,
+                                    partition,
+                                    offset,
+                                    "",
+                                    &format!("Deserialization error: {}", e),
+                                    0,
+                                )
+                                .await
+                            {
                                 error!("Failed to send to DLQ: {}", dlq_err);
                             }
                             // 提交 offset，避免重复处理
-                            if let Err(e) = self.consumer.commit_message(&message, CommitMode::Async) {
-                                error!("Failed to commit offset after deserialization error: {}", e);
+                            if let Err(e) =
+                                self.consumer.commit_message(&message, CommitMode::Async)
+                            {
+                                error!(
+                                    "Failed to commit offset after deserialization error: {}",
+                                    e
+                                );
                             }
                             continue;
                         }
@@ -166,18 +174,33 @@ impl KafkaEventConsumer {
                     };
 
                     // 处理消息，带重试机制
-                    if let Err(e) = self.process_with_retry(&handler, topic.clone(), payload.clone(), partition, offset).await {
-                        error!("Failed to process message from {} after {} retries: {}", topic, self.config.max_retries, e);
-
-                        // 发送到 DLQ
-                        if let Err(dlq_err) = self.send_to_dlq(
-                            &topic,
+                    if let Err(e) = self
+                        .process_with_retry(
+                            &handler,
+                            topic.clone(),
+                            payload.clone(),
                             partition,
                             offset,
-                            &payload,
-                            &e.to_string(),
-                            self.config.max_retries,
-                        ).await {
+                        )
+                        .await
+                    {
+                        error!(
+                            "Failed to process message from {} after {} retries: {}",
+                            topic, self.config.max_retries, e
+                        );
+
+                        // 发送到 DLQ
+                        if let Err(dlq_err) = self
+                            .send_to_dlq(
+                                &topic,
+                                partition,
+                                offset,
+                                &payload,
+                                &e.to_string(),
+                                self.config.max_retries,
+                            )
+                            .await
+                        {
                             error!("Failed to send to DLQ: {}", dlq_err);
                             // DLQ 发送失败，不提交 offset，下次重新处理
                             continue;
@@ -263,9 +286,10 @@ impl KafkaEventConsumer {
             return Ok(());
         }
 
-        let dlq_producer = self.dlq_producer.as_ref().ok_or_else(|| {
-            AppError::internal("DLQ producer not initialized")
-        })?;
+        let dlq_producer = self
+            .dlq_producer
+            .as_ref()
+            .ok_or_else(|| AppError::internal("DLQ producer not initialized"))?;
 
         let dlq_topic = format!("{}{}", original_topic, self.config.dlq_suffix);
 

@@ -65,7 +65,10 @@ impl ServiceConfig {
 ///     }).await
 /// }
 /// ```
-pub async fn run<F, Fut, S>(config_dir: &str, service_builder: F) -> Result<(), Box<dyn std::error::Error>>
+pub async fn run<F, Fut, S>(
+    config_dir: &str,
+    service_builder: F,
+) -> Result<(), Box<dyn std::error::Error>>
 where
     F: FnOnce(Infrastructure) -> Fut,
     Fut: Future<Output = S>,

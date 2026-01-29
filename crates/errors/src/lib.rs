@@ -16,7 +16,7 @@ pub enum AppError {
 
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
-    
+
     #[error("Unauthenticated: {0}")]
     Unauthenticated(String),
 
@@ -34,10 +34,10 @@ pub enum AppError {
 
     #[error("External service error: {0}")]
     ExternalService(String),
-    
+
     #[error("Failed precondition: {0}")]
     FailedPrecondition(String),
-    
+
     #[error("Resource exhausted: {0}")]
     ResourceExhausted(String),
 }
@@ -74,15 +74,15 @@ impl AppError {
     pub fn external_service(msg: impl Into<String>) -> Self {
         Self::ExternalService(msg.into())
     }
-    
+
     pub fn unauthenticated(msg: impl Into<String>) -> Self {
         Self::Unauthenticated(msg.into())
     }
-    
+
     pub fn failed_precondition(msg: impl Into<String>) -> Self {
         Self::FailedPrecondition(msg.into())
     }
-    
+
     pub fn resource_exhausted(msg: impl Into<String>) -> Self {
         Self::ResourceExhausted(msg.into())
     }
@@ -144,9 +144,15 @@ impl AppError {
             Self::ExternalService(_) => {
                 "https://api.cuba-erp.com/problems/external-service".to_string()
             }
-            Self::Unauthenticated(_) => "https://api.cuba-erp.com/problems/unauthenticated".to_string(),
-            Self::FailedPrecondition(_) => "https://api.cuba-erp.com/problems/failed-precondition".to_string(),
-            Self::ResourceExhausted(_) => "https://api.cuba-erp.com/problems/resource-exhausted".to_string(),
+            Self::Unauthenticated(_) => {
+                "https://api.cuba-erp.com/problems/unauthenticated".to_string()
+            }
+            Self::FailedPrecondition(_) => {
+                "https://api.cuba-erp.com/problems/failed-precondition".to_string()
+            }
+            Self::ResourceExhausted(_) => {
+                "https://api.cuba-erp.com/problems/resource-exhausted".to_string()
+            }
         }
     }
 

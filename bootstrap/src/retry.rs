@@ -155,8 +155,7 @@ mod tests {
     #[tokio::test]
     async fn test_retry_success_first_attempt() {
         let config = RetryConfig::new(3, 100, 1000);
-        let result: Result<i32, &str> =
-            with_retry(&config, "test", || async { Ok(42) }).await;
+        let result: Result<i32, &str> = with_retry(&config, "test", || async { Ok(42) }).await;
         assert_eq!(result.unwrap(), 42);
     }
 

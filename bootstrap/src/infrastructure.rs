@@ -5,10 +5,11 @@
 use std::sync::Arc;
 
 use clickhouse::Client as ClickHouseClient;
-use cuba_adapter_clickhouse::{create_client as create_clickhouse_client, ClickHouseConfig};
+use cuba_adapter_clickhouse::{ClickHouseConfig, create_client as create_clickhouse_client};
 use cuba_adapter_kafka::{KafkaEventPublisher, KafkaProducerConfig};
-use cuba_adapter_postgres::{create_pool, PostgresConfig};
-use cuba_adapter_redis::{create_connection_manager, RedisCache};
+pub use cuba_adapter_postgres::PoolStatus;
+use cuba_adapter_postgres::{PostgresConfig, ReadWritePool, create_pool};
+use cuba_adapter_redis::{RedisCache, create_connection_manager};
 use cuba_auth_core::TokenService;
 use cuba_config::AppConfig;
 use cuba_errors::AppResult;
@@ -17,7 +18,7 @@ use secrecy::ExposeSecret;
 use sqlx::PgPool;
 use tracing::info;
 
-use crate::retry::{with_retry, with_retry_optional, RetryConfig};
+use crate::retry::{RetryConfig, with_retry, with_retry_optional};
 
 /// 基础设施资源容器
 ///
@@ -27,6 +28,8 @@ pub struct Infrastructure {
     config: AppConfig,
     /// PostgreSQL 连接池
     postgres_pool: PgPool,
+    /// PostgreSQL 读写分离连接池（可选）
+    rw_pool: Option<ReadWritePool>,
     /// Redis 连接管理器
     redis_conn: ConnectionManager,
     /// Token 服务
@@ -35,17 +38,6 @@ pub struct Infrastructure {
     kafka_producer: Option<Arc<KafkaEventPublisher>>,
     /// ClickHouse 客户端（可选）
     clickhouse_client: Option<ClickHouseClient>,
-}
-
-/// 连接池状态
-#[derive(Debug, Clone)]
-pub struct PoolStatus {
-    /// 连接池大小
-    pub size: u32,
-    /// 空闲连接数
-    pub idle: u32,
-    /// 活跃连接数
-    pub active: u32,
 }
 
 impl Infrastructure {
@@ -61,7 +53,41 @@ impl Infrastructure {
             async move { create_pool(&cfg).await }
         })
         .await?;
-        info!("PostgreSQL connection pool created");
+        info!(
+            "PostgreSQL connection pool created (max_connections: {})",
+            config.database.max_connections
+        );
+
+        // 1.1 创建读库连接池（可选，用于读写分离）
+        let rw_pool = if let Some(read_url) = &config.database.read_url {
+            let read_config = PostgresConfig::new(read_url.expose_secret())
+                .with_max_connections(config.database.read_max_connections);
+
+            match with_retry(&retry_config, "PostgreSQL read replica connection", || {
+                let cfg = read_config.clone();
+                async move { create_pool(&cfg).await }
+            })
+            .await
+            {
+                Ok(read_pool) => {
+                    info!(
+                        "PostgreSQL read replica pool created (max_connections: {})",
+                        config.database.read_max_connections
+                    );
+                    Some(ReadWritePool::new(postgres_pool.clone(), Some(read_pool)))
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to create read replica pool: {}, using primary for reads",
+                        e
+                    );
+                    Some(ReadWritePool::new(postgres_pool.clone(), None))
+                }
+            }
+        } else {
+            info!("Read replica not configured, using primary for all operations");
+            Some(ReadWritePool::new(postgres_pool.clone(), None))
+        };
 
         // 2. 创建 Redis 连接（必需，带重试）
         let redis_url = config.redis.url.clone();
@@ -83,8 +109,8 @@ impl Infrastructure {
 
         // 4. 创建 Kafka Producer（可选，带重试）
         let kafka_producer = if let Some(kafka_config) = &config.kafka {
-            let producer_config = KafkaProducerConfig::new(&kafka_config.brokers)
-                .with_client_id(&config.app_name);
+            let producer_config =
+                KafkaProducerConfig::new(&kafka_config.brokers).with_client_id(&config.app_name);
             let result = with_retry_optional(&retry_config, "Kafka producer", || {
                 let cfg = producer_config.clone();
                 async move { KafkaEventPublisher::new(&cfg) }
@@ -101,14 +127,18 @@ impl Infrastructure {
 
         // 5. 创建 ClickHouse 客户端（可选，不重试，因为是同步创建）
         let clickhouse_client = if let Some(ch_config) = &config.clickhouse {
-            let ch_adapter_config = ClickHouseConfig::new(ch_config.url.expose_secret(), &ch_config.database);
+            let ch_adapter_config =
+                ClickHouseConfig::new(ch_config.url.expose_secret(), &ch_config.database);
             match create_clickhouse_client(&ch_adapter_config) {
                 Ok(client) => {
                     info!("ClickHouse client created");
                     Some(client)
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to create ClickHouse client: {}, continuing without ClickHouse", e);
+                    tracing::warn!(
+                        "Failed to create ClickHouse client: {}, continuing without ClickHouse",
+                        e
+                    );
                     None
                 }
             }
@@ -120,6 +150,7 @@ impl Infrastructure {
         Ok(Self {
             config,
             postgres_pool,
+            rw_pool,
             redis_conn,
             token_service,
             kafka_producer,
@@ -135,6 +166,11 @@ impl Infrastructure {
     /// 获取 PostgreSQL 连接池
     pub fn postgres_pool(&self) -> PgPool {
         self.postgres_pool.clone()
+    }
+
+    /// 获取读写分离连接池（如果配置了读库）
+    pub fn read_write_pool(&self) -> Option<&ReadWritePool> {
+        self.rw_pool.as_ref()
     }
 
     /// 获取 Redis 连接管理器
@@ -184,11 +220,20 @@ impl Infrastructure {
 
     /// 获取 PostgreSQL 连接池状态
     pub fn postgres_pool_status(&self) -> PoolStatus {
-        let pool = &self.postgres_pool;
-        PoolStatus {
-            size: pool.size(),
-            idle: pool.num_idle() as u32,
-            active: pool.size() - pool.num_idle() as u32,
+        if let Some(rw_pool) = &self.rw_pool {
+            // 如果有读写分离配置，返回详细状态
+            rw_pool.pool_status()
+        } else {
+            // 否则返回简单状态
+            let pool = &self.postgres_pool;
+            PoolStatus {
+                write_size: pool.size(),
+                write_idle: pool.num_idle() as u32,
+                write_active: pool.size() - pool.num_idle() as u32,
+                read_size: 0,
+                read_idle: 0,
+                read_active: 0,
+            }
         }
     }
 

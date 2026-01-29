@@ -1,9 +1,8 @@
 //! cuba-config - 配置加载库
 
-
 use figment::{
-    providers::{Env, Format, Toml},
     Figment,
+    providers::{Env, Format, Toml},
 };
 use serde::Deserialize;
 use thiserror::Error;
@@ -22,6 +21,11 @@ pub struct DatabaseConfig {
     pub url: Secret<String>,
     #[serde(default = "default_max_connections")]
     pub max_connections: u32,
+    /// 可选: 读库 URL（用于读写分离）
+    pub read_url: Option<Secret<String>>,
+    /// 可选: 读库最大连接数
+    #[serde(default = "default_read_max_connections")]
+    pub read_max_connections: u32,
 }
 
 fn default_max_connections() -> u32 {
@@ -30,6 +34,14 @@ fn default_max_connections() -> u32 {
     match std::env::var("APP_ENV").as_deref() {
         Ok("production") => 50,
         _ => 10,
+    }
+}
+
+fn default_read_max_connections() -> u32 {
+    // 读库连接数通常可以更多，因为读操作更频繁
+    match std::env::var("APP_ENV").as_deref() {
+        Ok("production") => 100,
+        _ => 20,
     }
 }
 

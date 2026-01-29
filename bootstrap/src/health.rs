@@ -2,13 +2,7 @@
 //!
 //! 提供 /health 和 /ready 端点
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
-};
+use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
 use cuba_adapter_clickhouse::check_connection as check_clickhouse;
 use serde::Serialize;
 use std::net::SocketAddr;
@@ -16,8 +10,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::info;
 
-use crate::metrics::MetricsRecorder;
 use crate::Infrastructure;
+use crate::metrics::MetricsRecorder;
 
 /// 健康检查状态
 #[derive(Debug, Clone, Serialize)]
@@ -153,10 +147,7 @@ impl HealthChecker {
 
     async fn check_redis(&self, infra: &Infrastructure) -> ComponentHealth {
         let mut conn = infra.redis_connection_manager();
-        match redis::cmd("PING")
-            .query_async::<String>(&mut conn)
-            .await
-        {
+        match redis::cmd("PING").query_async::<String>(&mut conn).await {
             Ok(_) => ComponentHealth::healthy("redis"),
             Err(e) => ComponentHealth::unhealthy("redis", e.to_string()),
         }

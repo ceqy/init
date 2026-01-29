@@ -25,18 +25,27 @@ pub trait CachePort: Send + Sync {
     /// 原子性递增计数器，如果键不存在则创建并设置 TTL
     async fn incr_with_ttl(&self, key: &str, ttl_secs: u64) -> AppResult<i64> {
         // 默认实现（非原子性，子类应该覆盖）
-        let current = self.get(key).await?
+        let current = self
+            .get(key)
+            .await?
             .and_then(|v| v.parse::<i64>().ok())
             .unwrap_or(0);
         let new_value = current + 1;
-        self.set(key, &new_value.to_string(), Some(Duration::from_secs(ttl_secs))).await?;
+        self.set(
+            key,
+            &new_value.to_string(),
+            Some(Duration::from_secs(ttl_secs)),
+        )
+        .await?;
         Ok(new_value)
     }
 
     /// 原子性递减计数器
     async fn decr(&self, key: &str) -> AppResult<i64> {
         // 默认实现（非原子性，子类应该覆盖）
-        let current = self.get(key).await?
+        let current = self
+            .get(key)
+            .await?
             .and_then(|v| v.parse::<i64>().ok())
             .unwrap_or(0);
         let new_value = current - 1;
@@ -71,10 +80,11 @@ pub trait CachePort: Send + Sync {
     async fn delete_if_equals(&self, key: &str, expected_value: &str) -> AppResult<bool> {
         // 默认实现（非原子性，子类应该覆盖）
         if let Some(current) = self.get(key).await?
-            && current == expected_value {
-                self.delete(key).await?;
-                return Ok(true);
-            }
+            && current == expected_value
+        {
+            self.delete(key).await?;
+            return Ok(true);
+        }
         Ok(false)
     }
 }

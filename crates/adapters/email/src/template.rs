@@ -27,8 +27,9 @@ impl EmailTemplate {
         let mut tera = Tera::default();
 
         for (name, content) in templates {
-            tera.add_raw_template(&name, &content)
-                .map_err(|e| AppError::internal(format!("Failed to add template {}: {}", name, e)))?;
+            tera.add_raw_template(&name, &content).map_err(|e| {
+                AppError::internal(format!("Failed to add template {}: {}", name, e))
+            })?;
         }
 
         Ok(Self { tera })
@@ -39,9 +40,12 @@ impl EmailTemplate {
         let context = tera::Context::from_serialize(context)
             .map_err(|e| AppError::internal(format!("Failed to create template context: {}", e)))?;
 
-        self.tera
-            .render(template_name, &context)
-            .map_err(|e| AppError::internal(format!("Failed to render template {}: {}", template_name, e)))
+        self.tera.render(template_name, &context).map_err(|e| {
+            AppError::internal(format!(
+                "Failed to render template {}: {}",
+                template_name, e
+            ))
+        })
     }
 
     /// 渲染密码重置邮件
@@ -57,12 +61,14 @@ impl EmailTemplate {
         context.insert("expires_in_minutes", &expires_in_minutes);
 
         // 渲染 HTML 版本
-        let html = self.tera
+        let html = self
+            .tera
             .render("password_reset.html", &context)
             .map_err(|e| AppError::internal(format!("Failed to render HTML template: {}", e)))?;
 
         // 渲染纯文本版本
-        let text = self.tera
+        let text = self
+            .tera
             .render("password_reset.txt", &context)
             .map_err(|e| AppError::internal(format!("Failed to render text template: {}", e)))?;
 

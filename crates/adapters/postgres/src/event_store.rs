@@ -30,7 +30,9 @@ impl EventStore for PostgresEventStore {
             .map_err(|e| AppError::internal(format!("Failed to serialize metadata: {}", e)))?;
 
         // 使用事务确保版本检查和插入的原子性
-        let mut tx = self.pool.begin()
+        let mut tx = self
+            .pool
+            .begin()
             .await
             .map_err(|e| AppError::database(format!("Failed to begin transaction: {}", e)))?;
 
@@ -50,7 +52,11 @@ impl EventStore for PostgresEventStore {
         .map_err(|e| AppError::database(format!("Failed to get current version: {}", e)))?;
 
         let current_version = current_version.map(|(v,)| v as u64).unwrap_or(0);
-        let expected_version = if envelope.version == 1 { 0 } else { envelope.version - 1 };
+        let expected_version = if envelope.version == 1 {
+            0
+        } else {
+            envelope.version - 1
+        };
 
         // 版本冲突检测
         if current_version != expected_version {
@@ -258,7 +264,9 @@ mod tests {
         store.append(&envelope).await?;
 
         // 验证版本
-        let version = store.get_current_version("TestAggregate", &aggregate_id).await?;
+        let version = store
+            .get_current_version("TestAggregate", &aggregate_id)
+            .await?;
         assert_eq!(version, 1);
 
         Ok(())
@@ -277,7 +285,9 @@ mod tests {
         }
 
         // 验证最终版本
-        let version = store.get_current_version("TestAggregate", &aggregate_id).await?;
+        let version = store
+            .get_current_version("TestAggregate", &aggregate_id)
+            .await?;
         assert_eq!(version, 5);
 
         // 验证所有事件都被保存
@@ -307,7 +317,9 @@ mod tests {
         assert!(matches!(err, AppError::Conflict(_)));
 
         // 验证版本仍然是 1
-        let version = store.get_current_version("TestAggregate", &aggregate_id).await?;
+        let version = store
+            .get_current_version("TestAggregate", &aggregate_id)
+            .await?;
         assert_eq!(version, 1);
 
         Ok(())
@@ -333,7 +345,9 @@ mod tests {
         assert!(matches!(err, AppError::Conflict(_)));
 
         // 验证版本仍然是 1
-        let version = store.get_current_version("TestAggregate", &aggregate_id).await?;
+        let version = store
+            .get_current_version("TestAggregate", &aggregate_id)
+            .await?;
         assert_eq!(version, 1);
 
         Ok(())
@@ -379,8 +393,12 @@ mod tests {
         store.append(&envelope2).await?;
 
         // 验证两个聚合的版本都是 1
-        let version1 = store.get_current_version("TestAggregate", &aggregate_id1).await?;
-        let version2 = store.get_current_version("TestAggregate", &aggregate_id2).await?;
+        let version1 = store
+            .get_current_version("TestAggregate", &aggregate_id1)
+            .await?;
+        let version2 = store
+            .get_current_version("TestAggregate", &aggregate_id2)
+            .await?;
         assert_eq!(version1, 1);
         assert_eq!(version2, 1);
 

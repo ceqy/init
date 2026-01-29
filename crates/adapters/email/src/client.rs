@@ -2,7 +2,7 @@
 
 use crate::{EmailConfig, EmailSender, EmailTemplate};
 use cuba_errors::{AppError, AppResult};
-use lettre::message::{header, MultiPart, SinglePart};
+use lettre::message::{MultiPart, SinglePart, header};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 use secrecy::ExposeSecret;
@@ -72,10 +72,7 @@ impl EmailClient {
             .parse()
             .map_err(|e| AppError::validation(format!("Invalid to address: {}", e)))?;
 
-        let message_builder = Message::builder()
-            .from(from)
-            .to(to)
-            .subject(&msg.subject);
+        let message_builder = Message::builder().from(from).to(to).subject(&msg.subject);
 
         // 构建邮件体
         let body = if let Some(html) = &msg.html_body {
@@ -100,7 +97,8 @@ impl EmailClient {
             )
         };
 
-        let message = message_builder.multipart(body)
+        let message = message_builder
+            .multipart(body)
             .map_err(|e| AppError::internal(format!("Failed to build message: {}", e)))?;
 
         Ok(message)

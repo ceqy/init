@@ -231,9 +231,12 @@ impl PoolMetricsCollector {
                     record_redis_connection_status(redis_connected);
 
                     debug!(
-                        postgres_size = pool_status.size,
-                        postgres_idle = pool_status.idle,
-                        postgres_active = pool_status.active,
+                        postgres_write_size = pool_status.write_size,
+                        postgres_write_idle = pool_status.write_idle,
+                        postgres_write_active = pool_status.write_active,
+                        postgres_read_size = pool_status.read_size,
+                        postgres_read_idle = pool_status.read_idle,
+                        postgres_read_active = pool_status.read_active,
                         redis_connected = redis_connected,
                         "Pool metrics collected"
                     );
@@ -251,19 +254,45 @@ impl Default for PoolMetricsCollector {
 
 /// 记录 PostgreSQL 连接池指标
 pub fn record_postgres_pool_metrics(status: &PoolStatus) {
-    let labels = [("pool", "main".to_string())];
+    // 记录写连接池指标
+    let write_labels = [("pool", "write".to_string())];
+    gauge!("postgres_pool_size", &write_labels).set(status.write_size as f64);
+    gauge!("postgres_pool_idle", &write_labels).set(status.write_idle as f64);
+    gauge!("postgres_pool_active", &write_labels).set(status.write_active as f64);
 
-    gauge!("postgres_pool_size", &labels).set(status.size as f64);
-    gauge!("postgres_pool_idle", &labels).set(status.idle as f64);
-    gauge!("postgres_pool_active", &labels).set(status.active as f64);
-
-    // 计算使用率百分比
-    let utilization = if status.size > 0 {
-        (status.active as f64 / status.size as f64) * 100.0
+    // 计算写连接池使用率
+    let write_utilization = if status.write_size > 0 {
+        (status.write_active as f64 / status.write_size as f64) * 100.0
     } else {
         0.0
     };
-    set_pool_utilization("postgres", utilization);
+    gauge!("postgres_pool_utilization", &write_labels).set(write_utilization);
+
+    // 如果有读连接池，记录读连接池指标
+    if status.read_size > 0 {
+        let read_labels = [("pool", "read".to_string())];
+        gauge!("postgres_pool_size", &read_labels).set(status.read_size as f64);
+        gauge!("postgres_pool_idle", &read_labels).set(status.read_idle as f64);
+        gauge!("postgres_pool_active", &read_labels).set(status.read_active as f64);
+
+        // 计算读连接池使用率
+        let read_utilization = if status.read_size > 0 {
+            (status.read_active as f64 / status.read_size as f64) * 100.0
+        } else {
+            0.0
+        };
+        gauge!("postgres_pool_utilization", &read_labels).set(read_utilization);
+    }
+
+    // 记录总体使用率（用于向后兼容）
+    let total_size = status.write_size + status.read_size;
+    let total_active = status.write_active + status.read_active;
+    let total_utilization = if total_size > 0 {
+        (total_active as f64 / total_size as f64) * 100.0
+    } else {
+        write_utilization
+    };
+    set_pool_utilization("postgres", total_utilization);
 }
 
 /// 记录 Redis 连接状态

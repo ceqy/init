@@ -1,17 +1,17 @@
 //! Redis 连接管理
 
 use cuba_errors::{AppError, AppResult};
-use redis::aio::ConnectionManager;
 use redis::Client;
+use redis::aio::ConnectionManager;
 
 /// 创建 Redis 连接管理器
 pub async fn create_connection_manager(url: &str) -> AppResult<ConnectionManager> {
-    let client =
-        Client::open(url).map_err(|e| AppError::internal(format!("Failed to create Redis client: {}", e)))?;
+    let client = Client::open(url)
+        .map_err(|e| AppError::internal(format!("Failed to create Redis client: {}", e)))?;
 
-    ConnectionManager::new(client)
-        .await
-        .map_err(|e| AppError::internal(format!("Failed to create Redis connection manager: {}", e)))
+    ConnectionManager::new(client).await.map_err(|e| {
+        AppError::internal(format!("Failed to create Redis connection manager: {}", e))
+    })
 }
 
 /// 检查 Redis 连接

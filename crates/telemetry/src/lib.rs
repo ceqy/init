@@ -1,6 +1,6 @@
 //! cuba-telemetry - 可观测性库
 
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 /// 初始化 tracing
 pub fn init_tracing(log_level: &str) {

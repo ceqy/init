@@ -40,7 +40,10 @@ impl Money {
     }
 
     pub fn zero(currency: Currency) -> Self {
-        Self { amount: 0, currency }
+        Self {
+            amount: 0,
+            currency,
+        }
     }
 
     pub fn cny(amount: i64) -> Self {

@@ -32,7 +32,7 @@ impl RedisCache {
                 redis.call('EXPIRE', KEYS[1], ARGV[1])
             end
             return current
-            "
+            ",
         );
 
         script
@@ -106,7 +106,7 @@ impl RedisCache {
             else
                 return 0
             end
-            "
+            ",
         );
 
         let deleted: i64 = script
@@ -154,11 +154,10 @@ impl CachePort for RedisCache {
     async fn set(&self, key: &str, value: &str, ttl: Option<Duration>) -> AppResult<()> {
         let mut conn = self.conn.clone();
         match ttl {
-            Some(duration) => {
-                conn.set_ex(key, value, duration.as_secs())
-                    .await
-                    .map_err(|e| AppError::internal(format!("Redis set failed: {}", e)))
-            }
+            Some(duration) => conn
+                .set_ex(key, value, duration.as_secs())
+                .await
+                .map_err(|e| AppError::internal(format!("Redis set failed: {}", e))),
             None => conn
                 .set(key, value)
                 .await

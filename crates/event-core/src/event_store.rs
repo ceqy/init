@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use cuba_errors::AppResult;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use crate::EventEnvelope;
 
@@ -45,11 +45,8 @@ pub trait EventStore: Send + Sync {
     ) -> AppResult<Vec<StoredEvent>>;
 
     /// 获取聚合的当前版本
-    async fn get_current_version(
-        &self,
-        aggregate_type: &str,
-        aggregate_id: &str,
-    ) -> AppResult<u64>;
+    async fn get_current_version(&self, aggregate_type: &str, aggregate_id: &str)
+    -> AppResult<u64>;
 }
 
 /// 从存储的事件反序列化

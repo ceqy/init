@@ -5,7 +5,7 @@
 use chrono::{Duration, Utc};
 use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation, Algorithm};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

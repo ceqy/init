@@ -78,7 +78,10 @@ impl Add for Quantity {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        assert_eq!(self.unit, other.unit, "Cannot add quantities with different units");
+        assert_eq!(
+            self.unit, other.unit,
+            "Cannot add quantities with different units"
+        );
         assert_eq!(
             self.precision, other.precision,
             "Cannot add quantities with different precisions"

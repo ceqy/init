@@ -5,8 +5,8 @@
 use async_trait::async_trait;
 use cuba_errors::{AppError, AppResult};
 use cuba_ports::DistributedLock;
-use redis::aio::ConnectionManager;
 use redis::Script;
+use redis::aio::ConnectionManager;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -169,19 +169,34 @@ mod tests {
         let lock2 = RedisDistributedLock::new(conn);
 
         // lock1 获取锁
-        assert!(lock1.acquire("test_key", Duration::from_secs(1)).await.unwrap());
+        assert!(
+            lock1
+                .acquire("test_key", Duration::from_secs(1))
+                .await
+                .unwrap()
+        );
 
         // 等待锁过期
         tokio::time::sleep(Duration::from_secs(2)).await;
 
         // lock2 获取锁（此时 lock1 的锁已过期）
-        assert!(lock2.acquire("test_key", Duration::from_secs(10)).await.unwrap());
+        assert!(
+            lock2
+                .acquire("test_key", Duration::from_secs(10))
+                .await
+                .unwrap()
+        );
 
         // lock1 尝试释放锁（应该不会删除 lock2 的锁）
         lock1.release("test_key").await.unwrap();
 
         // lock2 应该仍然持有锁
-        assert!(!lock1.acquire("test_key", Duration::from_secs(1)).await.unwrap());
+        assert!(
+            !lock1
+                .acquire("test_key", Duration::from_secs(1))
+                .await
+                .unwrap()
+        );
 
         // 清理
         lock2.release("test_key").await.unwrap();
@@ -195,7 +210,11 @@ mod tests {
         let lock = RedisDistributedLock::new(conn);
 
         // 获取锁
-        assert!(lock.acquire("test_key", Duration::from_secs(10)).await.unwrap());
+        assert!(
+            lock.acquire("test_key", Duration::from_secs(10))
+                .await
+                .unwrap()
+        );
 
         // 执行业务逻辑
         let result = 42;
@@ -215,7 +234,12 @@ mod tests {
         let lock2 = RedisDistributedLock::new(conn);
 
         // lock1 获取锁，短 TTL
-        assert!(lock1.acquire("test_key", Duration::from_millis(500)).await.unwrap());
+        assert!(
+            lock1
+                .acquire("test_key", Duration::from_millis(500))
+                .await
+                .unwrap()
+        );
 
         // lock2 尝试获取锁，带重试
         let acquired = lock2
