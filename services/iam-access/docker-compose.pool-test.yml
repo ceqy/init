@@ -1,0 +1,180 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 主库
+  postgres-primary:
+    image: postgres:16-alpine
+    container_name: cuba-postgres-primary
+    environment:
+      POSTGRES_DB: cuba
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "-c max_connections=200"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-primary-data:/var/lib/postgresql/data
+      - ./scripts/init-primary.sql:/docker-entrypoint-initdb.d/01-init.sql
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=2621kB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "max_wal_size=4GB"
+      - "-c"
+      - "wal_level=replica"
+      - "-c"
+      - "max_wal_senders=3"
+      - "-c"
+      - "max_replication_slots=3"
+      - "-c"
+      - "hot_standby=on"
+    networks:
+      - cuba-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL 从库（读副本）
+  postgres-replica:
+    image: postgres:16-alpine
+    container_name: cuba-postgres-replica
+    environment:
+      POSTGRES_DB: cuba
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+      - ./scripts/setup-replica.sh:/docker-entrypoint-initdb.d/setup-replica.sh
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=300"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "hot_standby=on"
+      - "-c"
+      - "hot_standby_feedback=on"
+      - "-c"
+      - "max_standby_streaming_delay=30s"
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    networks:
+      - cuba-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: cuba-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - cuba-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin（可选，用于数据库管理）
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cuba-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@cuba-erp.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - postgres-primary
+    networks:
+      - cuba-network
+
+  # Prometheus（监控）
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cuba-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - cuba-network
+
+  # Grafana（可视化）
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cuba-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - cuba-network
+
+volumes:
+  postgres-primary-data:
+  postgres-replica-data:
+  redis-data:
+  pgadmin-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  cuba-network:
+    driver: bridge

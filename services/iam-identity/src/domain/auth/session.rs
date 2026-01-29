@@ -138,24 +138,21 @@ mod tests {
 
     #[test]
     fn test_session_with_device_info() {
-        let session = create_test_session()
-            .with_device_info("iPhone 13");
+        let session = create_test_session().with_device_info("iPhone 13");
 
         assert_eq!(session.device_info, Some("iPhone 13".to_string()));
     }
 
     #[test]
     fn test_session_with_ip_address() {
-        let session = create_test_session()
-            .with_ip_address("192.168.1.1");
+        let session = create_test_session().with_ip_address("192.168.1.1");
 
         assert_eq!(session.ip_address, Some("192.168.1.1".to_string()));
     }
 
     #[test]
     fn test_session_with_user_agent() {
-        let session = create_test_session()
-            .with_user_agent("Mozilla/5.0");
+        let session = create_test_session().with_user_agent("Mozilla/5.0");
 
         assert_eq!(session.user_agent, Some("Mozilla/5.0".to_string()));
     }

@@ -7,9 +7,7 @@ use axum::{
     response::Response,
 };
 use cuba_auth_core::{Claims, TokenService};
-use tracing::{debug, warn, info};
-
-
+use tracing::{debug, info, warn};
 
 /// 认证上下文
 ///
@@ -89,65 +87,60 @@ pub async fn auth_middleware(
         .and_then(|h| h.to_str().ok());
 
     // Reworking the logic to handle lifetimes correctly
-    let query_token_owner: Option<String> = request
-        .uri()
-        .query()
-        .and_then(|query| {
-            url::form_urlencoded::parse(query.as_bytes())
-                .find(|(key, _)| key == "token")
-                .map(|(_, value)| value.to_string())
-        });
-        
+    let query_token_owner: Option<String> = request.uri().query().and_then(|query| {
+        url::form_urlencoded::parse(query.as_bytes())
+            .find(|(key, _)| key == "token")
+            .map(|(_, value)| value.to_string())
+    });
+
     let token = match auth_header {
         Some(header) if header.starts_with("Bearer ") => Some(&header[7..]),
         _ => query_token_owner.as_deref(),
     };
 
     if let Some(token) = token {
-            debug!("Validating JWT token");
+        debug!("Validating JWT token");
 
-            match token_service.validate_token(token) {
-                Ok(claims) => {
-                    info!(
-                        user_id = %claims.sub,
-                        tenant_id = %claims.tenant_id,
-                        "Token validated successfully"
-                    );
+        match token_service.validate_token(token) {
+            Ok(claims) => {
+                info!(
+                    user_id = %claims.sub,
+                    tenant_id = %claims.tenant_id,
+                    "Token validated successfully"
+                );
 
-                    // 将 AuthContext (claims + token) 注入到请求扩展中
-                    let auth_context = AuthContext {
-                        claims,
-                        token: token.to_string(),
-                    };
-                    let mut request = request;
-                    request.extensions_mut().insert(auth_context);
+                // 将 AuthContext (claims + token) 注入到请求扩展中
+                let auth_context = AuthContext {
+                    claims,
+                    token: token.to_string(),
+                };
+                let mut request = request;
+                request.extensions_mut().insert(auth_context);
 
-                    Ok(next.run(request).await)
-                }
-                Err(e) => {
-                    warn!(error = %e, "Token validation failed");
-                    Err(StatusCode::UNAUTHORIZED)
-                }
+                Ok(next.run(request).await)
             }
+            Err(e) => {
+                warn!(error = %e, "Token validation failed");
+                Err(StatusCode::UNAUTHORIZED)
+            }
+        }
     } else {
-            warn!("Missing or invalid authorization header/query param");
-            Err(StatusCode::UNAUTHORIZED)
+        warn!("Missing or invalid authorization header/query param");
+        Err(StatusCode::UNAUTHORIZED)
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use axum::{
+        Router,
         body::Body,
         http::{Request, StatusCode},
-        routing::get,
-        Router,
         middleware,
+        routing::get,
     };
-    use cuba_common::{UserId, TenantId};
+    use cuba_common::{TenantId, UserId};
     use tower::ServiceExt;
 
     async fn handler() -> impl axum::response::IntoResponse {
@@ -157,7 +150,13 @@ mod tests {
     #[tokio::test]
     async fn test_auth_middleware_valid_token() {
         let secret = "test_secret";
-        let token_service = TokenService::new(secret, 3600, 3600, "cuba-iam".to_string(), "cuba-api".to_string());
+        let token_service = TokenService::new(
+            secret,
+            3600,
+            3600,
+            "cuba-iam".to_string(),
+            "cuba-api".to_string(),
+        );
         let user_id = UserId::new();
         let tenant_id = TenantId::new();
         let token = token_service
@@ -166,7 +165,10 @@ mod tests {
 
         let app = Router::new()
             .route("/", get(handler))
-            .layer(middleware::from_fn_with_state(token_service.clone(), auth_middleware))
+            .layer(middleware::from_fn_with_state(
+                token_service.clone(),
+                auth_middleware,
+            ))
             .with_state(token_service);
 
         let req = Request::builder()
@@ -182,11 +184,20 @@ mod tests {
     #[tokio::test]
     async fn test_auth_middleware_invalid_token() {
         let secret = "test_secret";
-        let token_service = TokenService::new(secret, 3600, 3600, "cuba-iam".to_string(), "cuba-api".to_string());
-        
+        let token_service = TokenService::new(
+            secret,
+            3600,
+            3600,
+            "cuba-iam".to_string(),
+            "cuba-api".to_string(),
+        );
+
         let app = Router::new()
             .route("/", get(handler))
-            .layer(middleware::from_fn_with_state(token_service.clone(), auth_middleware))
+            .layer(middleware::from_fn_with_state(
+                token_service.clone(),
+                auth_middleware,
+            ))
             .with_state(token_service);
 
         let req = Request::builder()
@@ -202,17 +213,23 @@ mod tests {
     #[tokio::test]
     async fn test_auth_middleware_missing_header() {
         let secret = "test_secret";
-        let token_service = TokenService::new(secret, 3600, 3600, "cuba-iam".to_string(), "cuba-api".to_string());
-        
+        let token_service = TokenService::new(
+            secret,
+            3600,
+            3600,
+            "cuba-iam".to_string(),
+            "cuba-api".to_string(),
+        );
+
         let app = Router::new()
             .route("/", get(handler))
-            .layer(middleware::from_fn_with_state(token_service.clone(), auth_middleware))
+            .layer(middleware::from_fn_with_state(
+                token_service.clone(),
+                auth_middleware,
+            ))
             .with_state(token_service);
 
-        let req = Request::builder()
-            .uri("/")
-            .body(Body::empty())
-            .unwrap();
+        let req = Request::builder().uri("/").body(Body::empty()).unwrap();
 
         let response = app.oneshot(req).await.unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
@@ -228,7 +245,7 @@ mod tests {
             -3600,
             "cuba-iam".to_string(),
             "cuba-api".to_string(),
-        ); 
+        );
         let user_id = UserId::new();
         let tenant_id = TenantId::new();
         // Generate a token that is already expired
@@ -238,7 +255,10 @@ mod tests {
 
         let app = Router::new()
             .route("/", get(handler))
-            .layer(middleware::from_fn_with_state(token_service.clone(), auth_middleware))
+            .layer(middleware::from_fn_with_state(
+                token_service.clone(),
+                auth_middleware,
+            ))
             .with_state(token_service);
 
         let req = Request::builder()
@@ -254,8 +274,14 @@ mod tests {
     #[tokio::test]
     async fn test_auth_middleware_wrong_secret() {
         let secret = "correct_secret";
-        let token_service = TokenService::new(secret, 3600, 3600, "cuba-iam".to_string(), "cuba-api".to_string());
-        
+        let token_service = TokenService::new(
+            secret,
+            3600,
+            3600,
+            "cuba-iam".to_string(),
+            "cuba-api".to_string(),
+        );
+
         let wrong_secret_service = TokenService::new(
             "wrong_secret_at_least_32_characters",
             3600,
@@ -271,7 +297,10 @@ mod tests {
 
         let app = Router::new()
             .route("/", get(handler))
-            .layer(middleware::from_fn_with_state(token_service.clone(), auth_middleware))
+            .layer(middleware::from_fn_with_state(
+                token_service.clone(),
+                auth_middleware,
+            ))
             .with_state(token_service);
 
         let req = Request::builder()

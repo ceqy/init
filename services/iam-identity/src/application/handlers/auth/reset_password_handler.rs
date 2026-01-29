@@ -86,10 +86,14 @@ impl CommandHandler<ResetPasswordCommand> for ResetPasswordHandler {
         uow.users().update(&user).await?;
 
         // 10. 撤销该用户的所有密码重置令牌
-        uow.password_resets().delete_by_user_id(&user_id, &tenant_id).await?;
+        uow.password_resets()
+            .delete_by_user_id(&user_id, &tenant_id)
+            .await?;
 
         // 11. 撤销该用户的所有会话（强制重新登录）
-        uow.sessions().revoke_all_by_user_id(&user_id, &tenant_id).await?;
+        uow.sessions()
+            .revoke_all_by_user_id(&user_id, &tenant_id)
+            .await?;
 
         // 12. 提交事务
         uow.commit().await?;

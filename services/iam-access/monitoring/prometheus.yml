@@ -1,0 +1,36 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'cuba-erp'
+    environment: 'development'
+
+scrape_configs:
+  # IAM Access Service
+  - job_name: 'iam-access'
+    static_configs:
+      - targets: ['host.docker.internal:50052']
+        labels:
+          service: 'iam-access'
+          component: 'grpc'
+
+  # PostgreSQL Exporter (如果使用)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          component: 'database'
+
+  # Redis Exporter (如果使用)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          component: 'cache'
+
+  # Prometheus 自身
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

@@ -1,0 +1,41 @@
+app_name = "iam-access"
+app_env = "development"
+
+[database]
+url = "postgres://postgres:postgres@localhost:5432/cuba"
+# 开发环境: 20 个连接，适合本地开发和测试
+max_connections = 20
+
+[redis]
+url = "redis://localhost:6379"
+
+[jwt]
+secret = "your-super-secret-key-change-in-production"
+expires_in = 3600
+refresh_expires_in = 604800
+
+[server]
+host = "127.0.0.1"
+port = 50052
+
+[email]
+smtp_host = "localhost"
+smtp_port = 1025
+username = ""
+password = ""
+from_email = "noreply@cuba-erp.local"
+from_name = "Cuba ERP"
+use_tls = false
+timeout_secs = 30
+
+[password_reset]
+token_expires_minutes = 15
+max_requests_per_hour = 3
+reset_link_base_url = "http://localhost:3000/reset-password"
+
+[telemetry]
+log_level = "debug"
+
+[webauthn]
+rp_id = "localhost"
+rp_origin = "http://localhost:3000"

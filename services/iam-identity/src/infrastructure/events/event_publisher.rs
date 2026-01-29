@@ -99,7 +99,7 @@ impl IamDomainEvent {
 
     pub fn aggregate_type(&self) -> &'static str {
         match self {
-            Self::UserCreated { .. } 
+            Self::UserCreated { .. }
             | Self::UserLoggedIn { .. }
             | Self::UserLoggedOut { .. }
             | Self::PasswordChanged { .. }
@@ -108,8 +108,7 @@ impl IamDomainEvent {
             | Self::UserUpdated { .. }
             | Self::UserProfileUpdated { .. } => "User",
             Self::OAuthClientCreated { .. } => "OAuthClient",
-            Self::SessionCreated { .. }
-            | Self::SessionRevoked { .. } => "Session",
+            Self::SessionCreated { .. } | Self::SessionRevoked { .. } => "Session",
         }
     }
 
@@ -123,7 +122,7 @@ impl IamDomainEvent {
             | Self::TwoFactorDisabled { timestamp, .. }
             | Self::OAuthClientCreated { timestamp, .. }
             | Self::SessionCreated { timestamp, .. }
-            | Self::SessionRevoked { timestamp, .. } 
+            | Self::SessionRevoked { timestamp, .. }
             | Self::UserUpdated { timestamp, .. }
             | Self::UserProfileUpdated { timestamp, .. } => *timestamp,
         }
@@ -135,7 +134,7 @@ impl IamDomainEvent {
 pub trait EventPublisher: Send + Sync {
     /// 发布单个事件
     async fn publish(&self, event: IamDomainEvent);
-    
+
     /// 批量发布事件
     async fn publish_all(&self, events: Vec<IamDomainEvent>);
 }
@@ -179,7 +178,7 @@ impl EventPublisher for InMemoryEventBus {
         );
         self.events.write().await.push(event);
     }
-    
+
     async fn publish_all(&self, events: Vec<IamDomainEvent>) {
         for event in events {
             self.publish(event).await;
@@ -193,7 +192,7 @@ pub struct NoOpEventPublisher;
 #[async_trait]
 impl EventPublisher for NoOpEventPublisher {
     async fn publish(&self, _event: IamDomainEvent) {}
-    
+
     async fn publish_all(&self, _events: Vec<IamDomainEvent>) {}
 }
 
@@ -210,7 +209,7 @@ impl EventPublisher for LoggingEventPublisher {
             event.event_type()
         );
     }
-    
+
     async fn publish_all(&self, events: Vec<IamDomainEvent>) {
         for event in events {
             self.publish(event).await;

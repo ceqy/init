@@ -193,4 +193,3 @@ impl From<WebAuthnCredentialError> for cuba_errors::AppError {
         cuba_errors::AppError::validation(err.to_string())
     }
 }
-

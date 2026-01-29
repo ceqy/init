@@ -5,9 +5,8 @@ use cuba_common::{AuditInfo, TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 
-use crate::domain::user::{Tenant, TenantStatus};
 use crate::domain::repositories::user::TenantRepository;
-
+use crate::domain::user::{Tenant, TenantStatus};
 
 /// PostgreSQL 租户仓储实现（完整实现，待集成到 DI 容器）
 #[allow(dead_code)]
@@ -126,21 +125,23 @@ impl TenantRepository for PostgresTenantRepository {
     }
 
     async fn exists_by_name(&self, name: &str) -> AppResult<bool> {
-        let result: (bool,) = sqlx::query_as("SELECT EXISTS(SELECT 1 FROM tenants WHERE name = $1)")
-            .bind(name)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e| AppError::database(format!("Failed to check tenant name: {}", e)))?;
+        let result: (bool,) =
+            sqlx::query_as("SELECT EXISTS(SELECT 1 FROM tenants WHERE name = $1)")
+                .bind(name)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to check tenant name: {}", e)))?;
 
         Ok(result.0)
     }
 
     async fn exists_by_domain(&self, domain: &str) -> AppResult<bool> {
-        let result: (bool,) = sqlx::query_as("SELECT EXISTS(SELECT 1 FROM tenants WHERE domain = $1)")
-            .bind(domain)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e| AppError::database(format!("Failed to check tenant domain: {}", e)))?;
+        let result: (bool,) =
+            sqlx::query_as("SELECT EXISTS(SELECT 1 FROM tenants WHERE domain = $1)")
+                .bind(domain)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to check tenant domain: {}", e)))?;
 
         Ok(result.0)
     }
@@ -165,7 +166,10 @@ impl TenantRepository for PostgresTenantRepository {
         }
 
         if search.is_some() {
-            conditions.push(format!("(name ILIKE ${} OR display_name ILIKE ${})", bind_idx, bind_idx));
+            conditions.push(format!(
+                "(name ILIKE ${} OR display_name ILIKE ${})",
+                bind_idx, bind_idx
+            ));
             bind_idx += 1;
         }
 

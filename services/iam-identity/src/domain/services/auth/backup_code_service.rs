@@ -32,4 +32,3 @@ impl BackupCodeService {
         Self::hash_code(code) == hash
     }
 }
-

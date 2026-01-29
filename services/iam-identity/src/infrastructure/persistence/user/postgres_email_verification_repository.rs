@@ -6,11 +6,8 @@ use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::{debug, warn};
 
-
-use crate::domain::user::{
-    EmailVerification, EmailVerificationId, EmailVerificationStatus,
-};
 use crate::domain::repositories::user::EmailVerificationRepository;
+use crate::domain::user::{EmailVerification, EmailVerificationId, EmailVerificationStatus};
 
 /// PostgreSQL 邮箱验证仓储
 pub struct PostgresEmailVerificationRepository {
@@ -279,11 +276,7 @@ impl EmailVerificationRepository for PostgresEmailVerificationRepository {
         Ok(deleted)
     }
 
-    async fn count_today_by_user(
-        &self,
-        user_id: &UserId,
-        tenant_id: &TenantId,
-    ) -> AppResult<i64> {
+    async fn count_today_by_user(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64> {
         debug!(user_id = %user_id, tenant_id = %tenant_id, "Counting today's email verifications");
 
         let row = sqlx::query!(
@@ -307,4 +300,3 @@ impl EmailVerificationRepository for PostgresEmailVerificationRepository {
         Ok(row.count.unwrap_or(0))
     }
 }
-

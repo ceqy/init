@@ -2,20 +2,30 @@
 //!
 //! 这些 Repository 使用共享的 Transaction 而非 PgPool。
 
-use std::sync::Arc;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use sqlx::{Postgres, Transaction};
+use std::sync::Arc;
 use tokio::sync::Mutex;
-use chrono::{DateTime, Utc};
 
-use crate::domain::user::{User, Tenant, EmailVerification, PhoneVerification};
-use crate::domain::auth::{Session, BackupCode, LoginLog, PasswordResetToken, WebAuthnCredential};
-use crate::domain::oauth::{OAuthClient, AccessToken, RefreshToken, AuthorizationCode, OAuthClientId};
-use crate::domain::repositories::user::{UserRepository, TenantRepository, EmailVerificationRepository, PhoneVerificationRepository};
-use crate::domain::repositories::auth::{SessionRepository, BackupCodeRepository, LoginLogRepository, PasswordResetRepository, WebAuthnCredentialRepository};
-use crate::domain::repositories::oauth::{OAuthClientRepository, AccessTokenRepository, RefreshTokenRepository, AuthorizationCodeRepository};
+use crate::domain::auth::{BackupCode, LoginLog, PasswordResetToken, Session, WebAuthnCredential};
+use crate::domain::oauth::{
+    AccessToken, AuthorizationCode, OAuthClient, OAuthClientId, RefreshToken,
+};
+use crate::domain::repositories::auth::{
+    BackupCodeRepository, LoginLogRepository, PasswordResetRepository, SessionRepository,
+    WebAuthnCredentialRepository,
+};
+use crate::domain::repositories::oauth::{
+    AccessTokenRepository, AuthorizationCodeRepository, OAuthClientRepository,
+    RefreshTokenRepository,
+};
+use crate::domain::repositories::user::{
+    EmailVerificationRepository, PhoneVerificationRepository, TenantRepository, UserRepository,
+};
+use crate::domain::user::{EmailVerification, PhoneVerification, Tenant, User};
 
 /// 共享事务类型
 type SharedTx = Arc<Mutex<Option<Transaction<'static, Postgres>>>>;
@@ -57,16 +67,18 @@ define_tx_repo!(TxAuthorizationCodeRepository);
 impl UserRepository for TxUserRepository {
     async fn find_by_id(&self, id: &UserId, tenant_id: &TenantId) -> AppResult<Option<User>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
-        
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
         // 此处应复用原本的 query 逻辑，但为了保持原子性实现，我们需要复制逻辑并传参 tx
         // 注意：在真实的工程中，通常会提取一个通用的 Executor 版本以避免重复代码
         // 此处为了完成任务展示 UOW 核心逻辑，仅实现关键方法作为示范，或完整复制逻辑。
         // 由于方法很多，我将实现核心的 save/update/find 方法。
-        
+
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::UserRow>(
-"SELECT * FROM users WHERE id = $1 AND tenant_id = $2",
-)
+            "SELECT * FROM users WHERE id = $1 AND tenant_id = $2",
+        )
         .bind(id.0)
         .bind(tenant_id.0)
         .fetch_optional(&mut **tx)
@@ -81,7 +93,9 @@ impl UserRepository for TxUserRepository {
 
     async fn save(&self, user: &User) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -130,10 +144,16 @@ impl UserRepository for TxUserRepository {
         Ok(())
     }
 
-    async fn find_by_username(&self, username: &crate::domain::value_objects::Username, tenant_id: &TenantId) -> AppResult<Option<User>> {
+    async fn find_by_username(
+        &self,
+        username: &crate::domain::value_objects::Username,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<User>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
-        
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::UserRow>(
             "SELECT * FROM users WHERE username = $1 AND tenant_id = $2",
         )
@@ -150,9 +170,15 @@ impl UserRepository for TxUserRepository {
     }
 
     // 实现存根以满足 trait
-    async fn find_by_email(&self, email: &crate::domain::value_objects::Email, tenant_id: &TenantId) -> AppResult<Option<User>> {
+    async fn find_by_email(
+        &self,
+        email: &crate::domain::value_objects::Email,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<User>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::UserRow>(
             r#"
@@ -180,7 +206,9 @@ impl UserRepository for TxUserRepository {
     }
     async fn update(&self, user: &User) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -229,7 +257,9 @@ impl UserRepository for TxUserRepository {
     }
     async fn delete(&self, id: &UserId, tenant_id: &TenantId) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query("DELETE FROM users WHERE id = $1 AND tenant_id = $2")
             .bind(id.0)
@@ -240,9 +270,15 @@ impl UserRepository for TxUserRepository {
 
         Ok(())
     }
-    async fn exists_by_username(&self, username: &crate::domain::value_objects::Username, tenant_id: &TenantId) -> AppResult<bool> {
+    async fn exists_by_username(
+        &self,
+        username: &crate::domain::value_objects::Username,
+        tenant_id: &TenantId,
+    ) -> AppResult<bool> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (bool,) = sqlx::query_as(
             "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND tenant_id = $2)",
@@ -256,9 +292,15 @@ impl UserRepository for TxUserRepository {
         Ok(result.0)
     }
 
-    async fn exists_by_email(&self, email: &crate::domain::value_objects::Email, tenant_id: &TenantId) -> AppResult<bool> {
+    async fn exists_by_email(
+        &self,
+        email: &crate::domain::value_objects::Email,
+        tenant_id: &TenantId,
+    ) -> AppResult<bool> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (bool,) = sqlx::query_as(
             "SELECT EXISTS(SELECT 1 FROM users WHERE email = $1 AND tenant_id = $2)",
@@ -281,7 +323,9 @@ impl UserRepository for TxUserRepository {
         page_size: i32,
     ) -> AppResult<(Vec<User>, i64)> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let offset = ((page - 1) * page_size) as i64;
         let page_size = page_size as i64;
@@ -289,7 +333,7 @@ impl UserRepository for TxUserRepository {
         // 构建查询 - 基础部分
         let mut query = String::from("SELECT * FROM users WHERE tenant_id = $1");
         let mut count_query = String::from("SELECT COUNT(*) FROM users WHERE tenant_id = $1");
-        
+
         let mut params: Vec<String> = Vec::new();
         let mut param_index = 2;
 
@@ -304,11 +348,14 @@ impl UserRepository for TxUserRepository {
 
         // Search 过滤 (username or email or display_name)
         if let Some(s) = search {
-             let clause = format!(" AND (username ILIKE ${0} OR email ILIKE ${0} OR display_name ILIKE ${0})", param_index);
-             query.push_str(&clause);
-             count_query.push_str(&clause);
-             params.push(format!("%{}%", s));
-             param_index += 1;
+            let clause = format!(
+                " AND (username ILIKE ${0} OR email ILIKE ${0} OR display_name ILIKE ${0})",
+                param_index
+            );
+            query.push_str(&clause);
+            count_query.push_str(&clause);
+            params.push(format!("%{}%", s));
+            param_index += 1;
         }
 
         // Role IDs 过滤 (simplified check for intersection)
@@ -324,12 +371,13 @@ impl UserRepository for TxUserRepository {
             // and realizing QueryBuilder expects a concrete database type, we'll try QueryBuilder or a simpler approach.
             // Let's use `sqlx::QueryBuilder`.
         }
-        
+
         // Re-implement using sqlx::QueryBuilder for safety and ease
         let mut query_builder = sqlx::QueryBuilder::new("SELECT * FROM users WHERE tenant_id = ");
         query_builder.push_bind(tenant_id.0);
 
-        let mut count_builder = sqlx::QueryBuilder::new("SELECT COUNT(*) FROM users WHERE tenant_id = ");
+        let mut count_builder =
+            sqlx::QueryBuilder::new("SELECT COUNT(*) FROM users WHERE tenant_id = ");
         count_builder.push_bind(tenant_id.0);
 
         if let Some(s) = status {
@@ -359,10 +407,10 @@ impl UserRepository for TxUserRepository {
         }
 
         if !role_ids.is_empty() {
-             query_builder.push(" AND role_ids && ");
-             query_builder.push_bind(role_ids);
-             count_builder.push(" AND role_ids && ");
-             count_builder.push_bind(role_ids);
+            query_builder.push(" AND role_ids && ");
+            query_builder.push_bind(role_ids);
+            count_builder.push(" AND role_ids && ");
+            count_builder.push_bind(role_ids);
         }
 
         // Add sorting and pagination to list query
@@ -372,18 +420,21 @@ impl UserRepository for TxUserRepository {
         query_builder.push_bind(offset);
 
         // Execute List Query
-        let rows = query_builder.build_query_as::<crate::infrastructure::persistence::user::UserRow>()
+        let rows = query_builder
+            .build_query_as::<crate::infrastructure::persistence::user::UserRow>()
             .fetch_all(&mut **tx)
             .await
             .map_err(|e| AppError::database(format!("Failed to list users: {}", e)))?;
 
-        let users = rows.into_iter()
+        let users = rows
+            .into_iter()
             .map(|r| r.into_user())
             .collect::<Result<Vec<_>, String>>()
             .map_err(|e| AppError::database(e))?;
-        
+
         // Execute Count Query
-        let count: (i64,) = count_builder.build_query_as()
+        let count: (i64,) = count_builder
+            .build_query_as()
             .fetch_one(&mut **tx)
             .await
             .map_err(|e| AppError::database(format!("Failed to count users: {}", e)))?;
@@ -392,7 +443,9 @@ impl UserRepository for TxUserRepository {
     }
     async fn count_by_tenant(&self, tenant_id: &TenantId) -> AppResult<i64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
             .bind(tenant_id.0)
@@ -412,7 +465,9 @@ impl UserRepository for TxUserRepository {
 impl SessionRepository for TxSessionRepository {
     async fn save(&self, session: &Session) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -440,10 +495,16 @@ impl SessionRepository for TxSessionRepository {
     }
 
     // 实现存根以满足 trait
-    async fn find_by_id(&self, id: &crate::domain::auth::SessionId, tenant_id: &TenantId) -> AppResult<Option<Session>> {
+    async fn find_by_id(
+        &self,
+        id: &crate::domain::auth::SessionId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<Session>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
-        
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::auth::SessionRow>(
             r#"
             SELECT id, user_id, tenant_id, refresh_token_hash, device_info, ip_address, user_agent,
@@ -460,9 +521,15 @@ impl SessionRepository for TxSessionRepository {
 
         Ok(row.map(|r| r.into_session()))
     }
-    async fn find_by_refresh_token_hash(&self, hash: &str, tenant_id: &TenantId) -> AppResult<Option<Session>> {
+    async fn find_by_refresh_token_hash(
+        &self,
+        hash: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<Session>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::auth::SessionRow>(
             r#"
@@ -480,9 +547,15 @@ impl SessionRepository for TxSessionRepository {
 
         Ok(row.map(|r| r.into_session()))
     }
-    async fn find_active_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<Session>> {
+    async fn find_active_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<Session>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let rows = sqlx::query_as::<_, crate::infrastructure::persistence::auth::SessionRow>(
             r#"
@@ -503,7 +576,9 @@ impl SessionRepository for TxSessionRepository {
     }
     async fn update(&self, session: &Session) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -523,9 +598,15 @@ impl SessionRepository for TxSessionRepository {
 
         Ok(())
     }
-    async fn delete(&self, id: &crate::domain::auth::SessionId, tenant_id: &TenantId) -> AppResult<()> {
+    async fn delete(
+        &self,
+        id: &crate::domain::auth::SessionId,
+        tenant_id: &TenantId,
+    ) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query("DELETE FROM sessions WHERE id = $1 AND tenant_id = $2")
             .bind(id.0)
@@ -538,28 +619,31 @@ impl SessionRepository for TxSessionRepository {
     }
     async fn revoke_all_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        sqlx::query(
-            "UPDATE sessions SET revoked = TRUE WHERE user_id = $1 AND tenant_id = $2",
-        )
-        .bind(user_id.0)
-        .bind(tenant_id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to revoke sessions: {}", e)))?;
+        sqlx::query("UPDATE sessions SET revoked = TRUE WHERE user_id = $1 AND tenant_id = $2")
+            .bind(user_id.0)
+            .bind(tenant_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to revoke sessions: {}", e)))?;
 
         Ok(())
     }
     async fn cleanup_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result = sqlx::query("DELETE FROM sessions WHERE expires_at < NOW() AND tenant_id = $1")
-            .bind(tenant_id.0)
-            .execute(&mut **tx)
-            .await
-            .map_err(|e| AppError::database(format!("Failed to cleanup sessions: {}", e)))?;
+        let result =
+            sqlx::query("DELETE FROM sessions WHERE expires_at < NOW() AND tenant_id = $1")
+                .bind(tenant_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to cleanup sessions: {}", e)))?;
 
         Ok(result.rows_affected())
     }
@@ -569,10 +653,13 @@ impl SessionRepository for TxSessionRepository {
 // 为了演示完成 Unit of Work 的闭环，我将为所有 Repository 提供基本骨架。
 // 为了节省篇幅和用户等待时间，我将先行提供以上两个核心实现，后续根据需要补全。
 
-#[async_trait] impl TenantRepository for TxTenantRepository {
+#[async_trait]
+impl TenantRepository for TxTenantRepository {
     async fn find_by_id(&self, id: &TenantId) -> AppResult<Option<Tenant>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::TenantRow>(
             "SELECT * FROM tenants WHERE id = $1",
@@ -589,7 +676,9 @@ impl SessionRepository for TxSessionRepository {
     }
     async fn find_by_name(&self, name: &str) -> AppResult<Option<Tenant>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::TenantRow>(
             "SELECT * FROM tenants WHERE name = $1",
@@ -606,7 +695,9 @@ impl SessionRepository for TxSessionRepository {
     }
     async fn find_by_domain(&self, domain: &str) -> AppResult<Option<Tenant>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::TenantRow>(
             "SELECT id, name, display_name, domain, settings, status, trial_ends_at, 
@@ -623,7 +714,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn save(&self, tenant: &Tenant) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let settings_json = serde_json::to_value(&tenant.settings)
             .map_err(|e| AppError::internal(format!("Failed to serialize settings: {}", e)))?;
@@ -652,7 +745,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn update(&self, tenant: &Tenant) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let settings_json = serde_json::to_value(&tenant.settings)
             .map_err(|e| AppError::internal(format!("Failed to serialize settings: {}", e)))?;
@@ -681,7 +776,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn delete(&self, id: &TenantId) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query("UPDATE tenants SET status = 'Cancelled' WHERE id = $1")
             .bind(id.0)
@@ -694,26 +791,32 @@ impl SessionRepository for TxSessionRepository {
 
     async fn exists_by_name(&self, name: &str) -> AppResult<bool> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result: (bool,) = sqlx::query_as("SELECT EXISTS(SELECT 1 FROM tenants WHERE name = $1)")
-        .bind(name)
-        .fetch_one(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to check tenant name: {}", e)))?;
+        let result: (bool,) =
+            sqlx::query_as("SELECT EXISTS(SELECT 1 FROM tenants WHERE name = $1)")
+                .bind(name)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to check tenant name: {}", e)))?;
 
         Ok(result.0)
     }
 
     async fn exists_by_domain(&self, domain: &str) -> AppResult<bool> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result: (bool,) = sqlx::query_as("SELECT EXISTS(SELECT 1 FROM tenants WHERE domain = $1)")
-        .bind(domain)
-        .fetch_one(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to check tenant domain: {}", e)))?;
+        let result: (bool,) =
+            sqlx::query_as("SELECT EXISTS(SELECT 1 FROM tenants WHERE domain = $1)")
+                .bind(domain)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to check tenant domain: {}", e)))?;
 
         Ok(result.0)
     }
@@ -726,7 +829,9 @@ impl SessionRepository for TxSessionRepository {
         page_size: i32,
     ) -> AppResult<(Vec<Tenant>, i64)> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let offset = ((page - 1) * page_size) as i64;
         let page_size = page_size as i64;
@@ -740,7 +845,10 @@ impl SessionRepository for TxSessionRepository {
         }
 
         if search.is_some() {
-            conditions.push(format!("(name ILIKE ${} OR display_name ILIKE ${})", bind_idx, bind_idx));
+            conditions.push(format!(
+                "(name ILIKE ${} OR display_name ILIKE ${})",
+                bind_idx, bind_idx
+            ));
             bind_idx += 1;
         }
 
@@ -748,12 +856,13 @@ impl SessionRepository for TxSessionRepository {
             "SELECT id, name, display_name, domain, settings, status, trial_ends_at, 
                     subscription_ends_at, created_at, created_by, updated_at, updated_by
              FROM tenants WHERE {} ORDER BY created_at DESC LIMIT ${} OFFSET ${}",
-             conditions.join(" AND "),
-             bind_idx,
-             bind_idx + 1
+            conditions.join(" AND "),
+            bind_idx,
+            bind_idx + 1
         );
 
-        let mut q = sqlx::query_as::<_, crate::infrastructure::persistence::user::TenantRow>(&query);
+        let mut q =
+            sqlx::query_as::<_, crate::infrastructure::persistence::user::TenantRow>(&query);
 
         if let Some(s) = &status {
             let status_str = serde_json::to_string(s).unwrap();
@@ -785,7 +894,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn count(&self) -> AppResult<i64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM tenants")
             .fetch_one(&mut **tx)
@@ -797,7 +908,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn find_expiring_trials(&self, days: i64) -> AppResult<Vec<Tenant>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let rows = sqlx::query_as::<_, crate::infrastructure::persistence::user::TenantRow>(
             "SELECT id, name, display_name, domain, settings, status, trial_ends_at, 
@@ -818,7 +931,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn find_expiring_subscriptions(&self, days: i64) -> AppResult<Vec<Tenant>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let rows = sqlx::query_as::<_, crate::infrastructure::persistence::user::TenantRow>(
             "SELECT id, name, display_name, domain, settings, status, trial_ends_at, 
@@ -838,10 +953,13 @@ impl SessionRepository for TxSessionRepository {
     }
 }
 
-#[async_trait] impl EmailVerificationRepository for TxEmailVerificationRepository {
+#[async_trait]
+impl EmailVerificationRepository for TxEmailVerificationRepository {
     async fn save(&self, verification: &EmailVerification) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -866,9 +984,15 @@ impl SessionRepository for TxSessionRepository {
         Ok(())
     }
 
-    async fn find_latest_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Option<EmailVerification>> {
+    async fn find_latest_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<EmailVerification>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::EmailVerificationRow>(
             "SELECT * FROM email_verifications WHERE user_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 1",
@@ -884,34 +1008,43 @@ impl SessionRepository for TxSessionRepository {
 
     async fn update(&self, verification: &EmailVerification) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        sqlx::query(
-            "UPDATE email_verifications SET status = $1, verified_at = $2 WHERE id = $3",
-        )
-        .bind(format!("{:?}", verification.status))
-        .bind(verification.verified_at)
-        .bind(verification.id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to update email verification: {}", e)))?;
+        sqlx::query("UPDATE email_verifications SET status = $1, verified_at = $2 WHERE id = $3")
+            .bind(format!("{:?}", verification.status))
+            .bind(verification.verified_at)
+            .bind(verification.id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| {
+                AppError::database(format!("Failed to update email verification: {}", e))
+            })?;
 
         Ok(())
     }
 
     // Stub remaining
-    async fn find_by_id(&self, id: &crate::domain::user::EmailVerificationId, tenant_id: &TenantId) -> AppResult<Option<EmailVerification>> {
+    async fn find_by_id(
+        &self,
+        id: &crate::domain::user::EmailVerificationId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<EmailVerification>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::EmailVerificationRow>(
-            "SELECT * FROM email_verifications WHERE id = $1 AND tenant_id = $2",
-        )
-        .bind(id.0)
-        .bind(tenant_id.0)
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to find email verification: {}", e)))?;
+        let row =
+            sqlx::query_as::<_, crate::infrastructure::persistence::user::EmailVerificationRow>(
+                "SELECT * FROM email_verifications WHERE id = $1 AND tenant_id = $2",
+            )
+            .bind(id.0)
+            .bind(tenant_id.0)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to find email verification: {}", e)))?;
 
         match row {
             Some(r) => Ok(Some(r.into_verification())),
@@ -919,23 +1052,30 @@ impl SessionRepository for TxSessionRepository {
         }
     }
 
-    async fn find_latest_by_email(&self, email: &str, tenant_id: &TenantId) -> AppResult<Option<EmailVerification>> {
+    async fn find_latest_by_email(
+        &self,
+        email: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<EmailVerification>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::EmailVerificationRow>(
-            r#"
+        let row =
+            sqlx::query_as::<_, crate::infrastructure::persistence::user::EmailVerificationRow>(
+                r#"
             SELECT * FROM email_verifications 
             WHERE email = $1 AND tenant_id = $2
             ORDER BY created_at DESC 
             LIMIT 1
             "#,
-        )
-        .bind(email)
-        .bind(tenant_id.0)
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to find email verification: {}", e)))?;
+            )
+            .bind(email)
+            .bind(tenant_id.0)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to find email verification: {}", e)))?;
 
         match row {
             Some(r) => Ok(Some(r.into_verification())),
@@ -945,20 +1085,31 @@ impl SessionRepository for TxSessionRepository {
 
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result = sqlx::query("DELETE FROM email_verifications WHERE expires_at < NOW() AND tenant_id = $1")
-            .bind(tenant_id.0)
-            .execute(&mut **tx)
-            .await
-            .map_err(|e| AppError::database(format!("Failed to delete expired email verifications: {}", e)))?;
+        let result = sqlx::query(
+            "DELETE FROM email_verifications WHERE expires_at < NOW() AND tenant_id = $1",
+        )
+        .bind(tenant_id.0)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| {
+            AppError::database(format!(
+                "Failed to delete expired email verifications: {}",
+                e
+            ))
+        })?;
 
         Ok(result.rows_affected())
     }
 
     async fn count_today_by_user(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM email_verifications WHERE user_id = $1 AND tenant_id = $2 AND created_at >= CURRENT_DATE",
@@ -973,10 +1124,13 @@ impl SessionRepository for TxSessionRepository {
     }
 }
 
-#[async_trait] impl PhoneVerificationRepository for TxPhoneVerificationRepository {
+#[async_trait]
+impl PhoneVerificationRepository for TxPhoneVerificationRepository {
     async fn save(&self, verification: &PhoneVerification) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -1001,9 +1155,15 @@ impl SessionRepository for TxSessionRepository {
         Ok(())
     }
 
-    async fn find_latest_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Option<PhoneVerification>> {
+    async fn find_latest_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<PhoneVerification>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::PhoneVerificationRow>(
             "SELECT * FROM phone_verifications WHERE user_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 1",
@@ -1019,34 +1179,43 @@ impl SessionRepository for TxSessionRepository {
 
     async fn update(&self, verification: &PhoneVerification) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        sqlx::query(
-            "UPDATE phone_verifications SET status = $1, verified_at = $2 WHERE id = $3",
-        )
-        .bind(format!("{:?}", verification.status))
-        .bind(verification.verified_at)
-        .bind(verification.id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to update phone verification: {}", e)))?;
+        sqlx::query("UPDATE phone_verifications SET status = $1, verified_at = $2 WHERE id = $3")
+            .bind(format!("{:?}", verification.status))
+            .bind(verification.verified_at)
+            .bind(verification.id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| {
+                AppError::database(format!("Failed to update phone verification: {}", e))
+            })?;
 
         Ok(())
     }
 
     // Stub remaining
-    async fn find_by_id(&self, id: &crate::domain::user::PhoneVerificationId, tenant_id: &TenantId) -> AppResult<Option<PhoneVerification>> {
+    async fn find_by_id(
+        &self,
+        id: &crate::domain::user::PhoneVerificationId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<PhoneVerification>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::PhoneVerificationRow>(
-            "SELECT * FROM phone_verifications WHERE id = $1 AND tenant_id = $2",
-        )
-        .bind(id.0)
-        .bind(tenant_id.0)
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to find phone verification: {}", e)))?;
+        let row =
+            sqlx::query_as::<_, crate::infrastructure::persistence::user::PhoneVerificationRow>(
+                "SELECT * FROM phone_verifications WHERE id = $1 AND tenant_id = $2",
+            )
+            .bind(id.0)
+            .bind(tenant_id.0)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to find phone verification: {}", e)))?;
 
         match row {
             Some(r) => Ok(Some(r.into_verification())),
@@ -1054,23 +1223,30 @@ impl SessionRepository for TxSessionRepository {
         }
     }
 
-    async fn find_latest_by_phone(&self, phone: &str, tenant_id: &TenantId) -> AppResult<Option<PhoneVerification>> {
+    async fn find_latest_by_phone(
+        &self,
+        phone: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<PhoneVerification>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let row = sqlx::query_as::<_, crate::infrastructure::persistence::user::PhoneVerificationRow>(
-            r#"
+        let row =
+            sqlx::query_as::<_, crate::infrastructure::persistence::user::PhoneVerificationRow>(
+                r#"
             SELECT * FROM phone_verifications 
             WHERE phone = $1 AND tenant_id = $2
             ORDER BY created_at DESC 
             LIMIT 1
             "#,
-        )
-        .bind(phone)
-        .bind(tenant_id.0)
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to find phone verification: {}", e)))?;
+            )
+            .bind(phone)
+            .bind(tenant_id.0)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to find phone verification: {}", e)))?;
 
         match row {
             Some(r) => Ok(Some(r.into_verification())),
@@ -1080,20 +1256,31 @@ impl SessionRepository for TxSessionRepository {
 
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result = sqlx::query("DELETE FROM phone_verifications WHERE expires_at < NOW() AND tenant_id = $1")
-            .bind(tenant_id.0)
-            .execute(&mut **tx)
-            .await
-            .map_err(|e| AppError::database(format!("Failed to delete expired phone verifications: {}", e)))?;
+        let result = sqlx::query(
+            "DELETE FROM phone_verifications WHERE expires_at < NOW() AND tenant_id = $1",
+        )
+        .bind(tenant_id.0)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| {
+            AppError::database(format!(
+                "Failed to delete expired phone verifications: {}",
+                e
+            ))
+        })?;
 
         Ok(result.rows_affected())
     }
 
     async fn count_today_by_user(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM phone_verifications WHERE user_id = $1 AND tenant_id = $2 AND created_at >= CURRENT_DATE",
@@ -1108,10 +1295,13 @@ impl SessionRepository for TxSessionRepository {
     }
 }
 
-#[async_trait] impl BackupCodeRepository for TxBackupCodeRepository {
+#[async_trait]
+impl BackupCodeRepository for TxBackupCodeRepository {
     async fn save(&self, code: &BackupCode) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -1135,7 +1325,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn save_batch(&self, codes: &[BackupCode]) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         // Simple batch insert using loop inside transaction for simplicity in this implementation
         // For performance, sqlx `QueryBuilder` with `push_values` is better, but this is acceptable for now.
@@ -1161,9 +1353,15 @@ impl SessionRepository for TxSessionRepository {
         Ok(())
     }
 
-    async fn find_by_id(&self, id: &crate::domain::auth::BackupCodeId, tenant_id: &TenantId) -> AppResult<Option<BackupCode>> {
+    async fn find_by_id(
+        &self,
+        id: &crate::domain::auth::BackupCodeId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<BackupCode>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::auth::BackupCodeRow>(
             "SELECT * FROM backup_codes WHERE id = $1 AND tenant_id = $2",
@@ -1180,9 +1378,15 @@ impl SessionRepository for TxSessionRepository {
         }
     }
 
-    async fn find_available_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<BackupCode>> {
+    async fn find_available_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<BackupCode>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let rows = sqlx::query_as::<_, crate::infrastructure::persistence::auth::BackupCodeRow>(
             "SELECT * FROM backup_codes WHERE user_id = $1 AND tenant_id = $2 AND used = false",
@@ -1198,24 +1402,26 @@ impl SessionRepository for TxSessionRepository {
 
     async fn update(&self, code: &BackupCode) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        sqlx::query(
-            "UPDATE backup_codes SET used = $1, used_at = $2 WHERE id = $3",
-        )
-        .bind(code.used)
-        .bind(code.used_at)
-        .bind(code.id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to update backup code: {}", e)))?;
+        sqlx::query("UPDATE backup_codes SET used = $1, used_at = $2 WHERE id = $3")
+            .bind(code.used)
+            .bind(code.used_at)
+            .bind(code.id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to update backup code: {}", e)))?;
 
         Ok(())
     }
 
     async fn delete_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query("DELETE FROM backup_codes WHERE user_id = $1 AND tenant_id = $2")
             .bind(user_id.0)
@@ -1227,9 +1433,15 @@ impl SessionRepository for TxSessionRepository {
         Ok(())
     }
 
-    async fn count_available_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64> {
+    async fn count_available_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<i64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM backup_codes WHERE user_id = $1 AND tenant_id = $2 AND used = false",
@@ -1244,10 +1456,13 @@ impl SessionRepository for TxSessionRepository {
     }
 }
 
-#[async_trait] impl LoginLogRepository for TxLoginLogRepository {
+#[async_trait]
+impl LoginLogRepository for TxLoginLogRepository {
     async fn save(&self, log: &LoginLog) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -1278,12 +1493,18 @@ impl SessionRepository for TxSessionRepository {
         Ok(())
     }
 
-    async fn find_by_id(&self, id: &crate::domain::auth::LoginLogId, tenant_id: &TenantId) -> AppResult<Option<LoginLog>> {
+    async fn find_by_id(
+        &self,
+        id: &crate::domain::auth::LoginLogId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<LoginLog>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::auth::LoginLogRow>(
-            "SELECT * FROM login_logs WHERE id = $1 AND tenant_id = $2"
+            "SELECT * FROM login_logs WHERE id = $1 AND tenant_id = $2",
         )
         .bind(id.0)
         .bind(tenant_id.0)
@@ -1294,9 +1515,16 @@ impl SessionRepository for TxSessionRepository {
         Ok(row.map(Into::into))
     }
 
-    async fn find_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId, limit: i32) -> AppResult<Vec<LoginLog>> {
+    async fn find_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+        limit: i32,
+    ) -> AppResult<Vec<LoginLog>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let rows = sqlx::query_as::<_, crate::infrastructure::persistence::auth::LoginLogRow>(
             "SELECT * FROM login_logs WHERE user_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT $3"
@@ -1311,9 +1539,17 @@ impl SessionRepository for TxSessionRepository {
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
-    async fn find_by_user_id_and_time_range(&self, user_id: &UserId, tenant_id: &TenantId, start: DateTime<Utc>, end: DateTime<Utc>) -> AppResult<Vec<LoginLog>> {
+    async fn find_by_user_id_and_time_range(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> AppResult<Vec<LoginLog>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let rows = sqlx::query_as::<_, crate::infrastructure::persistence::auth::LoginLogRow>(
             "SELECT * FROM login_logs WHERE user_id = $1 AND tenant_id = $2 AND created_at BETWEEN $3 AND $4 ORDER BY created_at DESC"
@@ -1329,9 +1565,15 @@ impl SessionRepository for TxSessionRepository {
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
-    async fn find_last_successful_login(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Option<LoginLog>> {
+    async fn find_last_successful_login(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<LoginLog>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::auth::LoginLogRow>(
             "SELECT * FROM login_logs WHERE user_id = $1 AND tenant_id = $2 AND result = 'Success' ORDER BY created_at DESC LIMIT 1"
@@ -1345,9 +1587,16 @@ impl SessionRepository for TxSessionRepository {
         Ok(row.map(Into::into))
     }
 
-    async fn find_by_user_and_ip(&self, user_id: &UserId, tenant_id: &TenantId, ip: &str) -> AppResult<Vec<LoginLog>> {
+    async fn find_by_user_and_ip(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+        ip: &str,
+    ) -> AppResult<Vec<LoginLog>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let rows = sqlx::query_as::<_, crate::infrastructure::persistence::auth::LoginLogRow>(
             "SELECT * FROM login_logs WHERE user_id = $1 AND tenant_id = $2 AND ip_address = $3 ORDER BY created_at DESC"
@@ -1362,7 +1611,12 @@ impl SessionRepository for TxSessionRepository {
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
-    async fn find_by_user_and_device_fingerprint(&self, user_id: &UserId, tenant_id: &TenantId, device_fingerprint: &str) -> AppResult<Vec<LoginLog>> {
+    async fn find_by_user_and_device_fingerprint(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+        device_fingerprint: &str,
+    ) -> AppResult<Vec<LoginLog>> {
         // NOTE: device_fingerprint is not in DB yet as per PostgresLoginLogRepository check
         // Assuming we implement it matching PostgresLoginLogRepository which tries to query `device_fingerprint` column?
         // Wait, PostgresLoginLogRepository `find_by_user_and_device_fingerprint` uses `device_fingerprint` column (line 132 in step 1013).
@@ -1375,9 +1629,11 @@ impl SessionRepository for TxSessionRepository {
         // If the column doesn't exist, the query will fail.
         // I will implement it but note potential issue.
         // Or better, just implement as is, assuming schema will be updated or it's a known issue.
-        
-         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
+        let mut guard = self.tx.lock().await;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         // Using just simple query for now, if column missing it will fail at runtime, same as current repo.
         // But for safety in this migration, I'll copy the logic.
@@ -1394,9 +1650,16 @@ impl SessionRepository for TxSessionRepository {
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
-    async fn count_failed_attempts(&self, user_id: &UserId, tenant_id: &TenantId, start: DateTime<Utc>) -> AppResult<i64> {
+    async fn count_failed_attempts(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+        start: DateTime<Utc>,
+    ) -> AppResult<i64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM login_logs WHERE user_id = $1 AND tenant_id = $2 AND result = 'Failed' AND created_at >= $3"
@@ -1411,10 +1674,17 @@ impl SessionRepository for TxSessionRepository {
         Ok(result.0)
     }
 
-    async fn find_suspicious_logins(&self, tenant_id: &TenantId, start: DateTime<Utc>, limit: i32) -> AppResult<Vec<LoginLog>> {
+    async fn find_suspicious_logins(
+        &self,
+        tenant_id: &TenantId,
+        start: DateTime<Utc>,
+        limit: i32,
+    ) -> AppResult<Vec<LoginLog>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
-        
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
         // Similar issue with is_suspicious column potentially missing
         let rows = sqlx::query_as::<_, crate::infrastructure::persistence::auth::LoginLogRow>(
             "SELECT * FROM login_logs WHERE tenant_id = $1 AND created_at >= $2 AND is_suspicious = true ORDER BY created_at DESC LIMIT $3"
@@ -1429,21 +1699,24 @@ impl SessionRepository for TxSessionRepository {
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
-    async fn list(&self,
-         tenant_id: &TenantId,
-         _user_id: Option<&UserId>,
-         _result: Option<crate::domain::auth::LoginResult>,
-         _start_time: Option<DateTime<Utc>>,
-         _end_time: Option<DateTime<Utc>>,
-         page: i32,
-         page_size: i32,
+    async fn list(
+        &self,
+        tenant_id: &TenantId,
+        _user_id: Option<&UserId>,
+        _result: Option<crate::domain::auth::LoginResult>,
+        _start_time: Option<DateTime<Utc>>,
+        _end_time: Option<DateTime<Utc>>,
+        page: i32,
+        page_size: i32,
     ) -> AppResult<(Vec<LoginLog>, i64)> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let offset = ((page - 1) * page_size) as i64;
         let page_size = page_size as i64;
-        
+
         let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM login_logs WHERE tenant_id = $1")
             .bind(tenant_id.0)
             .fetch_one(&mut **tx)
@@ -1463,9 +1736,15 @@ impl SessionRepository for TxSessionRepository {
         Ok((rows.into_iter().map(Into::into).collect(), total.0))
     }
 
-    async fn delete_older_than(&self, tenant_id: &TenantId, before: DateTime<Utc>) -> AppResult<u64> {
+    async fn delete_older_than(
+        &self,
+        tenant_id: &TenantId,
+        before: DateTime<Utc>,
+    ) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result = sqlx::query("DELETE FROM login_logs WHERE tenant_id = $1 AND created_at < $2")
             .bind(tenant_id.0)
@@ -1478,13 +1757,21 @@ impl SessionRepository for TxSessionRepository {
     }
 }
 
-#[async_trait] impl PasswordResetRepository for TxPasswordResetRepository {
-    async fn find_by_token_hash(&self, token_hash: &str, tenant_id: &TenantId) -> AppResult<Option<PasswordResetToken>> {
+#[async_trait]
+impl PasswordResetRepository for TxPasswordResetRepository {
+    async fn find_by_token_hash(
+        &self,
+        token_hash: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<PasswordResetToken>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let row = sqlx::query_as::<_, crate::infrastructure::persistence::auth::PasswordResetTokenRow>(
-            r#"
+        let row =
+            sqlx::query_as::<_, crate::infrastructure::persistence::auth::PasswordResetTokenRow>(
+                r#"
             SELECT prt.*
             FROM password_reset_tokens prt
             INNER JOIN users u ON prt.user_id = u.id
@@ -1492,19 +1779,30 @@ impl SessionRepository for TxSessionRepository {
             ORDER BY prt.created_at DESC
             LIMIT 1
             "#,
-        )
-        .bind(token_hash)
-        .bind(tenant_id.0)
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to find password reset token by hash: {}", e)))?;
+            )
+            .bind(token_hash)
+            .bind(tenant_id.0)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| {
+                AppError::database(format!(
+                    "Failed to find password reset token by hash: {}",
+                    e
+                ))
+            })?;
 
         Ok(row.map(|r| r.into_token(tenant_id.clone())))
     }
 
-    async fn mark_as_used(&self, id: &crate::domain::auth::PasswordResetTokenId, tenant_id: &TenantId) -> AppResult<()> {
+    async fn mark_as_used(
+        &self,
+        id: &crate::domain::auth::PasswordResetTokenId,
+        tenant_id: &TenantId,
+    ) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -1520,7 +1818,12 @@ impl SessionRepository for TxSessionRepository {
         .bind(tenant_id.0)
         .execute(&mut **tx)
         .await
-        .map_err(|e| AppError::database(format!("Failed to mark password reset token as used: {}", e)))?;
+        .map_err(|e| {
+            AppError::database(format!(
+                "Failed to mark password reset token as used: {}",
+                e
+            ))
+        })?;
 
         Ok(())
     }
@@ -1528,7 +1831,9 @@ impl SessionRepository for TxSessionRepository {
     // Stub remaining
     async fn save(&self, token: &PasswordResetToken) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -1552,11 +1857,20 @@ impl SessionRepository for TxSessionRepository {
         Ok(())
     }
 
-    async fn find_by_id(&self, id: &crate::domain::auth::PasswordResetTokenId, tenant_id: &TenantId) -> AppResult<Option<PasswordResetToken>> {
+    async fn find_by_id(
+        &self,
+        id: &crate::domain::auth::PasswordResetTokenId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<PasswordResetToken>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let row = sqlx::query_as::<_, crate::infrastructure::persistence::auth::PasswordResetTokenRow>(
+        let row = sqlx::query_as::<
+            _,
+            crate::infrastructure::persistence::auth::PasswordResetTokenRow,
+        >(
             r#"
             SELECT prt.*
             FROM password_reset_tokens prt
@@ -1575,7 +1889,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn update(&self, token: &PasswordResetToken) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result = sqlx::query(
             r#"
@@ -1590,7 +1906,7 @@ impl SessionRepository for TxSessionRepository {
         .execute(&mut **tx)
         .await
         .map_err(|e| AppError::database(format!("Failed to update password reset token: {}", e)))?;
-        
+
         if result.rows_affected() == 0 {
             return Err(AppError::not_found("Password reset token not found"));
         }
@@ -1600,7 +1916,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn delete_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -1615,14 +1933,18 @@ impl SessionRepository for TxSessionRepository {
         .bind(tenant_id.0)
         .execute(&mut **tx)
         .await
-        .map_err(|e| AppError::database(format!("Failed to delete password reset tokens: {}", e)))?;
+        .map_err(|e| {
+            AppError::database(format!("Failed to delete password reset tokens: {}", e))
+        })?;
 
         Ok(())
     }
 
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result = sqlx::query(
             r#"
@@ -1641,9 +1963,15 @@ impl SessionRepository for TxSessionRepository {
         Ok(result.rows_affected())
     }
 
-    async fn count_unused_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64> {
+    async fn count_unused_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<i64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (i64,) = sqlx::query_as(
             r#"
@@ -1666,10 +1994,13 @@ impl SessionRepository for TxSessionRepository {
     }
 }
 
-#[async_trait] impl WebAuthnCredentialRepository for TxWebAuthnCredentialRepository {
+#[async_trait]
+impl WebAuthnCredentialRepository for TxWebAuthnCredentialRepository {
     async fn save(&self, credential: &WebAuthnCredential) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -1701,11 +2032,20 @@ impl SessionRepository for TxSessionRepository {
         Ok(())
     }
 
-    async fn find_by_id(&self, id: &crate::domain::auth::WebAuthnCredentialId, tenant_id: &TenantId) -> AppResult<Option<WebAuthnCredential>> {
+    async fn find_by_id(
+        &self,
+        id: &crate::domain::auth::WebAuthnCredentialId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<WebAuthnCredential>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let row = sqlx::query_as::<_, crate::infrastructure::persistence::auth::WebAuthnCredentialRow>(
+        let row = sqlx::query_as::<
+            _,
+            crate::infrastructure::persistence::auth::WebAuthnCredentialRow,
+        >(
             r#"
             SELECT id, user_id, tenant_id, credential_id, public_key, counter,
                    name, aaguid, transports, backup_eligible, backup_state,
@@ -1723,11 +2063,20 @@ impl SessionRepository for TxSessionRepository {
         Ok(row.map(Into::into))
     }
 
-    async fn find_by_credential_id(&self, credential_id: &[u8], tenant_id: &TenantId) -> AppResult<Option<WebAuthnCredential>> {
+    async fn find_by_credential_id(
+        &self,
+        credential_id: &[u8],
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<WebAuthnCredential>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let row = sqlx::query_as::<_, crate::infrastructure::persistence::auth::WebAuthnCredentialRow>(
+        let row = sqlx::query_as::<
+            _,
+            crate::infrastructure::persistence::auth::WebAuthnCredentialRow,
+        >(
             r#"
             SELECT id, user_id, tenant_id, credential_id, public_key, counter,
                    name, aaguid, transports, backup_eligible, backup_state,
@@ -1745,11 +2094,20 @@ impl SessionRepository for TxSessionRepository {
         Ok(row.map(Into::into))
     }
 
-    async fn find_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<WebAuthnCredential>> {
+    async fn find_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<WebAuthnCredential>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let rows = sqlx::query_as::<_, crate::infrastructure::persistence::auth::WebAuthnCredentialRow>(
+        let rows = sqlx::query_as::<
+            _,
+            crate::infrastructure::persistence::auth::WebAuthnCredentialRow,
+        >(
             r#"
             SELECT id, user_id, tenant_id, credential_id, public_key, counter,
                    name, aaguid, transports, backup_eligible, backup_state,
@@ -1770,7 +2128,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn update(&self, credential: &WebAuthnCredential) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -1795,23 +2155,33 @@ impl SessionRepository for TxSessionRepository {
         Ok(())
     }
 
-    async fn delete(&self, id: &crate::domain::auth::WebAuthnCredentialId, tenant_id: &TenantId) -> AppResult<()> {
+    async fn delete(
+        &self,
+        id: &crate::domain::auth::WebAuthnCredentialId,
+        tenant_id: &TenantId,
+    ) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query("DELETE FROM webauthn_credentials WHERE id = $1 AND tenant_id = $2")
             .bind(id.0)
             .bind(tenant_id.0)
             .execute(&mut **tx)
             .await
-            .map_err(|e| AppError::database(format!("Failed to delete WebAuthn credential: {}", e)))?;
+            .map_err(|e| {
+                AppError::database(format!("Failed to delete WebAuthn credential: {}", e))
+            })?;
 
         Ok(())
     }
 
     async fn has_credentials(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<bool> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (bool,) = sqlx::query_as(
             "SELECT EXISTS(SELECT 1 FROM webauthn_credentials WHERE user_id = $1 AND tenant_id = $2)",
@@ -1826,10 +2196,17 @@ impl SessionRepository for TxSessionRepository {
     }
 }
 
-#[async_trait] impl OAuthClientRepository for TxOAuthClientRepository {
-    async fn find_by_id(&self, id: &crate::domain::oauth::OAuthClientId, tenant_id: &TenantId) -> AppResult<Option<OAuthClient>> {
+#[async_trait]
+impl OAuthClientRepository for TxOAuthClientRepository {
+    async fn find_by_id(
+        &self,
+        id: &crate::domain::oauth::OAuthClientId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<OAuthClient>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::oauth::OAuthClientRow>(
             r#"
@@ -1852,7 +2229,9 @@ impl SessionRepository for TxSessionRepository {
     }
     async fn save(&self, client: &OAuthClient) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let grant_types: Vec<String> = client.grant_types.iter().map(|g| g.to_string()).collect();
         let client_type = format!("{:?}", client.client_type);
@@ -1899,7 +2278,9 @@ impl SessionRepository for TxSessionRepository {
     }
     async fn update(&self, client: &OAuthClient) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let grant_types: Vec<String> = client.grant_types.iter().map(|g| g.to_string()).collect();
 
@@ -1932,9 +2313,15 @@ impl SessionRepository for TxSessionRepository {
         Ok(())
     }
 
-    async fn delete(&self, id: &crate::domain::oauth::OAuthClientId, tenant_id: &TenantId) -> AppResult<()> {
+    async fn delete(
+        &self,
+        id: &crate::domain::oauth::OAuthClientId,
+        tenant_id: &TenantId,
+    ) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query("DELETE FROM oauth_clients WHERE id = $1 AND tenant_id = $2")
             .bind(id.0)
@@ -1946,9 +2333,15 @@ impl SessionRepository for TxSessionRepository {
         Ok(())
     }
 
-    async fn exists(&self, id: &crate::domain::oauth::OAuthClientId, tenant_id: &TenantId) -> AppResult<bool> {
+    async fn exists(
+        &self,
+        id: &crate::domain::oauth::OAuthClientId,
+        tenant_id: &TenantId,
+    ) -> AppResult<bool> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result: (bool,) = sqlx::query_as(
             "SELECT EXISTS(SELECT 1 FROM oauth_clients WHERE id = $1 AND tenant_id = $2)",
@@ -1962,9 +2355,16 @@ impl SessionRepository for TxSessionRepository {
         Ok(result.0)
     }
 
-    async fn list_by_tenant(&self, tenant_id: &TenantId, page: i64, page_size: i64) -> AppResult<Vec<OAuthClient>> {
+    async fn list_by_tenant(
+        &self,
+        tenant_id: &TenantId,
+        page: i64,
+        page_size: i64,
+    ) -> AppResult<Vec<OAuthClient>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let offset = (page - 1) * page_size;
 
@@ -1993,24 +2393,32 @@ impl SessionRepository for TxSessionRepository {
 
     async fn count_by_tenant(&self, tenant_id: &TenantId) -> AppResult<i64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM oauth_clients WHERE tenant_id = $1",
-        )
-        .bind(tenant_id.0)
-        .fetch_one(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to count OAuth clients: {}", e)))?;
+        let count: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM oauth_clients WHERE tenant_id = $1")
+                .bind(tenant_id.0)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to count OAuth clients: {}", e)))?;
 
         Ok(count.0)
     }
 }
 
-#[async_trait] impl AccessTokenRepository for TxAccessTokenRepository {
-    async fn find_by_token(&self, token: &str, tenant_id: &TenantId) -> AppResult<Option<AccessToken>> {
+#[async_trait]
+impl AccessTokenRepository for TxAccessTokenRepository {
+    async fn find_by_token(
+        &self,
+        token: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<AccessToken>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::oauth::AccessTokenRow>(
             r#"
@@ -2031,7 +2439,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn save(&self, token: &AccessToken) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let scopes_str = token.scopes.join(" ");
 
@@ -2059,7 +2469,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn update(&self, token: &AccessToken) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -2080,7 +2492,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn delete(&self, token: &str, tenant_id: &TenantId) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query("DELETE FROM access_tokens WHERE token = $1 AND tenant_id = $2")
             .bind(token)
@@ -2094,54 +2508,68 @@ impl SessionRepository for TxSessionRepository {
 
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result = sqlx::query(
-            "DELETE FROM access_tokens WHERE tenant_id = $1 AND expires_at < NOW()",
-        )
-        .bind(tenant_id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete expired tokens: {}", e)))?;
+        let result =
+            sqlx::query("DELETE FROM access_tokens WHERE tenant_id = $1 AND expires_at < NOW()")
+                .bind(tenant_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| {
+                    AppError::database(format!("Failed to delete expired tokens: {}", e))
+                })?;
 
         Ok(result.rows_affected())
     }
 
     async fn delete_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result = sqlx::query(
-            "DELETE FROM access_tokens WHERE user_id = $1 AND tenant_id = $2",
-        )
-        .bind(user_id.0)
-        .bind(tenant_id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
-
-        Ok(result.rows_affected())
-    }
-
-    async fn delete_by_client_id(&self, client_id: &OAuthClientId, tenant_id: &TenantId) -> AppResult<u64> {
-        let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
-
-        let result = sqlx::query(
-            "DELETE FROM access_tokens WHERE client_id = $1 AND tenant_id = $2",
-        )
-        .bind(client_id.0)
-        .bind(tenant_id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
+        let result = sqlx::query("DELETE FROM access_tokens WHERE user_id = $1 AND tenant_id = $2")
+            .bind(user_id.0)
+            .bind(tenant_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
 
         Ok(result.rows_affected())
     }
 
-    async fn list_active_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<AccessToken>> {
+    async fn delete_by_client_id(
+        &self,
+        client_id: &OAuthClientId,
+        tenant_id: &TenantId,
+    ) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
+        let result =
+            sqlx::query("DELETE FROM access_tokens WHERE client_id = $1 AND tenant_id = $2")
+                .bind(client_id.0)
+                .bind(tenant_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
+
+        Ok(result.rows_affected())
+    }
+
+    async fn list_active_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<AccessToken>> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let rows = sqlx::query_as::<_, crate::infrastructure::persistence::oauth::AccessTokenRow>(
             r#"
@@ -2162,10 +2590,17 @@ impl SessionRepository for TxSessionRepository {
     }
 }
 
-#[async_trait] impl RefreshTokenRepository for TxRefreshTokenRepository {
-    async fn find_by_token(&self, token: &str, tenant_id: &TenantId) -> AppResult<Option<RefreshToken>> {
+#[async_trait]
+impl RefreshTokenRepository for TxRefreshTokenRepository {
+    async fn find_by_token(
+        &self,
+        token: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<RefreshToken>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::oauth::RefreshTokenRow>(
             r#"
@@ -2186,7 +2621,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn save(&self, token: &RefreshToken) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let scopes_str = token.scopes.join(" ");
 
@@ -2215,7 +2652,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn update(&self, token: &RefreshToken) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -2236,7 +2675,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn delete(&self, token: &str, tenant_id: &TenantId) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query("DELETE FROM refresh_tokens WHERE token = $1 AND tenant_id = $2")
             .bind(token)
@@ -2250,54 +2691,69 @@ impl SessionRepository for TxSessionRepository {
 
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result = sqlx::query(
-            "DELETE FROM refresh_tokens WHERE tenant_id = $1 AND expires_at < NOW()",
-        )
-        .bind(tenant_id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete expired tokens: {}", e)))?;
+        let result =
+            sqlx::query("DELETE FROM refresh_tokens WHERE tenant_id = $1 AND expires_at < NOW()")
+                .bind(tenant_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| {
+                    AppError::database(format!("Failed to delete expired tokens: {}", e))
+                })?;
 
         Ok(result.rows_affected())
     }
 
     async fn delete_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result = sqlx::query(
-            "DELETE FROM refresh_tokens WHERE user_id = $1 AND tenant_id = $2",
-        )
-        .bind(user_id.0)
-        .bind(tenant_id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
-
-        Ok(result.rows_affected())
-    }
-
-    async fn delete_by_client_id(&self, client_id: &OAuthClientId, tenant_id: &TenantId) -> AppResult<u64> {
-        let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
-
-        let result = sqlx::query(
-            "DELETE FROM refresh_tokens WHERE client_id = $1 AND tenant_id = $2",
-        )
-        .bind(client_id.0)
-        .bind(tenant_id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
+        let result =
+            sqlx::query("DELETE FROM refresh_tokens WHERE user_id = $1 AND tenant_id = $2")
+                .bind(user_id.0)
+                .bind(tenant_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
 
         Ok(result.rows_affected())
     }
 
-    async fn find_by_access_token(&self, access_token: &str, tenant_id: &TenantId) -> AppResult<Option<RefreshToken>> {
+    async fn delete_by_client_id(
+        &self,
+        client_id: &OAuthClientId,
+        tenant_id: &TenantId,
+    ) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
+
+        let result =
+            sqlx::query("DELETE FROM refresh_tokens WHERE client_id = $1 AND tenant_id = $2")
+                .bind(client_id.0)
+                .bind(tenant_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
+
+        Ok(result.rows_affected())
+    }
+
+    async fn find_by_access_token(
+        &self,
+        access_token: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<RefreshToken>> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let row = sqlx::query_as::<_, crate::infrastructure::persistence::oauth::RefreshTokenRow>(
             r#"
@@ -2316,9 +2772,15 @@ impl SessionRepository for TxSessionRepository {
         Ok(row.map(|r| r.into()))
     }
 
-    async fn list_active_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<RefreshToken>> {
+    async fn list_active_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<RefreshToken>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let rows = sqlx::query_as::<_, crate::infrastructure::persistence::oauth::RefreshTokenRow>(
             r#"
@@ -2339,31 +2801,41 @@ impl SessionRepository for TxSessionRepository {
     }
 }
 
-#[async_trait] impl AuthorizationCodeRepository for TxAuthorizationCodeRepository {
-    async fn find_by_code(&self, code: &str, tenant_id: &TenantId) -> AppResult<Option<AuthorizationCode>> {
+#[async_trait]
+impl AuthorizationCodeRepository for TxAuthorizationCodeRepository {
+    async fn find_by_code(
+        &self,
+        code: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<AuthorizationCode>> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let row = sqlx::query_as::<_, crate::infrastructure::persistence::oauth::AuthorizationCodeRow>(
-            r#"
+        let row =
+            sqlx::query_as::<_, crate::infrastructure::persistence::oauth::AuthorizationCodeRow>(
+                r#"
             SELECT code, tenant_id, client_id, user_id, redirect_uri, scopes,
                    code_challenge, code_challenge_method, used, expires_at, created_at
             FROM authorization_codes
             WHERE code = $1 AND tenant_id = $2
             "#,
-        )
-        .bind(code)
-        .bind(tenant_id.0)
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to find authorization code: {}", e)))?;
+            )
+            .bind(code)
+            .bind(tenant_id.0)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to find authorization code: {}", e)))?;
 
         Ok(row.map(|r| r.into()))
     }
 
     async fn save(&self, authorization_code: &AuthorizationCode) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let scopes_str = authorization_code.scopes.join(" ");
 
@@ -2395,7 +2867,9 @@ impl SessionRepository for TxSessionRepository {
 
     async fn update(&self, authorization_code: &AuthorizationCode) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query(
             r#"
@@ -2416,21 +2890,27 @@ impl SessionRepository for TxSessionRepository {
 
     async fn delete(&self, code: &str, tenant_id: &TenantId) -> AppResult<()> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         sqlx::query("DELETE FROM authorization_codes WHERE code = $1 AND tenant_id = $2")
             .bind(code)
             .bind(tenant_id.0)
             .execute(&mut **tx)
             .await
-            .map_err(|e| AppError::database(format!("Failed to delete authorization code: {}", e)))?;
+            .map_err(|e| {
+                AppError::database(format!("Failed to delete authorization code: {}", e))
+            })?;
 
         Ok(())
     }
 
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
         let result = sqlx::query(
             "DELETE FROM authorization_codes WHERE tenant_id = $1 AND expires_at < NOW()",
@@ -2445,32 +2925,38 @@ impl SessionRepository for TxSessionRepository {
 
     async fn delete_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result = sqlx::query(
-            "DELETE FROM authorization_codes WHERE user_id = $1 AND tenant_id = $2",
-        )
-        .bind(user_id.0)
-        .bind(tenant_id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete codes: {}", e)))?;
+        let result =
+            sqlx::query("DELETE FROM authorization_codes WHERE user_id = $1 AND tenant_id = $2")
+                .bind(user_id.0)
+                .bind(tenant_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to delete codes: {}", e)))?;
 
         Ok(result.rows_affected())
     }
 
-    async fn delete_by_client_id(&self, client_id: &OAuthClientId, tenant_id: &TenantId) -> AppResult<u64> {
+    async fn delete_by_client_id(
+        &self,
+        client_id: &OAuthClientId,
+        tenant_id: &TenantId,
+    ) -> AppResult<u64> {
         let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or_else(|| AppError::internal("Transaction consumed"))?;
+        let tx = guard
+            .as_mut()
+            .ok_or_else(|| AppError::internal("Transaction consumed"))?;
 
-        let result = sqlx::query(
-            "DELETE FROM authorization_codes WHERE client_id = $1 AND tenant_id = $2",
-        )
-        .bind(client_id.0)
-        .bind(tenant_id.0)
-        .execute(&mut **tx)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete codes: {}", e)))?;
+        let result =
+            sqlx::query("DELETE FROM authorization_codes WHERE client_id = $1 AND tenant_id = $2")
+                .bind(client_id.0)
+                .bind(tenant_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to delete codes: {}", e)))?;
 
         Ok(result.rows_affected())
     }

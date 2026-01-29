@@ -83,13 +83,13 @@ impl EvaluationResult {
 }
 
 /// 策略评估器
-/// 
+///
 /// 使用 Deny-Override 策略: 如果有任何 Deny 策略匹配，则拒绝
 pub struct PolicyEvaluator;
 
 impl PolicyEvaluator {
     /// 评估策略
-    /// 
+    ///
     /// 算法:
     /// 1. 收集所有匹配的策略
     /// 2. 按优先级排序
@@ -103,10 +103,10 @@ impl PolicyEvaluator {
         let matching_policies: Vec<&Policy> = policies
             .iter()
             .filter(|p| {
-                p.is_active &&
-                subject_patterns.iter().any(|s| p.matches_subject(s)) &&
-                p.matches_resource(&request.resource) &&
-                p.matches_action(&request.action)
+                p.is_active
+                    && subject_patterns.iter().any(|s| p.matches_subject(s))
+                    && p.matches_resource(&request.resource)
+                    && p.matches_action(&request.action)
             })
             .collect();
 
@@ -128,19 +128,15 @@ impl PolicyEvaluator {
         // Deny-Override: 检查是否有 Deny 策略
         for policy in &final_policies {
             if policy.effect == Effect::Deny {
-                return EvaluationResult::deny(format!(
-                    "Denied by policy: {}",
-                    policy.name
-                ))
-                .with_policy(policy.id.to_string());
+                return EvaluationResult::deny(format!("Denied by policy: {}", policy.name))
+                    .with_policy(policy.id.to_string());
             }
         }
 
         // 检查是否有 Allow 策略
         for policy in &final_policies {
             if policy.effect == Effect::Allow {
-                return EvaluationResult::allow()
-                    .with_policy(policy.id.to_string());
+                return EvaluationResult::allow().with_policy(policy.id.to_string());
             }
         }
 
@@ -155,7 +151,9 @@ impl PolicyEvaluator {
             Err(_) => return false,
         };
 
-        let context: serde_json::Value = request.context.as_ref()
+        let context: serde_json::Value = request
+            .context
+            .as_ref()
             .and_then(|ctx| serde_json::from_str(ctx).ok())
             .unwrap_or(serde_json::Value::Null);
 
@@ -171,7 +169,11 @@ impl PolicyEvaluator {
     }
 
     /// 从上下文或请求中获取值
-    fn get_value(key: &str, context: &serde_json::Value, request: &EvaluationRequest) -> serde_json::Value {
+    fn get_value(
+        key: &str,
+        context: &serde_json::Value,
+        request: &EvaluationRequest,
+    ) -> serde_json::Value {
         // 优先从 context 中查询 (支持级联 path: user.id)
         let mut current = context;
         for part in key.split('.') {
@@ -191,17 +193,22 @@ impl PolicyEvaluator {
     }
 
     /// 匹配值 (支持占位符 ${subject.id})
-    fn match_value(expected: &serde_json::Value, actual: &serde_json::Value, request: &EvaluationRequest) -> bool {
-        if let Some(s) = expected.as_str() {
-            if s.starts_with("${") && s.ends_with('}') {
-                let var_path = &s[2..s.len() - 1];
-                let var_val = match var_path {
-                    "subject.id" => request.subject.clone(),
-                    "resource.id" => request.resource.clone(),
-                    _ => return false,
-                };
-                return actual.as_str() == Some(&var_val);
-            }
+    fn match_value(
+        expected: &serde_json::Value,
+        actual: &serde_json::Value,
+        request: &EvaluationRequest,
+    ) -> bool {
+        if let Some(s) = expected.as_str()
+            && s.starts_with("${")
+            && s.ends_with('}')
+        {
+            let var_path = &s[2..s.len() - 1];
+            let var_val = match var_path {
+                "subject.id" => request.subject.clone(),
+                "resource.id" => request.resource.clone(),
+                _ => return false,
+            };
+            return actual.as_str() == Some(&var_val);
         }
         expected == actual
     }
@@ -232,21 +239,24 @@ mod tests {
                 vec!["role:admin".to_string()],
                 vec!["*".to_string()],
                 vec!["*".to_string()],
-            ).with_priority(100),
+            )
+            .with_priority(100),
             Policy::allow(
                 tenant_id.clone(),
                 "Editor Article Access".to_string(),
                 vec!["role:editor".to_string()],
                 vec!["article:*".to_string()],
                 vec!["read".to_string(), "write".to_string()],
-            ).with_priority(50),
+            )
+            .with_priority(50),
             Policy::deny(
                 tenant_id.clone(),
                 "Deny Delete for Everyone".to_string(),
                 vec!["*".to_string()],
                 vec!["*".to_string()],
                 vec!["delete".to_string()],
-            ).with_priority(200), // Higher priority than admin
+            )
+            .with_priority(200), // Higher priority than admin
         ]
     }
 
@@ -257,7 +267,8 @@ mod tests {
             "user:123".to_string(),
             "article:456".to_string(),
             "read".to_string(),
-        ).with_roles(vec!["admin".to_string()]);
+        )
+        .with_roles(vec!["admin".to_string()]);
 
         let result = PolicyEvaluator::evaluate(&policies, &request);
         assert!(result.allowed);
@@ -270,7 +281,8 @@ mod tests {
             "user:456".to_string(),
             "article:123".to_string(),
             "write".to_string(),
-        ).with_roles(vec!["editor".to_string()]);
+        )
+        .with_roles(vec!["editor".to_string()]);
 
         let result = PolicyEvaluator::evaluate(&policies, &request);
         assert!(result.allowed);
@@ -284,7 +296,8 @@ mod tests {
             "user:123".to_string(),
             "article:456".to_string(),
             "delete".to_string(),
-        ).with_roles(vec!["admin".to_string()]);
+        )
+        .with_roles(vec!["admin".to_string()]);
 
         let result = PolicyEvaluator::evaluate(&policies, &request);
         assert!(!result.allowed);
@@ -301,7 +314,8 @@ mod tests {
                 vec!["*".to_string()],
                 vec!["document:*".to_string()],
                 vec!["read".to_string()],
-            ).with_conditions(r#"{"owner_id": "${subject.id}"}"#.to_string()),
+            )
+            .with_conditions(r#"{"owner_id": "${subject.id}"}"#.to_string()),
         ];
 
         // 匹配：owner_id 与 subject.id 相同
@@ -309,20 +323,28 @@ mod tests {
             "user:123".to_string(),
             "document:abc".to_string(),
             "read".to_string(),
-        ).with_context(r#"{"owner_id": "user:123"}"#.to_string());
+        )
+        .with_context(r#"{"owner_id": "user:123"}"#.to_string());
 
         let result_ok = PolicyEvaluator::evaluate(&policies, &request_ok);
-        assert!(result_ok.allowed, "Should be allowed if owner_id matches subject.id");
+        assert!(
+            result_ok.allowed,
+            "Should be allowed if owner_id matches subject.id"
+        );
 
         // 不匹配：owner_id 与 subject.id 不同
         let request_err = EvaluationRequest::new(
             "user:456".to_string(),
             "document:abc".to_string(),
             "read".to_string(),
-        ).with_context(r#"{"owner_id": "user:123"}"#.to_string());
+        )
+        .with_context(r#"{"owner_id": "user:123"}"#.to_string());
 
         let result_err = PolicyEvaluator::evaluate(&policies, &request_err);
-        assert!(!result_err.allowed, "Should be denied if owner_id does not match subject.id");
+        assert!(
+            !result_err.allowed,
+            "Should be denied if owner_id does not match subject.id"
+        );
     }
 
     #[test]

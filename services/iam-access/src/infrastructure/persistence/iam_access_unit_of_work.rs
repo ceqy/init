@@ -177,9 +177,7 @@ impl OutboxRepository for TxOutboxRepository {
         .bind(aggregate_type)
         .bind(aggregate_id)
         .bind(event_type)
-        .bind(serde_json::Value::from(
-            serde_json::from_str::<serde_json::Value>(payload_json).unwrap_or_default(),
-        ))
+        .bind(serde_json::from_str::<serde_json::Value>(payload_json).unwrap_or_default())
         .bind(chrono::Utc::now())
         .execute(&mut **tx)
         .await

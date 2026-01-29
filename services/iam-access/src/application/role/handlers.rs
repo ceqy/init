@@ -22,7 +22,7 @@ impl RoleCommandHandler {
     /// 创建角色
     pub async fn handle_create(&self, cmd: CreateRoleCommand) -> AppResult<Role> {
         // 验证输入
-        cmd.validate().map_err(|e| AppError::validation(e))?;
+        cmd.validate().map_err(AppError::validation)?;
 
         let uow = self.uow_factory.begin().await?;
 
@@ -39,7 +39,7 @@ impl RoleCommandHandler {
         }
 
         // 保存 performed_by 用于事件
-        let performed_by = cmd.performed_by.clone();
+        let performed_by = cmd.performed_by;
 
         // 使用移动语义创建角色 (避免克隆)
         let role = cmd.into_role();
@@ -88,7 +88,7 @@ impl RoleCommandHandler {
         let event = RbacEvent::RoleUpdated {
             id: role.id.0,
             tenant_id: role.tenant_id.0,
-            by: cmd.performed_by.clone(),
+            by: cmd.performed_by,
         };
 
         let payload = serde_json::to_string(&event)
@@ -128,7 +128,7 @@ impl RoleCommandHandler {
         let event = RbacEvent::RoleDeleted {
             id: role.id.0,
             tenant_id: role.tenant_id.0,
-            by: cmd.performed_by.clone(),
+            by: cmd.performed_by,
         };
 
         let payload = serde_json::to_string(&event)

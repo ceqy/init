@@ -54,7 +54,9 @@ impl Tenant {
     pub fn new(name: String, display_name: String) -> Result<Self, TenantError> {
         // 验证租户名称
         if name.is_empty() {
-            return Err(TenantError::Validation("Tenant name cannot be empty".to_string()));
+            return Err(TenantError::Validation(
+                "Tenant name cannot be empty".to_string(),
+            ));
         }
 
         if !Self::is_valid_name(&name) {
@@ -81,7 +83,8 @@ impl Tenant {
 
     /// 验证租户名称格式
     fn is_valid_name(name: &str) -> bool {
-        name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        name.chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
             && !name.starts_with('-')
             && !name.ends_with('-')
     }
@@ -148,7 +151,10 @@ impl Tenant {
     /// 验证域名格式
     fn is_valid_domain(domain: &str) -> bool {
         // 简单的域名验证
-        domain.contains('.') && domain.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
+        domain.contains('.')
+            && domain
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
     }
 
     /// 延长订阅
@@ -234,4 +240,3 @@ pub enum TenantError {
     #[error("Subscription expired")]
     SubscriptionExpired,
 }
-

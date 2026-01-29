@@ -3,6 +3,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use base64::{Engine as _, engine::general_purpose};
 use chrono::{Duration, Utc};
 use cuba_auth_core::{Claims, TokenService};
 use cuba_common::{TenantId, UserId};
@@ -10,24 +11,21 @@ use prost_types::Timestamp;
 use sha2::{Digest, Sha256};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
-use base64::{engine::general_purpose, Engine as _};
 
 use crate::domain::auth::{PasswordResetToken, Session as DomainSession, SessionId};
 use crate::domain::repositories::auth::{
     BackupCodeRepository, PasswordResetRepository, SessionRepository,
 };
-use crate::domain::services::auth::{BackupCodeService, TotpService, WebAuthnService};
-use crate::infrastructure::cache::AuthCache;
 use crate::domain::repositories::user::UserRepository;
+use crate::domain::services::auth::{BackupCodeService, TotpService, WebAuthnService};
 use crate::domain::value_objects::{Email, HashedPassword, Username};
+use crate::infrastructure::cache::AuthCache;
 use cuba_adapter_email::EmailSender;
 
-use super::auth_proto::{self, auth_service_server::AuthService};
 use super::auth_proto::*;
+use super::auth_proto::{self, auth_service_server::AuthService};
 
 use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
-
-
 
 /// AuthService 实现
 pub struct AuthServiceImpl {
@@ -200,8 +198,8 @@ impl AuthService for AuthServiceImpl {
         );
 
         // 2. 构建用户名值对象
-        let username = Username::new(&req.username)
-            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+        let username =
+            Username::new(&req.username).map_err(|e| Status::invalid_argument(e.to_string()))?;
 
         // 3. 查找用户
         let user = self
@@ -280,21 +278,29 @@ impl AuthService for AuthServiceImpl {
         let _ = self.user_repo.update(&updated_user).await;
 
         // 10. 发布登录事件
-        self.event_publisher.publish(IamDomainEvent::UserLoggedIn {
-            user_id: user.id.clone(),
-            tenant_id: user.tenant_id.clone(),
-            ip_address: if req.ip_address.is_empty() { None } else { Some(req.ip_address.clone()) },
-            user_agent: None,
-            timestamp: Utc::now(),
-        }).await;
+        self.event_publisher
+            .publish(IamDomainEvent::UserLoggedIn {
+                user_id: user.id.clone(),
+                tenant_id: user.tenant_id.clone(),
+                ip_address: if req.ip_address.is_empty() {
+                    None
+                } else {
+                    Some(req.ip_address.clone())
+                },
+                user_agent: None,
+                timestamp: Utc::now(),
+            })
+            .await;
 
         // 11. 发布会话创建事件
-        self.event_publisher.publish(IamDomainEvent::SessionCreated {
-            session_id: session.id.0.to_string(),
-            user_id: user.id.clone(),
-            tenant_id: user.tenant_id.clone(),
-            timestamp: Utc::now(),
-        }).await;
+        self.event_publisher
+            .publish(IamDomainEvent::SessionCreated {
+                session_id: session.id.0.to_string(),
+                user_id: user.id.clone(),
+                tenant_id: user.tenant_id.clone(),
+                timestamp: Utc::now(),
+            })
+            .await;
 
         tracing::info!(username = %req.username, user_id = %user.id.0, "Login successful");
 
@@ -353,12 +359,14 @@ impl AuthService for AuthServiceImpl {
                 .map_err(|e| Status::internal(e.to_string()))?;
 
             // 发布登出事件
-            self.event_publisher.publish(IamDomainEvent::UserLoggedOut {
-                user_id: user_id.clone(),
-                tenant_id: tenant_id.clone(),
-                session_id: "all".to_string(),
-                timestamp: Utc::now(),
-            }).await;
+            self.event_publisher
+                .publish(IamDomainEvent::UserLoggedOut {
+                    user_id: user_id.clone(),
+                    tenant_id: tenant_id.clone(),
+                    session_id: "all".to_string(),
+                    timestamp: Utc::now(),
+                })
+                .await;
 
             tracing::info!(user_id = %user_id.0, "All sessions revoked and tokens blacklisted");
         } else {
@@ -369,12 +377,14 @@ impl AuthService for AuthServiceImpl {
                 .map_err(|e| Status::internal(e.to_string()))?;
 
             // 发布登出事件
-            self.event_publisher.publish(IamDomainEvent::UserLoggedOut {
-                user_id: user_id.clone(),
-                tenant_id: tenant_id.clone(),
-                session_id: claims.jti.clone(),
-                timestamp: Utc::now(),
-            }).await;
+            self.event_publisher
+                .publish(IamDomainEvent::UserLoggedOut {
+                    user_id: user_id.clone(),
+                    tenant_id: tenant_id.clone(),
+                    session_id: claims.jti.clone(),
+                    timestamp: Utc::now(),
+                })
+                .await;
 
             tracing::info!(jti = %claims.jti, "Token blacklisted");
         }
@@ -513,7 +523,9 @@ impl AuthService for AuthServiceImpl {
         let req = request.into_inner();
         tracing::info!(user_id = %req.user_id, "Change password request");
         if claims.sub != req.user_id {
-            return Err(Status::permission_denied("Cannot change other user's password"));
+            return Err(Status::permission_denied(
+                "Cannot change other user's password",
+            ));
         }
         let tenant_id = TenantId::from_str(&claims.tenant_id)
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
@@ -572,11 +584,13 @@ impl AuthService for AuthServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 9. 发布密码变更事件
-        self.event_publisher.publish(IamDomainEvent::PasswordChanged {
-            user_id: user_id.clone(),
-            tenant_id: tenant_id.clone(),
-            timestamp: Utc::now(),
-        }).await;
+        self.event_publisher
+            .publish(IamDomainEvent::PasswordChanged {
+                user_id: user_id.clone(),
+                tenant_id: tenant_id.clone(),
+                timestamp: Utc::now(),
+            })
+            .await;
 
         tracing::info!(user_id = %req.user_id, "Password changed successfully, all tokens invalidated");
 
@@ -616,7 +630,8 @@ impl AuthService for AuthServiceImpl {
                 tracing::warn!(email = %req.email, "User not found for password reset");
                 return Ok(Response::new(RequestPasswordResetResponse {
                     success: true,
-                    message: "If the email exists, a password reset link has been sent.".to_string(),
+                    message: "If the email exists, a password reset link has been sent."
+                        .to_string(),
                 }));
             }
         };
@@ -660,8 +675,11 @@ impl AuthService for AuthServiceImpl {
 
         // 7. 发送邮件
         let subject = "密码重置请求 - Cuba ERP";
-        let user_name = user.display_name.as_deref().unwrap_or(user.username.as_str());
-        
+        let user_name = user
+            .display_name
+            .as_deref()
+            .unwrap_or(user.username.as_str());
+
         // 构建邮件内容
         let html_body = format!(
             r#"<!DOCTYPE html>
@@ -715,7 +733,11 @@ impl AuthService for AuthServiceImpl {
         let token_hash = sha256_hash(&req.reset_token);
 
         // 开始事务
-        let uow = self.uow_factory.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let uow = self
+            .uow_factory
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         // 2. 查找令牌
         let token = uow
@@ -728,7 +750,9 @@ impl AuthService for AuthServiceImpl {
         // 3. 验证令牌有效性
         if !token.is_valid() {
             if token.used {
-                return Err(Status::invalid_argument("Reset token has already been used"));
+                return Err(Status::invalid_argument(
+                    "Reset token has already been used",
+                ));
             }
             if token.is_expired() {
                 return Err(Status::invalid_argument("Reset token has expired"));
@@ -788,7 +812,9 @@ impl AuthService for AuthServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 提交事务
-        uow.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        uow.commit()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         // --- 事务外操作（重试友好的或非关键的） ---
 
@@ -812,7 +838,8 @@ impl AuthService for AuthServiceImpl {
 
         Ok(Response::new(ResetPasswordResponse {
             success: true,
-            message: "Password has been reset successfully. Please login with your new password.".to_string(),
+            message: "Password has been reset successfully. Please login with your new password."
+                .to_string(),
         }))
     }
 
@@ -827,7 +854,9 @@ impl AuthService for AuthServiceImpl {
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
-             return Err(Status::permission_denied("Cannot view other user's sessions"));
+            return Err(Status::permission_denied(
+                "Cannot view other user's sessions",
+            ));
         }
 
         let user_id = UserId::from_uuid(
@@ -889,12 +918,14 @@ impl AuthService for AuthServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 发布会话撤销事件
-        self.event_publisher.publish(IamDomainEvent::SessionRevoked {
-            session_id: req.session_id.clone(),
-            user_id: session.user_id.clone(),
-            tenant_id: tenant_id.clone(),
-            timestamp: Utc::now(),
-        }).await;
+        self.event_publisher
+            .publish(IamDomainEvent::SessionRevoked {
+                session_id: req.session_id.clone(),
+                user_id: session.user_id.clone(),
+                tenant_id: tenant_id.clone(),
+                timestamp: Utc::now(),
+            })
+            .await;
 
         tracing::info!(session_id = %req.session_id, "Session revoked");
 
@@ -912,7 +943,9 @@ impl AuthService for AuthServiceImpl {
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
-             return Err(Status::permission_denied("Cannot enable 2FA for other user"));
+            return Err(Status::permission_denied(
+                "Cannot enable 2FA for other user",
+            ));
         }
 
         // 1. 解析用户 ID
@@ -979,12 +1012,14 @@ impl AuthService for AuthServiceImpl {
                 .map_err(|e| Status::internal(e.to_string()))?;
 
             // 10. 发布 2FA 启用事件
-            self.event_publisher.publish(IamDomainEvent::TwoFactorEnabled {
-                user_id: user_id.clone(),
-                tenant_id: tenant_id.clone(),
-                method: "TOTP".to_string(),
-                timestamp: Utc::now(),
-            }).await;
+            self.event_publisher
+                .publish(IamDomainEvent::TwoFactorEnabled {
+                    user_id: user_id.clone(),
+                    tenant_id: tenant_id.clone(),
+                    method: "TOTP".to_string(),
+                    timestamp: Utc::now(),
+                })
+                .await;
 
             tracing::info!(user_id = %req.user_id, "2FA enabled successfully");
 
@@ -1117,7 +1152,9 @@ impl AuthService for AuthServiceImpl {
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
-             return Err(Status::permission_denied("Cannot disable 2FA for other user"));
+            return Err(Status::permission_denied(
+                "Cannot disable 2FA for other user",
+            ));
         }
 
         // 1. 解析用户 ID
@@ -1156,11 +1193,13 @@ impl AuthService for AuthServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 6. 发布 2FA 禁用事件
-        self.event_publisher.publish(IamDomainEvent::TwoFactorDisabled {
-            user_id: user_id.clone(),
-            tenant_id: tenant_id.clone(),
-            timestamp: Utc::now(),
-        }).await;
+        self.event_publisher
+            .publish(IamDomainEvent::TwoFactorDisabled {
+                user_id: user_id.clone(),
+                tenant_id: tenant_id.clone(),
+                timestamp: Utc::now(),
+            })
+            .await;
 
         tracing::info!(user_id = %req.user_id, "2FA disabled successfully");
 
@@ -1184,7 +1223,9 @@ impl AuthService for AuthServiceImpl {
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
-             return Err(Status::permission_denied("Cannot register credential for other user"));
+            return Err(Status::permission_denied(
+                "Cannot register credential for other user",
+            ));
         }
 
         // 2. 解析用户 ID
@@ -1205,7 +1246,9 @@ impl AuthService for AuthServiceImpl {
             .start_registration(
                 user_id,
                 user.username.as_str(),
-                user.display_name.as_deref().unwrap_or(user.username.as_str()),
+                user.display_name
+                    .as_deref()
+                    .unwrap_or(user.username.as_str()),
                 &tenant_id,
             )
             .await
@@ -1250,7 +1293,9 @@ impl AuthService for AuthServiceImpl {
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
-             return Err(Status::permission_denied("Cannot register credential for other user"));
+            return Err(Status::permission_denied(
+                "Cannot register credential for other user",
+            ));
         }
 
         // 2. 解析用户 ID
@@ -1259,18 +1304,26 @@ impl AuthService for AuthServiceImpl {
 
         // 3. 反序列化注册状态
         let reg_state: webauthn_rs::prelude::PasskeyRegistration =
-            serde_json::from_str(&req.registration_state)
-                .map_err(|e| Status::invalid_argument(format!("Invalid registration state: {}", e)))?;
+            serde_json::from_str(&req.registration_state).map_err(|e| {
+                Status::invalid_argument(format!("Invalid registration state: {}", e))
+            })?;
 
         // 4. 反序列化凭证响应
         let reg: webauthn_rs::prelude::RegisterPublicKeyCredential =
-            serde_json::from_str(&req.credential_response)
-                .map_err(|e| Status::invalid_argument(format!("Invalid credential response: {}", e)))?;
+            serde_json::from_str(&req.credential_response).map_err(|e| {
+                Status::invalid_argument(format!("Invalid credential response: {}", e))
+            })?;
 
         // 5. 完成注册
         let credential = self
             .webauthn_service
-            .finish_registration(user_id, req.credential_name.clone(), &reg, &reg_state, &tenant_id)
+            .finish_registration(
+                user_id,
+                req.credential_name.clone(),
+                &reg,
+                &reg_state,
+                &tenant_id,
+            )
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1297,8 +1350,8 @@ impl AuthService for AuthServiceImpl {
         );
 
         // 2. 构建用户名值对象
-        let username = Username::new(&req.username)
-            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+        let username =
+            Username::new(&req.username).map_err(|e| Status::invalid_argument(e.to_string()))?;
 
         // 3. 查找用户
         let user = self
@@ -1351,13 +1404,15 @@ impl AuthService for AuthServiceImpl {
 
         // 1. 反序列化认证状态
         let auth_state: webauthn_rs::prelude::PasskeyAuthentication =
-            serde_json::from_str(&req.authentication_state)
-                .map_err(|e| Status::invalid_argument(format!("Invalid authentication state: {}", e)))?;
+            serde_json::from_str(&req.authentication_state).map_err(|e| {
+                Status::invalid_argument(format!("Invalid authentication state: {}", e))
+            })?;
 
         // 2. 反序列化凭证响应
         let auth: webauthn_rs::prelude::PublicKeyCredential =
-            serde_json::from_str(&req.credential_response)
-                .map_err(|e| Status::invalid_argument(format!("Invalid credential response: {}", e)))?;
+            serde_json::from_str(&req.credential_response).map_err(|e| {
+                Status::invalid_argument(format!("Invalid credential response: {}", e))
+            })?;
 
         // 3. 完成认证
         let user_id = self
@@ -1393,7 +1448,7 @@ impl AuthService for AuthServiceImpl {
             user.id.clone(),
             user.tenant_id.clone(),
             refresh_token_hash,
-            expires_at
+            expires_at,
         );
 
         if !req.device_info.is_empty() {
@@ -1436,7 +1491,9 @@ impl AuthService for AuthServiceImpl {
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
-             return Err(Status::permission_denied("Cannot list credentials for other user"));
+            return Err(Status::permission_denied(
+                "Cannot list credentials for other user",
+            ));
         }
 
         // 2. 解析用户 ID
@@ -1487,7 +1544,9 @@ impl AuthService for AuthServiceImpl {
             .map_err(|_| Status::internal("Invalid tenant ID"))?;
 
         if claims.sub != req.user_id {
-             return Err(Status::permission_denied("Cannot delete credential for other user"));
+            return Err(Status::permission_denied(
+                "Cannot delete credential for other user",
+            ));
         }
 
         // 2. 解析 IDs

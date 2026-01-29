@@ -67,7 +67,12 @@ impl PasswordResetToken {
     /// - `tenant_id`: 租户 ID
     /// - `token_hash`: 令牌的 SHA256 哈希
     /// - `expires_in_minutes`: 过期时间（分钟）
-    pub fn new(user_id: UserId, tenant_id: cuba_common::TenantId, token_hash: String, expires_in_minutes: i64) -> Self {
+    pub fn new(
+        user_id: UserId,
+        tenant_id: cuba_common::TenantId,
+        token_hash: String,
+        expires_in_minutes: i64,
+    ) -> Self {
         let now = Utc::now();
         let expires_at = now + Duration::minutes(expires_in_minutes);
 
@@ -109,4 +114,3 @@ impl PasswordResetToken {
         }
     }
 }
-

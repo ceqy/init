@@ -20,7 +20,11 @@ impl PostgresAuthorizationCodeRepository {
 
 #[async_trait]
 impl AuthorizationCodeRepository for PostgresAuthorizationCodeRepository {
-    async fn find_by_code(&self, code: &str, tenant_id: &TenantId) -> AppResult<Option<AuthorizationCode>> {
+    async fn find_by_code(
+        &self,
+        code: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<AuthorizationCode>> {
         debug!("Finding authorization code");
 
         let row = sqlx::query_as::<_, AuthorizationCodeRow>(
@@ -98,7 +102,9 @@ impl AuthorizationCodeRepository for PostgresAuthorizationCodeRepository {
             .bind(tenant_id.0)
             .execute(&self.pool)
             .await
-        .map_err(|e| AppError::database(format!("Failed to delete authorization code: {}", e)))?;
+            .map_err(|e| {
+                AppError::database(format!("Failed to delete authorization code: {}", e))
+            })?;
 
         Ok(())
     }
@@ -116,27 +122,29 @@ impl AuthorizationCodeRepository for PostgresAuthorizationCodeRepository {
     }
 
     async fn delete_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<u64> {
-        let result = sqlx::query(
-            "DELETE FROM authorization_codes WHERE user_id = $1 AND tenant_id = $2",
-        )
-        .bind(user_id.0)
-        .bind(tenant_id.0)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete codes: {}", e)))?;
+        let result =
+            sqlx::query("DELETE FROM authorization_codes WHERE user_id = $1 AND tenant_id = $2")
+                .bind(user_id.0)
+                .bind(tenant_id.0)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to delete codes: {}", e)))?;
 
         Ok(result.rows_affected())
     }
 
-    async fn delete_by_client_id(&self, client_id: &OAuthClientId, tenant_id: &TenantId) -> AppResult<u64> {
-        let result = sqlx::query(
-            "DELETE FROM authorization_codes WHERE client_id = $1 AND tenant_id = $2",
-        )
-        .bind(client_id.0)
-        .bind(tenant_id.0)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete codes: {}", e)))?;
+    async fn delete_by_client_id(
+        &self,
+        client_id: &OAuthClientId,
+        tenant_id: &TenantId,
+    ) -> AppResult<u64> {
+        let result =
+            sqlx::query("DELETE FROM authorization_codes WHERE client_id = $1 AND tenant_id = $2")
+                .bind(client_id.0)
+                .bind(tenant_id.0)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to delete codes: {}", e)))?;
 
         Ok(result.rows_affected())
     }
@@ -165,7 +173,11 @@ impl From<AuthorizationCodeRow> for AuthorizationCode {
             client_id: OAuthClientId::from_uuid(row.client_id),
             user_id: UserId::from_uuid(row.user_id),
             redirect_uri: row.redirect_uri,
-            scopes: row.scopes.split_whitespace().map(|s| s.to_string()).collect(),
+            scopes: row
+                .scopes
+                .split_whitespace()
+                .map(|s| s.to_string())
+                .collect(),
             code_challenge: row.code_challenge,
             code_challenge_method: row.code_challenge_method,
             used: row.used,

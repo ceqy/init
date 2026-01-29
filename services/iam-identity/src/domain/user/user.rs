@@ -188,7 +188,7 @@ impl User {
         self.lock_reason = None;
         self.failed_login_count = 0;
         self.last_failed_login_at = None;
-        
+
         // 如果之前是锁定状态，恢复为激活状态
         if self.status == UserStatus::Locked {
             self.status = UserStatus::Active;

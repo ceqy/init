@@ -79,4 +79,3 @@ impl RefreshToken {
         remaining.max(0)
     }
 }
-

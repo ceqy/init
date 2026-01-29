@@ -8,8 +8,7 @@ use cuba_errors::AppResult;
 use tracing::info;
 
 use crate::application::queries::user::{
-    GetUserByIdQuery, GetUserByUsernameQuery, GetUserByEmailQuery,
-    UserQueryResult,
+    GetUserByEmailQuery, GetUserByIdQuery, GetUserByUsernameQuery, UserQueryResult,
 };
 use crate::domain::repositories::user::UserRepository;
 use crate::domain::value_objects::{Email, Username};
@@ -34,7 +33,8 @@ impl QueryHandler<GetUserByIdQuery> for GetUserByIdHandler {
             "Handling GetUserByIdQuery"
         );
 
-        let user = self.user_repository
+        let user = self
+            .user_repository
             .find_by_id(&query.user_id, &query.tenant_id)
             .await?;
 
@@ -78,7 +78,8 @@ impl QueryHandler<GetUserByUsernameQuery> for GetUserByUsernameHandler {
         let username = Username::new(&query.username)
             .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?;
 
-        let user = self.user_repository
+        let user = self
+            .user_repository
             .find_by_username(&username, &query.tenant_id)
             .await?;
 
@@ -122,7 +123,8 @@ impl QueryHandler<GetUserByEmailQuery> for GetUserByEmailHandler {
         let email = Email::new(&query.email)
             .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?;
 
-        let user = self.user_repository
+        let user = self
+            .user_repository
             .find_by_email(&email, &query.tenant_id)
             .await?;
 

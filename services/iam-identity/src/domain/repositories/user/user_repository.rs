@@ -13,7 +13,11 @@ pub trait UserRepository: Send + Sync {
     async fn find_by_id(&self, id: &UserId, tenant_id: &TenantId) -> AppResult<Option<User>>;
 
     /// 根据用户名查找用户（带租户隔离）
-    async fn find_by_username(&self, username: &Username, tenant_id: &TenantId) -> AppResult<Option<User>>;
+    async fn find_by_username(
+        &self,
+        username: &Username,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<User>>;
 
     /// 根据邮箱查找用户（带租户隔离）
     async fn find_by_email(&self, email: &Email, tenant_id: &TenantId) -> AppResult<Option<User>>;
@@ -28,7 +32,11 @@ pub trait UserRepository: Send + Sync {
     async fn delete(&self, id: &UserId, tenant_id: &TenantId) -> AppResult<()>;
 
     /// 检查用户名是否存在（带租户隔离）
-    async fn exists_by_username(&self, username: &Username, tenant_id: &TenantId) -> AppResult<bool>;
+    async fn exists_by_username(
+        &self,
+        username: &Username,
+        tenant_id: &TenantId,
+    ) -> AppResult<bool>;
 
     /// 检查邮箱是否存在（带租户隔离）
     async fn exists_by_email(&self, email: &Email, tenant_id: &TenantId) -> AppResult<bool>;

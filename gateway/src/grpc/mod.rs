@@ -12,11 +12,11 @@ pub mod audit {
     tonic::include_proto!("cuba.iam.audit");
 }
 
-use auth::auth_service_client::AuthServiceClient;
-use user::user_service_client::UserServiceClient;
 use audit::audit_service_client::AuditServiceClient;
-use tonic::transport::Channel;
+use auth::auth_service_client::AuthServiceClient;
 use std::time::Duration;
+use tonic::transport::Channel;
+use user::user_service_client::UserServiceClient;
 
 /// gRPC 客户端集合
 #[derive(Clone)]
@@ -28,7 +28,7 @@ pub struct GrpcClients {
 
 impl GrpcClients {
     /// 创建新的 gRPC 客户端集合
-    /// 
+    ///
     /// 配置了适当的超时和连接设置以支持高并发请求
     pub async fn new(iam_endpoint: String) -> Result<Self, Box<dyn std::error::Error>> {
         let channel = Channel::from_shared(iam_endpoint)?

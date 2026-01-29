@@ -55,7 +55,11 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
         Ok(())
     }
 
-    async fn find_by_id(&self, id: &WebAuthnCredentialId, tenant_id: &cuba_common::TenantId) -> AppResult<Option<WebAuthnCredential>> {
+    async fn find_by_id(
+        &self,
+        id: &WebAuthnCredentialId,
+        tenant_id: &cuba_common::TenantId,
+    ) -> AppResult<Option<WebAuthnCredential>> {
         debug!("Finding WebAuthn credential by id: {}", id);
 
         let row = sqlx::query_as::<_, WebAuthnCredentialRow>(
@@ -76,7 +80,11 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
         Ok(row.map(|r| r.into()))
     }
 
-    async fn find_by_credential_id(&self, credential_id: &[u8], tenant_id: &cuba_common::TenantId) -> AppResult<Option<WebAuthnCredential>> {
+    async fn find_by_credential_id(
+        &self,
+        credential_id: &[u8],
+        tenant_id: &cuba_common::TenantId,
+    ) -> AppResult<Option<WebAuthnCredential>> {
         debug!("Finding WebAuthn credential by credential_id");
 
         let row = sqlx::query_as::<_, WebAuthnCredentialRow>(
@@ -97,7 +105,11 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
         Ok(row.map(|r| r.into()))
     }
 
-    async fn find_by_user_id(&self, user_id: &cuba_common::UserId, tenant_id: &cuba_common::TenantId) -> AppResult<Vec<WebAuthnCredential>> {
+    async fn find_by_user_id(
+        &self,
+        user_id: &cuba_common::UserId,
+        tenant_id: &cuba_common::TenantId,
+    ) -> AppResult<Vec<WebAuthnCredential>> {
         debug!("Finding WebAuthn credentials for user: {}", user_id);
 
         let rows = sqlx::query_as::<_, WebAuthnCredentialRow>(
@@ -145,7 +157,11 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
         Ok(())
     }
 
-    async fn delete(&self, id: &WebAuthnCredentialId, tenant_id: &cuba_common::TenantId) -> AppResult<()> {
+    async fn delete(
+        &self,
+        id: &WebAuthnCredentialId,
+        tenant_id: &cuba_common::TenantId,
+    ) -> AppResult<()> {
         debug!("Deleting WebAuthn credential: {}", id);
 
         sqlx::query("DELETE FROM webauthn_credentials WHERE id = $1 AND tenant_id = $2")
@@ -153,12 +169,18 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
             .bind(tenant_id.0)
             .execute(&self.pool)
             .await
-            .map_err(|e| AppError::database(format!("Failed to delete WebAuthn credential: {}", e)))?;
+            .map_err(|e| {
+                AppError::database(format!("Failed to delete WebAuthn credential: {}", e))
+            })?;
 
         Ok(())
     }
 
-    async fn has_credentials(&self, user_id: &cuba_common::UserId, tenant_id: &cuba_common::TenantId) -> AppResult<bool> {
+    async fn has_credentials(
+        &self,
+        user_id: &cuba_common::UserId,
+        tenant_id: &cuba_common::TenantId,
+    ) -> AppResult<bool> {
         debug!("Checking if user has WebAuthn credentials: {}", user_id);
 
         let result: (bool,) = sqlx::query_as(

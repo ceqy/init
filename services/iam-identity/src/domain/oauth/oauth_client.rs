@@ -135,12 +135,16 @@ impl OAuthClient {
     ) -> Result<Self, OAuthClientError> {
         // 验证名称
         if name.is_empty() {
-            return Err(OAuthClientError::Validation("Client name cannot be empty".to_string()));
+            return Err(OAuthClientError::Validation(
+                "Client name cannot be empty".to_string(),
+            ));
         }
 
         // 验证重定向 URI
         if redirect_uris.is_empty() {
-            return Err(OAuthClientError::Validation("At least one redirect URI is required".to_string()));
+            return Err(OAuthClientError::Validation(
+                "At least one redirect URI is required".to_string(),
+            ));
         }
 
         for uri in &redirect_uris {
@@ -148,7 +152,7 @@ impl OAuthClient {
         }
 
         let is_public = matches!(client_type, OAuthClientType::Public);
-        
+
         Ok(Self {
             id: OAuthClientId::new(),
             tenant_id,
@@ -159,11 +163,19 @@ impl OAuthClient {
             client_type,
             grant_types: vec![GrantType::AuthorizationCode],
             redirect_uris,
-            allowed_scopes: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
-            scopes: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
+            allowed_scopes: vec![
+                "openid".to_string(),
+                "profile".to_string(),
+                "email".to_string(),
+            ],
+            scopes: vec![
+                "openid".to_string(),
+                "profile".to_string(),
+                "email".to_string(),
+            ],
             public_client: is_public,
-            access_token_lifetime: 3600,      // 1 hour
-            refresh_token_lifetime: 2592000,  // 30 days
+            access_token_lifetime: 3600,     // 1 hour
+            refresh_token_lifetime: 2592000, // 30 days
             require_pkce: true,
             require_consent: true,
             is_active: true,
@@ -179,18 +191,19 @@ impl OAuthClient {
     /// 验证重定向 URI
     fn validate_redirect_uri(uri: &str) -> Result<(), OAuthClientError> {
         // 必须是 HTTPS（开发环境可以是 HTTP localhost）
-        if !uri.starts_with("https://") 
+        if !uri.starts_with("https://")
             && !uri.starts_with("http://localhost")
-            && !uri.starts_with("http://127.0.0.1") {
+            && !uri.starts_with("http://127.0.0.1")
+        {
             return Err(OAuthClientError::Validation(
-                "Redirect URI must use HTTPS or be localhost".to_string()
+                "Redirect URI must use HTTPS or be localhost".to_string(),
             ));
         }
 
         // 不能包含 fragment
         if uri.contains('#') {
             return Err(OAuthClientError::Validation(
-                "Redirect URI cannot contain fragment".to_string()
+                "Redirect URI cannot contain fragment".to_string(),
             ));
         }
 
@@ -233,7 +246,9 @@ impl OAuthClient {
 
     /// 验证 Scope 是否允许
     pub fn validate_scopes(&self, requested_scopes: &[String]) -> bool {
-        requested_scopes.iter().all(|scope| self.allowed_scopes.contains(scope))
+        requested_scopes
+            .iter()
+            .all(|scope| self.allowed_scopes.contains(scope))
     }
 
     /// 更新 Client 信息
@@ -246,7 +261,9 @@ impl OAuthClient {
     ) -> Result<(), OAuthClientError> {
         if let Some(n) = name {
             if n.is_empty() {
-                return Err(OAuthClientError::Validation("Client name cannot be empty".to_string()));
+                return Err(OAuthClientError::Validation(
+                    "Client name cannot be empty".to_string(),
+                ));
             }
             self.name = n;
         }
@@ -257,7 +274,9 @@ impl OAuthClient {
 
         if let Some(uris) = redirect_uris {
             if uris.is_empty() {
-                return Err(OAuthClientError::Validation("At least one redirect URI is required".to_string()));
+                return Err(OAuthClientError::Validation(
+                    "At least one redirect URI is required".to_string(),
+                ));
             }
             for uri in &uris {
                 Self::validate_redirect_uri(uri)?;
@@ -299,7 +318,6 @@ pub enum OAuthClientError {
     InvalidSecret,
 }
 
-
 // ============================================================
 // 单元测试
 // ============================================================
@@ -340,7 +358,8 @@ mod tests {
         let client_type = OAuthClientType::Public;
         let redirect_uris = vec!["https://example.com/callback".to_string()];
 
-        let client = OAuthClient::new(tenant_id, owner_id, name, client_type, redirect_uris).unwrap();
+        let client =
+            OAuthClient::new(tenant_id, owner_id, name, client_type, redirect_uris).unwrap();
 
         assert_eq!(client.client_type, OAuthClientType::Public);
         assert!(client.public_client);
@@ -489,12 +508,7 @@ mod tests {
     fn test_update_client_with_empty_name() {
         let mut client = create_test_client();
 
-        let result = client.update(
-            Some("".to_string()),
-            None,
-            None,
-            None,
-        );
+        let result = client.update(Some("".to_string()), None, None, None);
 
         assert!(result.is_err());
     }
@@ -535,8 +549,14 @@ mod tests {
 
     #[test]
     fn test_grant_type_display() {
-        assert_eq!(GrantType::AuthorizationCode.to_string(), "authorization_code");
-        assert_eq!(GrantType::ClientCredentials.to_string(), "client_credentials");
+        assert_eq!(
+            GrantType::AuthorizationCode.to_string(),
+            "authorization_code"
+        );
+        assert_eq!(
+            GrantType::ClientCredentials.to_string(),
+            "client_credentials"
+        );
         assert_eq!(GrantType::RefreshToken.to_string(), "refresh_token");
         assert_eq!(GrantType::Implicit.to_string(), "implicit");
         assert_eq!(GrantType::Password.to_string(), "password");

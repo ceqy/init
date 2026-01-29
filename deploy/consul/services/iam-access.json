@@ -1,0 +1,31 @@
+{
+  "service": {
+    "id": "iam-access-1",
+    "name": "iam-access",
+    "tags": ["grpc", "iam", "v1"],
+    "port": 50051,
+    "address": "iam-access-envoy",
+    "meta": {
+      "version": "1.0.0",
+      "environment": "development",
+      "protocol": "grpc"
+    },
+    "checks": [
+      {
+        "id": "iam-grpc-health",
+        "name": "IAM gRPC Health Check",
+        "grpc": "iam-access-envoy:50051/grpc.health.v1.Health",
+        "grpc_use_tls": false,
+        "interval": "10s",
+        "timeout": "2s"
+      },
+      {
+        "id": "iam-http-health",
+        "name": "IAM HTTP Health Check (via Envoy)",
+        "http": "http://iam-access-envoy:8080/health",
+        "interval": "10s",
+        "timeout": "2s"
+      }
+    ]
+  }
+}

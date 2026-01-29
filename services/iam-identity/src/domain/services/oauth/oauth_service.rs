@@ -1,9 +1,9 @@
-use tracing::debug;
 use base64::{Engine as _, engine::general_purpose};
 use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use rand::Rng;
 use sha2::{Digest, Sha256};
+use tracing::debug;
 
 use crate::domain::oauth::{AccessToken, AuthorizationCode, OAuthClientId, RefreshToken};
 
@@ -95,9 +95,14 @@ impl OAuthService {
         }
 
         if let Some(challenge) = &authorization_code.code_challenge {
-            let verifier = code_verifier.ok_or_else(|| AppError::validation("Code verifier required"))?;
-            
-            if !Self::verify_pkce(challenge, verifier, &authorization_code.code_challenge_method) {
+            let verifier =
+                code_verifier.ok_or_else(|| AppError::validation("Code verifier required"))?;
+
+            if !Self::verify_pkce(
+                challenge,
+                verifier,
+                &authorization_code.code_challenge_method,
+            ) {
                 return Err(AppError::validation("Invalid code verifier"));
             }
         }
@@ -224,7 +229,9 @@ impl OAuthService {
                 refresh_token.revoke();
                 refresh_token_repo.update(&refresh_token).await?;
             }
-        } else if let Some(mut refresh_token) = refresh_token_repo.find_by_token(token, tenant_id).await? {
+        } else if let Some(mut refresh_token) =
+            refresh_token_repo.find_by_token(token, tenant_id).await?
+        {
             refresh_token.revoke();
             refresh_token_repo.update(&refresh_token).await?;
 

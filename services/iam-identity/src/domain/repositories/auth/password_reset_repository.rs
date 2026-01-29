@@ -13,10 +13,18 @@ pub trait PasswordResetRepository: Send + Sync {
     async fn save(&self, token: &PasswordResetToken) -> AppResult<()>;
 
     /// 根据 ID 查找令牌（带租户隔离）
-    async fn find_by_id(&self, id: &PasswordResetTokenId, tenant_id: &TenantId) -> AppResult<Option<PasswordResetToken>>;
+    async fn find_by_id(
+        &self,
+        id: &PasswordResetTokenId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<PasswordResetToken>>;
 
     /// 根据令牌哈希查找（带租户隔离）
-    async fn find_by_token_hash(&self, token_hash: &str, tenant_id: &TenantId) -> AppResult<Option<PasswordResetToken>>;
+    async fn find_by_token_hash(
+        &self,
+        token_hash: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<PasswordResetToken>>;
 
     /// 更新令牌（验证 tenant_id 匹配）
     async fn update(&self, token: &PasswordResetToken) -> AppResult<()>;
@@ -31,5 +39,9 @@ pub trait PasswordResetRepository: Send + Sync {
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64>;
 
     /// 统计用户未使用的令牌数量（带租户隔离）
-    async fn count_unused_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64>;
+    async fn count_unused_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<i64>;
 }

@@ -80,4 +80,3 @@ impl AccessToken {
         remaining.max(0)
     }
 }
-

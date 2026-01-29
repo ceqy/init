@@ -12,10 +12,18 @@ pub trait SessionRepository: Send + Sync {
     async fn find_by_id(&self, id: &SessionId, tenant_id: &TenantId) -> AppResult<Option<Session>>;
 
     /// 根据刷新令牌哈希查找会话（带租户隔离）
-    async fn find_by_refresh_token_hash(&self, hash: &str, tenant_id: &TenantId) -> AppResult<Option<Session>>;
+    async fn find_by_refresh_token_hash(
+        &self,
+        hash: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<Session>>;
 
     /// 获取用户的所有活跃会话（带租户隔离）
-    async fn find_active_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<Session>>;
+    async fn find_active_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<Session>>;
 
     /// 保存会话（自动使用会话的 tenant_id）
     async fn save(&self, session: &Session) -> AppResult<()>;

@@ -73,10 +73,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
         info!("Outbox publisher started");
 
-        // 初始化缓存
-        use infrastructure::cache::AuthCache;
-        let redis_cache = infra.redis_cache();
-        let auth_cache = Arc::new(AuthCache::new(Arc::new(redis_cache)));
+        // 初始化增强的缓存
+        use infrastructure::cache::{AuthCacheConfig, CacheStrategyConfig, create_enhanced_cache};
+
+        // 配置缓存策略
+        let cache_config = CacheStrategyConfig {
+            enable_multi_layer: true,          // 启用多层缓存（L1 内存 + L2 Redis）
+            enable_avalanche_protection: true, // 启用雪崩防护（TTL 抖动 + Singleflight）
+            enable_bloom_filter: false,        // 布隆过滤器（可选，需要 RedisBloom）
+            enable_cache_warming: true,        // 启用缓存预热
+            jitter_range_secs: 30,             // TTL 抖动范围：±15 秒
+            auth_cache_config: AuthCacheConfig {
+                user_roles_ttl_secs: 300, // 用户角色缓存 5 分钟
+                role_ttl_secs: 600,       // 角色缓存 10 分钟
+                policy_ttl_secs: 600,     // 策略缓存 10 分钟
+            },
+            ..Default::default()
+        };
+
+        // 创建增强的缓存（带雪崩防护、多层缓存、自动降级）
+        let redis_conn = infra.redis_connection_manager();
+        let auth_cache = create_enhanced_cache(redis_conn, cache_config.clone());
+
+        info!("Enhanced cache initialized with multi-layer and avalanche protection");
 
         // 更新 UserRoleRepository 使用缓存
         let user_role_repo =
@@ -97,6 +116,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             AuthorizationServiceImpl::new(policy_repo.clone(), user_role_repo.clone());
 
         info!("gRPC services created");
+
+        // 可选：启动缓存预热（后台任务）
+        if cache_config.enable_cache_warming {
+            use infrastructure::cache::start_cache_warming;
+
+            tokio::spawn({
+                let auth_cache = auth_cache.clone();
+                let policy_repo = policy_repo.clone();
+                let role_repo = role_repo.clone();
+
+                async move {
+                    info!("Starting cache warming...");
+
+                    // 获取需要预热的租户列表
+                    // TODO: 从配置文件或数据库读取租户列表
+                    let tenant_ids = vec![
+                        // 添加你的租户 ID
+                        // 例如: TenantId::from_str("tenant-1").unwrap(),
+                    ];
+
+                    if let Err(e) =
+                        start_cache_warming(auth_cache, policy_repo, role_repo, tenant_ids).await
+                    {
+                        tracing::warn!("Cache warming failed: {}", e);
+                    } else {
+                        info!("Cache warming completed successfully");
+                    }
+                }
+            });
+        }
 
         // 构建反射服务
         let reflection_service = ReflectionBuilder::configure()

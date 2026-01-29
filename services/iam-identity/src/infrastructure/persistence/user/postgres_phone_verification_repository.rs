@@ -6,10 +6,8 @@ use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::{debug, warn};
 
-use crate::domain::user::{
-    PhoneVerification, PhoneVerificationId, PhoneVerificationStatus,
-};
 use crate::domain::repositories::user::PhoneVerificationRepository;
+use crate::domain::user::{PhoneVerification, PhoneVerificationId, PhoneVerificationStatus};
 
 /// PostgreSQL 手机验证仓储
 pub struct PostgresPhoneVerificationRepository {
@@ -278,11 +276,7 @@ impl PhoneVerificationRepository for PostgresPhoneVerificationRepository {
         Ok(deleted)
     }
 
-    async fn count_today_by_user(
-        &self,
-        user_id: &UserId,
-        tenant_id: &TenantId,
-    ) -> AppResult<i64> {
+    async fn count_today_by_user(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64> {
         debug!(user_id = %user_id, tenant_id = %tenant_id, "Counting today's phone verifications");
 
         let row = sqlx::query!(
@@ -306,4 +300,3 @@ impl PhoneVerificationRepository for PostgresPhoneVerificationRepository {
         Ok(row.count.unwrap_or(0))
     }
 }
-

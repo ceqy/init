@@ -8,19 +8,17 @@ use cuba_common::TenantId;
 use cuba_cqrs_core::CommandHandler;
 
 use crate::application::commands::oauth::{AuthorizeCommand, CreateClientCommand, TokenCommand};
-use crate::application::handlers::oauth::{
-    AuthorizeHandler, CreateClientHandler, TokenHandler,
-};
+use crate::application::handlers::oauth::{AuthorizeHandler, CreateClientHandler, TokenHandler};
 use crate::domain::oauth::OAuthClientId;
 use crate::domain::repositories::oauth::OAuthClientRepository;
 use crate::domain::services::oauth::OAuthService;
 
 use super::oauth_proto::{
-    o_auth_service_server::OAuthService as OAuthServiceTrait, AuthorizeRequest, AuthorizeResponse,
-    CreateClientRequest, CreateClientResponse, DeleteClientRequest, GetClientRequest,
-    GetClientResponse, IntrospectTokenRequest, IntrospectTokenResponse, ListClientsRequest,
-    ListClientsResponse, RefreshTokenRequest, RevokeTokenRequest, TokenRequest, TokenResponse,
-    UpdateClientRequest, UpdateClientResponse,
+    AuthorizeRequest, AuthorizeResponse, CreateClientRequest, CreateClientResponse,
+    DeleteClientRequest, GetClientRequest, GetClientResponse, IntrospectTokenRequest,
+    IntrospectTokenResponse, ListClientsRequest, ListClientsResponse, RefreshTokenRequest,
+    RevokeTokenRequest, TokenRequest, TokenResponse, UpdateClientRequest, UpdateClientResponse,
+    o_auth_service_server::OAuthService as OAuthServiceTrait,
 };
 
 pub struct OAuthServiceImpl {
@@ -94,7 +92,7 @@ impl OAuthServiceTrait for OAuthServiceImpl {
 
         let client_id_parsed = OAuthClientId::from_str(&client_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid client ID: {}", e)))?;
-        
+
         let tenant_id_parsed = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant ID: {}", e)))?;
 
@@ -184,17 +182,21 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         client.name = req.name;
         client.redirect_uris = req.redirect_uris;
         if !req.grant_types.is_empty() {
-             use crate::domain::oauth::GrantType;
-             client.grant_types = req.grant_types.iter().map(|s| {
-                 match s.as_str() {
-                    "authorization_code" => GrantType::AuthorizationCode,
-                    "client_credentials" => GrantType::ClientCredentials,
-                    "refresh_token" => GrantType::RefreshToken,
-                    "implicit" => GrantType::Implicit,
-                    "password" => GrantType::Password,
-                    _ => GrantType::AuthorizationCode, // Fallback or Error
-                 }
-             }).collect();
+            use crate::domain::oauth::GrantType;
+            client.grant_types = req
+                .grant_types
+                .iter()
+                .map(|s| {
+                    match s.as_str() {
+                        "authorization_code" => GrantType::AuthorizationCode,
+                        "client_credentials" => GrantType::ClientCredentials,
+                        "refresh_token" => GrantType::RefreshToken,
+                        "implicit" => GrantType::Implicit,
+                        "password" => GrantType::Password,
+                        _ => GrantType::AuthorizationCode, // Fallback or Error
+                    }
+                })
+                .collect();
         }
         client.scopes = req.scopes;
         client.updated_at = chrono::Utc::now();
@@ -451,15 +453,22 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let tenant_id = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
-        let uow = self.uow_factory.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let uow = self
+            .uow_factory
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        let res = self.oauth_service
+        let res = self
+            .oauth_service
             .revoke_token(uow.as_ref(), &req.token, &tenant_id)
             .await;
 
         match res {
             Ok(_) => {
-                uow.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+                uow.commit()
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
                 Ok(Response::new(()))
             }
             Err(e) => {
@@ -479,7 +488,11 @@ impl OAuthServiceTrait for OAuthServiceImpl {
         let tenant_id = TenantId::from_str(&tenant_id)
             .map_err(|e| Status::invalid_argument(format!("Invalid tenant_id: {}", e)))?;
 
-        let uow = self.uow_factory.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let uow = self
+            .uow_factory
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let token = self
             .oauth_service

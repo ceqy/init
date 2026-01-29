@@ -138,9 +138,7 @@ impl AvalancheProtectedCache {
     /// 如果多个并发请求同一个 key，只有一个会实际查询缓存
     pub async fn get_with_singleflight(&self, key: &str) -> AppResult<Option<String>> {
         self.singleflight
-            .do_call(key, || async {
-                self.inner.get(key).await
-            })
+            .do_call(key, || async { self.inner.get(key).await })
             .await
     }
 }
@@ -245,9 +243,7 @@ mod tests {
         let mut handles = vec![];
         for _ in 0..10 {
             let cache = cache.clone();
-            handles.push(tokio::spawn(async move {
-                cache.get("test_key").await
-            }));
+            handles.push(tokio::spawn(async move { cache.get("test_key").await }));
         }
 
         // 等待所有请求完成

@@ -142,4 +142,3 @@ pub enum EmailVerificationError {
     #[error("Invalid verification code")]
     InvalidCode,
 }
-

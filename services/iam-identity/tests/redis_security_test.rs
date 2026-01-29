@@ -10,18 +10,16 @@
 //!
 //! 预期结果：验证 Redis 使用的安全性，识别潜在风险
 
-use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
+use redis::aio::ConnectionManager;
 use std::env;
 use std::time::Duration;
 
 /// 获取 Redis 连接
 async fn get_redis_client() -> ConnectionManager {
-    let redis_url = env::var("REDIS_URL")
-        .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+    let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
 
-    let client = redis::Client::open(redis_url)
-        .expect("Failed to create Redis client");
+    let client = redis::Client::open(redis_url).expect("Failed to create Redis client");
 
     ConnectionManager::new(client)
         .await
@@ -119,7 +117,10 @@ async fn test_redis_cache_pollution_large_values() {
 
     let start = std::time::Instant::now();
 
-    let _: () = conn.set("test:large_value", &large_value).await.unwrap_or(());
+    let _: () = conn
+        .set("test:large_value", &large_value)
+        .await
+        .unwrap_or(());
 
     let elapsed = start.elapsed();
 
@@ -170,7 +171,10 @@ async fn test_redis_cache_pollution_many_keys() {
     }
 
     // 操作应该在合理时间内完成
-    assert!(elapsed.as_secs() < 30, "Should handle bulk operations efficiently");
+    assert!(
+        elapsed.as_secs() < 30,
+        "Should handle bulk operations efficiently"
+    );
 }
 
 // ============================================================================
@@ -241,7 +245,10 @@ async fn test_redis_cache_breakdown() {
     }
 
     // 操作应该快速完成（没有缓存击穿导致的延迟）
-    assert!(elapsed.as_secs() < 5, "Should handle cache breakdown gracefully");
+    assert!(
+        elapsed.as_secs() < 5,
+        "Should handle cache breakdown gracefully"
+    );
 }
 
 // ============================================================================
@@ -258,7 +265,10 @@ async fn test_redis_cache_avalanche() {
 
     for i in 0..num_keys {
         let key = format!("{}{}", prefix, i);
-        let _: () = conn.set_ex(&key, format!("value_{}", i), 2).await.unwrap_or(());
+        let _: () = conn
+            .set_ex(&key, format!("value_{}", i), 2)
+            .await
+            .unwrap_or(());
     }
 
     // 等待所有 key 同时过期
@@ -282,7 +292,10 @@ async fn test_redis_cache_avalanche() {
     // - 所有 key 都应该过期
     // - 查询应该快速完成
     assert_eq!(misses, num_keys, "All keys should have expired");
-    assert!(elapsed.as_secs() < 10, "Should handle cache avalanche efficiently");
+    assert!(
+        elapsed.as_secs() < 10,
+        "Should handle cache avalanche efficiently"
+    );
 }
 
 // ============================================================================
@@ -519,7 +532,10 @@ async fn test_redis_access_control() {
     // 2. 使用最小权限原则
     // 3. 分离读写实例
 
-    assert!(true, "Access control should be enforced at application layer");
+    assert!(
+        true,
+        "Access control should be enforced at application layer"
+    );
 }
 
 // ============================================================================
@@ -545,17 +561,12 @@ async fn test_redis_batch_operations_security() {
     assert!(result.is_ok());
 
     // 验证数据
-    let keys_vec: Vec<String> = conn
-        .keys(&format!("{}*", prefix))
-        .await
-        .unwrap_or(vec![]);
+    let keys_vec: Vec<String> = conn.keys(&format!("{}*", prefix)).await.unwrap_or(vec![]);
     let count: i64 = keys_vec.len() as i64;
     assert_eq!(count, num_keys);
 
     // 使用 MGET 批量获取
-    let keys: Vec<String> = (0..num_keys)
-        .map(|i| format!("{}{}", prefix, i))
-        .collect();
+    let keys: Vec<String> = (0..num_keys).map(|i| format!("{}{}", prefix, i)).collect();
 
     let start = std::time::Instant::now();
     let values: Vec<Option<String>> = conn.mget(&keys).await.unwrap_or(vec![]);

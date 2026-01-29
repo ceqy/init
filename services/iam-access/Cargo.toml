@@ -38,6 +38,10 @@ futures = { workspace = true }
 metrics = { workspace = true }
 secrecy = { workspace = true }
 
+# 缓存改进依赖
+moka = { version = "0.12", features = ["future"] }
+rand = "0.8"
+
 [build-dependencies]
 tonic-build = { workspace = true }
 

@@ -1,7 +1,7 @@
 //! 服务错误定义
 
-use cuba_errors::AppError;
 use crate::domain::value_objects::UsernameError;
+use cuba_errors::AppError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -39,7 +39,6 @@ impl From<UsernameError> for AppError {
         AppError::validation(error.to_string())
     }
 }
-
 
 impl From<AuthError> for AppError {
     fn from(err: AuthError) -> Self {

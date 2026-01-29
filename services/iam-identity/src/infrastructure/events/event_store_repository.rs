@@ -67,7 +67,7 @@ impl EventStoreRepository for PostgresEventStoreRepository {
     async fn find_events(&self, query: EventQuery) -> Result<Vec<StoredEvent>, sqlx::Error> {
         let mut sql = String::from(
             "SELECT id, event_type, aggregate_type, aggregate_id, tenant_id, payload, created_at 
-             FROM domain_events WHERE 1=1"
+             FROM domain_events WHERE 1=1",
         );
 
         if query.tenant_id.is_some() {
@@ -92,20 +92,40 @@ impl EventStoreRepository for PostgresEventStoreRepository {
         sql.push_str(" ORDER BY created_at DESC LIMIT $7 OFFSET $8");
 
         // 使用动态查询
-        let _rows = sqlx::query_as::<_, (Uuid, String, String, String, Uuid, serde_json::Value, DateTime<Utc>)>(
-            &sql
-        )
+        let _rows = sqlx::query_as::<
+            _,
+            (
+                Uuid,
+                String,
+                String,
+                String,
+                Uuid,
+                serde_json::Value,
+                DateTime<Utc>,
+            ),
+        >(&sql)
         .fetch_all(&self.pool)
         .await;
 
         // 简化实现：直接查询所有事件
-        let events = sqlx::query_as::<_, (Uuid, String, String, String, Uuid, serde_json::Value, DateTime<Utc>)>(
+        let events = sqlx::query_as::<
+            _,
+            (
+                Uuid,
+                String,
+                String,
+                String,
+                Uuid,
+                serde_json::Value,
+                DateTime<Utc>,
+            ),
+        >(
             r#"
             SELECT id, event_type, aggregate_type, aggregate_id, tenant_id, payload, created_at
             FROM domain_events
             ORDER BY created_at DESC
             LIMIT $1 OFFSET $2
-            "#
+            "#,
         )
         .bind(query.limit)
         .bind(query.offset)
@@ -114,17 +134,19 @@ impl EventStoreRepository for PostgresEventStoreRepository {
 
         Ok(events
             .into_iter()
-            .map(|(id, event_type, aggregate_type, aggregate_id, tenant_id, payload, created_at)| {
-                StoredEvent {
-                    id,
-                    event_type,
-                    aggregate_type,
-                    aggregate_id,
-                    tenant_id,
-                    payload,
-                    created_at,
-                }
-            })
+            .map(
+                |(id, event_type, aggregate_type, aggregate_id, tenant_id, payload, created_at)| {
+                    StoredEvent {
+                        id,
+                        event_type,
+                        aggregate_type,
+                        aggregate_id,
+                        tenant_id,
+                        payload,
+                        created_at,
+                    }
+                },
+            )
             .collect())
     }
 
@@ -135,14 +157,25 @@ impl EventStoreRepository for PostgresEventStoreRepository {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<StoredEvent>, sqlx::Error> {
-        let events = sqlx::query_as::<_, (Uuid, String, String, String, Uuid, serde_json::Value, DateTime<Utc>)>(
+        let events = sqlx::query_as::<
+            _,
+            (
+                Uuid,
+                String,
+                String,
+                String,
+                Uuid,
+                serde_json::Value,
+                DateTime<Utc>,
+            ),
+        >(
             r#"
             SELECT id, event_type, aggregate_type, aggregate_id, tenant_id, payload, created_at
             FROM domain_events
             WHERE aggregate_id = $1 AND tenant_id = $2
             ORDER BY created_at DESC
             LIMIT $3 OFFSET $4
-            "#
+            "#,
         )
         .bind(user_id)
         .bind(tenant_id)
@@ -153,17 +186,19 @@ impl EventStoreRepository for PostgresEventStoreRepository {
 
         Ok(events
             .into_iter()
-            .map(|(id, event_type, aggregate_type, aggregate_id, tenant_id, payload, created_at)| {
-                StoredEvent {
-                    id,
-                    event_type,
-                    aggregate_type,
-                    aggregate_id,
-                    tenant_id,
-                    payload,
-                    created_at,
-                }
-            })
+            .map(
+                |(id, event_type, aggregate_type, aggregate_id, tenant_id, payload, created_at)| {
+                    StoredEvent {
+                        id,
+                        event_type,
+                        aggregate_type,
+                        aggregate_id,
+                        tenant_id,
+                        payload,
+                        created_at,
+                    }
+                },
+            )
             .collect())
     }
 

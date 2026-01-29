@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-
 use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use rand::Rng;
@@ -88,7 +87,12 @@ impl PasswordResetService {
         let token_hash = hex::encode(hasher.finalize());
 
         // 6. 创建令牌实体
-        let reset_token = PasswordResetToken::new(user.id.clone(), user.tenant_id.clone(), token_hash, expires_in_minutes);
+        let reset_token = PasswordResetToken::new(
+            user.id.clone(),
+            user.tenant_id.clone(),
+            token_hash,
+            expires_in_minutes,
+        );
 
         // 7. 保存令牌
         self.password_reset_repo.save(&reset_token).await?;
@@ -184,4 +188,3 @@ impl PasswordResetService {
         Ok(deleted)
     }
 }
-

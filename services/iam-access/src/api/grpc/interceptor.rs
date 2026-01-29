@@ -20,6 +20,7 @@ pub struct UserInfo {
 }
 
 /// gRPC 拦截器：提取追踪 ID 和用户信息
+#[allow(clippy::result_large_err)]
 pub fn tracing_interceptor(req: Request<()>) -> Result<Request<()>, Status> {
     let metadata = req.metadata();
 

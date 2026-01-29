@@ -1,10 +1,10 @@
 //! 暴力破解防护服务
 
-use std::sync::Arc;
 use chrono::{Duration, Utc};
 use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use cuba_ports::CachePort;
+use std::sync::Arc;
 
 use crate::domain::repositories::auth::LoginLogRepository;
 use crate::domain::repositories::user::UserRepository;
@@ -62,43 +62,68 @@ impl BruteForceProtectionService {
         }
 
         // 2. 检查数据库
-        let user = self.user_repo.find_by_id(user_id, tenant_id).await?
+        let user = self
+            .user_repo
+            .find_by_id(user_id, tenant_id)
+            .await?
             .ok_or_else(|| AppError::not_found("User not found"))?;
 
         let is_locked = user.is_locked();
-        
+
         // 缓存结果
         if is_locked {
-            self.cache.set(&cache_key, "true", Some(std::time::Duration::from_secs(300))).await?;
+            self.cache
+                .set(
+                    &cache_key,
+                    "true",
+                    Some(std::time::Duration::from_secs(300)),
+                )
+                .await?;
         }
 
         Ok(is_locked)
     }
 
     /// 记录登录失败并检查是否需要锁定
-    pub async fn record_failed_attempt(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<()> {
+    pub async fn record_failed_attempt(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<()> {
         let start_time = Utc::now() - Duration::minutes(self.config.check_window_minutes);
-        
+
         // 统计失败次数
-        let failed_count = self.login_log_repo
+        let failed_count = self
+            .login_log_repo
             .count_failed_attempts(user_id, tenant_id, start_time)
             .await?;
 
         // 如果超过限制，锁定账户
         if failed_count >= self.config.max_failed_attempts as i64 {
-            let mut user = self.user_repo.find_by_id(user_id, tenant_id).await?
+            let mut user = self
+                .user_repo
+                .find_by_id(user_id, tenant_id)
+                .await?
                 .ok_or_else(|| AppError::not_found("User not found"))?;
 
             user.lock_account(
                 self.config.lockout_duration_minutes,
-                "Too many failed login attempts".to_string()
+                "Too many failed login attempts".to_string(),
             );
-            
+
             self.user_repo.update(&user).await?;
 
             // 更新缓存
             let cache_key = format!("account_lock:{}", user_id);
-            self.cache.set(&cache_key, "true", Some(std::time::Duration::from_secs(self.config.lockout_duration_minutes as u64 * 60))).await?;
+            self.cache
+                .set(
+                    &cache_key,
+                    "true",
+                    Some(std::time::Duration::from_secs(
+                        self.config.lockout_duration_minutes as u64 * 60,
+                    )),
+                )
+                .await?;
         }
 
         Ok(())
@@ -114,10 +139,15 @@ impl BruteForceProtectionService {
     }
 
     /// 获取剩余尝试次数
-    pub async fn get_remaining_attempts(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i32> {
+    pub async fn get_remaining_attempts(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<i32> {
         let start_time = Utc::now() - Duration::minutes(self.config.check_window_minutes);
-        
-        let failed_count = self.login_log_repo
+
+        let failed_count = self
+            .login_log_repo
             .count_failed_attempts(user_id, tenant_id, start_time)
             .await?;
 
@@ -127,7 +157,10 @@ impl BruteForceProtectionService {
 
     /// 手动解锁账户
     pub async fn unlock_account(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<()> {
-        let mut user = self.user_repo.find_by_id(user_id, tenant_id).await?
+        let mut user = self
+            .user_repo
+            .find_by_id(user_id, tenant_id)
+            .await?
             .ok_or_else(|| AppError::not_found("User not found"))?;
 
         user.unlock_account();

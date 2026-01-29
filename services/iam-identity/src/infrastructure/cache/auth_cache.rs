@@ -74,7 +74,8 @@ impl AuthCache for RedisAuthCache {
 
         // 使用 SETNX 确保原子性，防止覆盖已存在的黑名单条目
         // 如果键已存在（已被加入黑名单），返回 false 但不报错
-        let _ = self.cache
+        let _ = self
+            .cache
             .set_nx(&key, "1", Duration::from_secs(ttl_secs))
             .await?;
 
@@ -88,8 +89,9 @@ impl AuthCache for RedisAuthCache {
 
     async fn cache_user(&self, user: &User) -> AppResult<()> {
         let key = Self::user_cache_key(&user.id.0.to_string());
-        let value = serde_json::to_string(user)
-            .map_err(|e| cuba_errors::AppError::internal(format!("Failed to serialize user: {}", e)))?;
+        let value = serde_json::to_string(user).map_err(|e| {
+            cuba_errors::AppError::internal(format!("Failed to serialize user: {}", e))
+        })?;
         self.cache
             .set(&key, &value, Some(Duration::from_secs(USER_CACHE_TTL_SECS)))
             .await
@@ -120,7 +122,8 @@ impl AuthCache for RedisAuthCache {
 
         // 使用 SETNX 确保原子性
         // 如果键已存在，不覆盖（保留最早的撤销时间戳）
-        let set = self.cache
+        let set = self
+            .cache
             .set_nx(&key, &timestamp, Duration::from_secs(ttl_secs))
             .await?;
 

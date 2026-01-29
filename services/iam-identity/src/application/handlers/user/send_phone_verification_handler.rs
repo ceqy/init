@@ -40,15 +40,14 @@ impl CommandHandler<SendPhoneVerificationCommand> for SendPhoneVerificationHandl
         );
 
         // 解析 UUID
-        let user_id = UserId::from_uuid(
-            Uuid::parse_str(&command.user_id)
-                .map_err(|e| cuba_errors::AppError::validation(format!("Invalid user_id: {}", e)))?,
-        );
-        let tenant_id = TenantId::from_uuid(
-            Uuid::parse_str(&command.tenant_id).map_err(|e| {
+        let user_id =
+            UserId::from_uuid(Uuid::parse_str(&command.user_id).map_err(|e| {
+                cuba_errors::AppError::validation(format!("Invalid user_id: {}", e))
+            })?);
+        let tenant_id =
+            TenantId::from_uuid(Uuid::parse_str(&command.tenant_id).map_err(|e| {
                 cuba_errors::AppError::validation(format!("Invalid tenant_id: {}", e))
-            })?,
-        );
+            })?);
 
         // 发送验证码
         match self
@@ -85,4 +84,3 @@ impl CommandHandler<SendPhoneVerificationCommand> for SendPhoneVerificationHandl
         }
     }
 }
-

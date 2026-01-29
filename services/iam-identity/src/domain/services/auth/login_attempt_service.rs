@@ -93,4 +93,3 @@ pub trait LoginAttemptCache: Send + Sync {
     /// 获取 TTL（秒）
     async fn ttl(&self, key: &str) -> AppResult<Option<i64>>;
 }
-

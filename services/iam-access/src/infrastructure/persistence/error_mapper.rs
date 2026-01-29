@@ -1,5 +1,5 @@
 //! 数据库错误映射工具
-//! 
+//!
 //! 提供统一的 SQLx 错误到 AppError 的转换
 
 use cuba_errors::AppError;
@@ -7,9 +7,7 @@ use cuba_errors::AppError;
 /// 将 SQLx 错误转换为 AppError，区分不同错误类型
 pub fn map_sqlx_error(e: sqlx::Error) -> AppError {
     match e {
-        sqlx::Error::RowNotFound => {
-            AppError::not_found("Record not found")
-        }
+        sqlx::Error::RowNotFound => AppError::not_found("Record not found"),
         sqlx::Error::Database(db_err) => {
             if let Some(code) = db_err.code() {
                 match code.as_ref() {
@@ -26,12 +24,8 @@ pub fn map_sqlx_error(e: sqlx::Error) -> AppError {
                 AppError::database(db_err.to_string())
             }
         }
-        sqlx::Error::PoolTimedOut => {
-            AppError::internal("Database connection pool timeout")
-        }
-        sqlx::Error::PoolClosed => {
-            AppError::internal("Database connection pool is closed")
-        }
+        sqlx::Error::PoolTimedOut => AppError::internal("Database connection pool timeout"),
+        sqlx::Error::PoolClosed => AppError::internal("Database connection pool is closed"),
         sqlx::Error::Protocol(msg) => {
             AppError::internal(format!("Database protocol error: {}", msg))
         }

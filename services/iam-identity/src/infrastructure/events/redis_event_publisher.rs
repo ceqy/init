@@ -1,8 +1,8 @@
-use async_trait::async_trait;
-use redis::{Client, AsyncCommands};
-use tracing::{error, warn, debug};
 use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
+use async_trait::async_trait;
+use redis::{AsyncCommands, Client};
 use std::time::Duration;
+use tracing::{debug, error, warn};
 
 /// Redis 事件发布器
 ///

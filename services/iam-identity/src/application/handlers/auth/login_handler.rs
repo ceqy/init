@@ -12,9 +12,11 @@ use uuid::Uuid;
 
 use crate::application::commands::auth::{LoginCommand, LoginResult};
 use crate::application::dto::auth::TokenPair;
-use crate::domain::services::auth::{BruteForceProtectionService, SuspiciousLoginDetector};
-use crate::domain::auth::{DeviceInfo, LoginFailureReason, LoginLog, LoginResult as LogResult, Session};
+use crate::domain::auth::{
+    DeviceInfo, LoginFailureReason, LoginLog, LoginResult as LogResult, Session,
+};
 use crate::domain::services::auth::PasswordService;
+use crate::domain::services::auth::{BruteForceProtectionService, SuspiciousLoginDetector};
 use crate::domain::value_objects::Username;
 use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
 
@@ -57,10 +59,18 @@ impl LoginHandler {
         }
     }
 
-
-    async fn log_login(&self, uow: &dyn UnitOfWork, tenant_id: &TenantId, username: &str, user_id: Option<&cuba_common::UserId>, 
-                       ip: &str, user_agent: &str, result: LogResult, failure_reason: Option<LoginFailureReason>,
-                       is_suspicious: bool) -> AppResult<()> {
+    async fn log_login(
+        &self,
+        uow: &dyn UnitOfWork,
+        tenant_id: &TenantId,
+        username: &str,
+        user_id: Option<&cuba_common::UserId>,
+        ip: &str,
+        user_agent: &str,
+        result: LogResult,
+        failure_reason: Option<LoginFailureReason>,
+        is_suspicious: bool,
+    ) -> AppResult<()> {
         let log = LoginLog {
             id: crate::domain::auth::LoginLogId::new(),
             user_id: user_id.cloned(),
@@ -77,7 +87,7 @@ impl LoginHandler {
             suspicious_reason: None,
             created_at: Utc::now(),
         };
-        
+
         uow.login_logs().save(&log).await
     }
 }
@@ -101,15 +111,26 @@ impl CommandHandler<LoginCommand> for LoginHandler {
         let user = match uow.users().find_by_username(&username, &tenant_id).await? {
             Some(u) => u,
             None => {
-                self.log_login(uow.as_ref(), &tenant_id, &command.username, None, ip, user_agent, 
-                               LogResult::Failed, Some(LoginFailureReason::InvalidCredentials), false).await?;
+                self.log_login(
+                    uow.as_ref(),
+                    &tenant_id,
+                    &command.username,
+                    None,
+                    ip,
+                    user_agent,
+                    LogResult::Failed,
+                    Some(LoginFailureReason::InvalidCredentials),
+                    false,
+                )
+                .await?;
                 uow.commit().await?; // 即使失败也记录日志
                 return Err(AppError::unauthorized("Invalid credentials"));
             }
         };
 
         // 检测可疑登录
-        let (is_suspicious, reasons) = self.suspicious_detector
+        let (is_suspicious, reasons) = self
+            .suspicious_detector
             .is_suspicious(&user.id, &tenant_id, ip, None)
             .await?;
 
@@ -123,27 +144,65 @@ impl CommandHandler<LoginCommand> for LoginHandler {
         }
 
         // 检查账户锁定
-        if self.brute_force_protection.is_locked(&user.id, &tenant_id).await? {
-            self.log_login(uow.as_ref(), &tenant_id, &command.username, Some(&user.id), ip, user_agent,
-                          LogResult::Failed, Some(LoginFailureReason::AccountLocked), is_suspicious).await?;
+        if self
+            .brute_force_protection
+            .is_locked(&user.id, &tenant_id)
+            .await?
+        {
+            self.log_login(
+                uow.as_ref(),
+                &tenant_id,
+                &command.username,
+                Some(&user.id),
+                ip,
+                user_agent,
+                LogResult::Failed,
+                Some(LoginFailureReason::AccountLocked),
+                is_suspicious,
+            )
+            .await?;
             uow.commit().await?;
-            return Err(AppError::forbidden("Account is locked due to too many failed attempts"));
+            return Err(AppError::forbidden(
+                "Account is locked due to too many failed attempts",
+            ));
         }
 
         // 验证密码
         let valid = PasswordService::verify_password(&command.password, &user.password_hash)?;
         if !valid {
-            self.log_login(uow.as_ref(), &tenant_id, &command.username, Some(&user.id), ip, user_agent,
-                          LogResult::Failed, Some(LoginFailureReason::InvalidCredentials), is_suspicious).await?;
-            self.brute_force_protection.record_failed_attempt(&user.id, &tenant_id).await?;
+            self.log_login(
+                uow.as_ref(),
+                &tenant_id,
+                &command.username,
+                Some(&user.id),
+                ip,
+                user_agent,
+                LogResult::Failed,
+                Some(LoginFailureReason::InvalidCredentials),
+                is_suspicious,
+            )
+            .await?;
+            self.brute_force_protection
+                .record_failed_attempt(&user.id, &tenant_id)
+                .await?;
             uow.commit().await?;
             return Err(AppError::unauthorized("Invalid credentials"));
         }
 
         // 检查用户状态
         if !user.is_active() {
-            self.log_login(uow.as_ref(), &tenant_id, &command.username, Some(&user.id), ip, user_agent,
-                          LogResult::Failed, Some(LoginFailureReason::AccountDisabled), is_suspicious).await?;
+            self.log_login(
+                uow.as_ref(),
+                &tenant_id,
+                &command.username,
+                Some(&user.id),
+                ip,
+                user_agent,
+                LogResult::Failed,
+                Some(LoginFailureReason::AccountDisabled),
+                is_suspicious,
+            )
+            .await?;
             uow.commit().await?;
             return Err(AppError::forbidden("User account is not active"));
         }
@@ -178,7 +237,12 @@ impl CommandHandler<LoginCommand> for LoginHandler {
         let refresh_token_hash = format!("{:x}", sha256_simple(&refresh_token));
         let expires_at = Utc::now() + Duration::seconds(self.refresh_token_expires_in);
 
-        let mut session = Session::new(user.id.clone(), user.tenant_id.clone(), refresh_token_hash, expires_at);
+        let mut session = Session::new(
+            user.id.clone(),
+            user.tenant_id.clone(),
+            refresh_token_hash,
+            expires_at,
+        );
 
         if let Some(device_info) = command.device_info.clone() {
             session = session.with_device_info(device_info);
@@ -190,9 +254,21 @@ impl CommandHandler<LoginCommand> for LoginHandler {
         uow.sessions().save(&session).await?;
 
         // 记录成功登录
-        self.log_login(uow.as_ref(), &tenant_id, &command.username, Some(&user.id), ip, user_agent,
-                      LogResult::Success, None, is_suspicious).await?;
-        self.brute_force_protection.record_successful_login(&user.id).await?;
+        self.log_login(
+            uow.as_ref(),
+            &tenant_id,
+            &command.username,
+            Some(&user.id),
+            ip,
+            user_agent,
+            LogResult::Success,
+            None,
+            is_suspicious,
+        )
+        .await?;
+        self.brute_force_protection
+            .record_successful_login(&user.id)
+            .await?;
 
         // 提交事务
         uow.commit().await?;

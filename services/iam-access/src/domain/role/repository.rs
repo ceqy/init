@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use cuba_common::TenantId;
 use cuba_errors::AppResult;
 
-use super::role::{Role, RoleId};
 use super::permission::{Permission, PermissionId};
+use super::role::{Role, RoleId};
 
 /// 角色仓储接口
 #[async_trait]
@@ -26,10 +26,21 @@ pub trait RoleRepository: Send + Sync {
     async fn find_by_code(&self, tenant_id: &TenantId, code: &str) -> AppResult<Option<Role>>;
 
     /// 列出租户下的所有角色
-    async fn list_by_tenant(&self, tenant_id: &TenantId, page: u32, page_size: u32) -> AppResult<(Vec<Role>, i64)>;
+    async fn list_by_tenant(
+        &self,
+        tenant_id: &TenantId,
+        page: u32,
+        page_size: u32,
+    ) -> AppResult<(Vec<Role>, i64)>;
 
     /// 搜索角色
-    async fn search(&self, tenant_id: &TenantId, query: &str, page: u32, page_size: u32) -> AppResult<(Vec<Role>, i64)>;
+    async fn search(
+        &self,
+        tenant_id: &TenantId,
+        query: &str,
+        page: u32,
+        page_size: u32,
+    ) -> AppResult<(Vec<Role>, i64)>;
 
     /// 检查角色代码是否存在
     async fn exists_by_code(&self, tenant_id: &TenantId, code: &str) -> AppResult<bool>;
@@ -73,10 +84,18 @@ pub trait PermissionRepository: Send + Sync {
 #[async_trait]
 pub trait RolePermissionRepository: Send + Sync {
     /// 为角色分配权限
-    async fn assign_permissions(&self, role_id: &RoleId, permission_ids: &[PermissionId]) -> AppResult<()>;
+    async fn assign_permissions(
+        &self,
+        role_id: &RoleId,
+        permission_ids: &[PermissionId],
+    ) -> AppResult<()>;
 
     /// 移除角色的权限
-    async fn remove_permissions(&self, role_id: &RoleId, permission_ids: &[PermissionId]) -> AppResult<()>;
+    async fn remove_permissions(
+        &self,
+        role_id: &RoleId,
+        permission_ids: &[PermissionId],
+    ) -> AppResult<()>;
 
     /// 获取角色的所有权限
     async fn get_role_permissions(&self, role_id: &RoleId) -> AppResult<Vec<Permission>>;
@@ -89,23 +108,47 @@ pub trait RolePermissionRepository: Send + Sync {
 #[async_trait]
 pub trait UserRoleRepository: Send + Sync {
     /// 为用户分配角色
-    async fn assign_roles(&self, user_id: &str, tenant_id: &TenantId, role_ids: &[RoleId]) -> AppResult<()>;
+    async fn assign_roles(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+        role_ids: &[RoleId],
+    ) -> AppResult<()>;
 
     /// 移除用户的角色
-    async fn remove_roles(&self, user_id: &str, tenant_id: &TenantId, role_ids: &[RoleId]) -> AppResult<()>;
+    async fn remove_roles(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+        role_ids: &[RoleId],
+    ) -> AppResult<()>;
 
     /// 获取用户的所有角色
     async fn get_user_roles(&self, user_id: &str, tenant_id: &TenantId) -> AppResult<Vec<Role>>;
 
     /// 获取用户的所有权限 (聚合所有角色的权限)
-    async fn get_user_permissions(&self, user_id: &str, tenant_id: &TenantId) -> AppResult<Vec<Permission>>;
+    async fn get_user_permissions(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<Permission>>;
 
     /// 清空用户的所有角色
     async fn clear_user_roles(&self, user_id: &str, tenant_id: &TenantId) -> AppResult<()>;
 
     /// 检查用户是否拥有某个角色
-    async fn user_has_role(&self, user_id: &str, tenant_id: &TenantId, role_id: &RoleId) -> AppResult<bool>;
+    async fn user_has_role(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+        role_id: &RoleId,
+    ) -> AppResult<bool>;
 
     /// 检查用户是否拥有某个权限
-    async fn user_has_permission(&self, user_id: &str, tenant_id: &TenantId, permission_code: &str) -> AppResult<bool>;
+    async fn user_has_permission(
+        &self,
+        user_id: &str,
+        tenant_id: &TenantId,
+        permission_code: &str,
+    ) -> AppResult<bool>;
 }

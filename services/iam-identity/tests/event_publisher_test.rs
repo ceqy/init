@@ -1,7 +1,7 @@
 //! 事件发布器测试
 
-use cuba_common::{TenantId, UserId};
 use chrono::Utc;
+use cuba_common::{TenantId, UserId};
 use iam_identity::infrastructure::events::{
     EventPublisher, IamDomainEvent, InMemoryEventBus, LoggingEventPublisher, NoOpEventPublisher,
 };
@@ -19,10 +19,10 @@ fn create_test_event() -> IamDomainEvent {
 #[tokio::test]
 async fn test_in_memory_event_bus_publish() {
     let bus = InMemoryEventBus::new();
-    
+
     let event = create_test_event();
     bus.publish(event).await;
-    
+
     let events = bus.get_events().await;
     assert_eq!(events.len(), 1);
 }
@@ -30,7 +30,7 @@ async fn test_in_memory_event_bus_publish() {
 #[tokio::test]
 async fn test_in_memory_event_bus_publish_all() {
     let bus = InMemoryEventBus::new();
-    
+
     let events = vec![
         IamDomainEvent::UserCreated {
             user_id: UserId::new(),
@@ -47,9 +47,9 @@ async fn test_in_memory_event_bus_publish_all() {
             timestamp: Utc::now(),
         },
     ];
-    
+
     bus.publish_all(events).await;
-    
+
     let stored = bus.get_events().await;
     assert_eq!(stored.len(), 2);
 }
@@ -57,7 +57,7 @@ async fn test_in_memory_event_bus_publish_all() {
 #[tokio::test]
 async fn test_noop_event_publisher() {
     let publisher = NoOpEventPublisher;
-    
+
     let event = create_test_event();
     publisher.publish(event).await;
     // NoOp 不保存事件，只是忽略
@@ -66,7 +66,7 @@ async fn test_noop_event_publisher() {
 #[tokio::test]
 async fn test_logging_event_publisher() {
     let publisher = LoggingEventPublisher;
-    
+
     let event = create_test_event();
     publisher.publish(event).await;
     // 日志发布器只记录，不保存
@@ -75,10 +75,10 @@ async fn test_logging_event_publisher() {
 #[tokio::test]
 async fn test_in_memory_event_bus_default() {
     let bus = InMemoryEventBus::default();
-    
+
     let event = create_test_event();
     bus.publish(event).await;
-    
+
     let events = bus.get_events().await;
     assert_eq!(events.len(), 1);
 }
@@ -86,11 +86,11 @@ async fn test_in_memory_event_bus_default() {
 #[tokio::test]
 async fn test_in_memory_event_bus_clear() {
     let bus = InMemoryEventBus::new();
-    
+
     bus.publish(create_test_event()).await;
     bus.publish(create_test_event()).await;
     assert_eq!(bus.get_events().await.len(), 2);
-    
+
     bus.clear().await;
     assert_eq!(bus.get_events().await.len(), 0);
 }
@@ -106,7 +106,7 @@ async fn test_iam_domain_event_types() {
     };
     assert_eq!(user_created.event_type(), "UserCreated");
     assert_eq!(user_created.aggregate_type(), "User");
-    
+
     let logged_in = IamDomainEvent::UserLoggedIn {
         user_id: UserId::new(),
         tenant_id: TenantId::new(),
@@ -116,7 +116,7 @@ async fn test_iam_domain_event_types() {
     };
     assert_eq!(logged_in.event_type(), "UserLoggedIn");
     assert_eq!(logged_in.aggregate_type(), "User");
-    
+
     let password_changed = IamDomainEvent::PasswordChanged {
         user_id: UserId::new(),
         tenant_id: TenantId::new(),

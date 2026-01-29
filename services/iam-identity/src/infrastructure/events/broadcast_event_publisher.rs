@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use async_trait::async_trait;
 use super::event_publisher::{EventPublisher, IamDomainEvent};
+use async_trait::async_trait;
+use std::sync::Arc;
 use tracing::{error, warn};
 
 /// 广播事件发布器

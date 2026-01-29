@@ -15,14 +15,10 @@ mod infrastructure;
 use std::sync::Arc;
 
 use api::grpc::{
-    auth_service::AuthServiceImpl,
-    audit_service::AuditServiceImpl,
-    oauth_service::OAuthServiceImpl,
-    user_service::UserServiceImpl,
-    auth_proto::auth_service_server::AuthServiceServer,
-    audit_proto::audit_service_server::AuditServiceServer,
-    oauth_proto::o_auth_service_server::OAuthServiceServer,
-    user_proto::user_service_server::UserServiceServer,
+    audit_proto::audit_service_server::AuditServiceServer, audit_service::AuditServiceImpl,
+    auth_proto::auth_service_server::AuthServiceServer, auth_service::AuthServiceImpl,
+    oauth_proto::o_auth_service_server::OAuthServiceServer, oauth_service::OAuthServiceImpl,
+    user_proto::user_service_server::UserServiceServer, user_service::UserServiceImpl,
 };
 // Auth handlers are used indirectly via the service - keeping module export
 use application::handlers::oauth::{AuthorizeHandler, CreateClientHandler, TokenHandler};
@@ -31,37 +27,41 @@ use application::handlers::user::{
     VerifyPhoneHandler,
 };
 use application::listeners::NotificationListener;
+use async_trait::async_trait;
+use cuba_adapter_email::{EmailClient, EmailSender};
+use cuba_adapter_postgres::PostgresOutbox;
+use cuba_bootstrap::{Infrastructure, run_server};
 use domain::repositories::auth::{
     BackupCodeRepository, PasswordResetRepository, SessionRepository, WebAuthnCredentialRepository,
 };
 use domain::repositories::oauth::{
-    AccessTokenRepository, AuthorizationCodeRepository, OAuthClientRepository, RefreshTokenRepository,
+    AccessTokenRepository, AuthorizationCodeRepository, OAuthClientRepository,
+    RefreshTokenRepository,
 };
-use domain::repositories::user::{EmailVerificationRepository, PhoneVerificationRepository, UserRepository};
+use domain::repositories::user::{
+    EmailVerificationRepository, PhoneVerificationRepository, UserRepository,
+};
 use domain::services::auth::{TotpService, WebAuthnService};
 use domain::services::oauth::OAuthService;
 use domain::services::user::{EmailVerificationService, PhoneVerificationService, SmsSender};
 use infrastructure::cache::{AuthCache, RedisAuthCache};
+use infrastructure::events::{
+    BroadcastEventPublisher, EventPublisher, EventStoreRepository, OutboxProcessor,
+    OutboxProcessorConfig, PostgresEventStore, PostgresEventStoreRepository, RedisEventPublisher,
+};
 use infrastructure::persistence::auth::{
     PostgresBackupCodeRepository, PostgresPasswordResetRepository, PostgresSessionRepository,
     PostgresWebAuthnCredentialRepository,
 };
 use infrastructure::persistence::oauth::{
-    PostgresAccessTokenRepository, PostgresAuthorizationCodeRepository, PostgresOAuthClientRepository,
-    PostgresRefreshTokenRepository,
+    PostgresAccessTokenRepository, PostgresAuthorizationCodeRepository,
+    PostgresOAuthClientRepository, PostgresRefreshTokenRepository,
 };
 use infrastructure::persistence::user::{
-    PostgresEmailVerificationRepository, PostgresPhoneVerificationRepository, PostgresUserRepository,
+    PostgresEmailVerificationRepository, PostgresPhoneVerificationRepository,
+    PostgresUserRepository,
 };
-use infrastructure::events::{
-    EventPublisher, PostgresEventStore, PostgresEventStoreRepository, EventStoreRepository,
-    BroadcastEventPublisher, RedisEventPublisher, OutboxProcessor, OutboxProcessorConfig,
-};
-use async_trait::async_trait;
 use secrecy::ExposeSecret;
-use cuba_adapter_email::{EmailClient, EmailSender};
-use cuba_bootstrap::{run_server, Infrastructure};
-use cuba_adapter_postgres::PostgresOutbox;
 
 use cuba_ports::{CachePort, OutboxPort};
 use tonic::transport::Server;
@@ -72,7 +72,11 @@ struct NoOpSmsSender;
 
 #[async_trait]
 impl SmsSender for NoOpSmsSender {
-    async fn send_verification_code(&self, _phone: &str, _code: &str) -> cuba_errors::AppResult<()> {
+    async fn send_verification_code(
+        &self,
+        _phone: &str,
+        _code: &str,
+    ) -> cuba_errors::AppResult<()> {
         Ok(())
     }
 }

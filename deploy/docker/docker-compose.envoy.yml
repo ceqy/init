@@ -1,0 +1,285 @@
+# Cuba ERP - Envoy + Consul 服务发现与高可用架构
+# 功能：服务发现、负载均衡、熔断、重试、健康检查、可观测性
+
+version: '3.9'
+
+services:
+  # ============================================
+  # 基础设施服务
+  # ============================================
+
+  # Consul 服务注册中心
+  consul:
+    image: hashicorp/consul:1.18
+    container_name: cuba-consul
+    command: agent -server -ui -bootstrap-expect=1 -config-file=/consul/config/consul-config.json
+    ports:
+      - "8500:8500"  # HTTP API & UI
+      - "8600:8600/udp"  # DNS
+      - "8502:8502"  # gRPC (xDS)
+    volumes:
+      - consul_data:/consul/data
+      - ../consul/consul-config.json:/consul/config/consul-config.json:ro
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cuba-network
+
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: cuba-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cuba
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cuba-network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: cuba-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cuba-network
+
+  # Kafka 消息队列
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: cuba-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - cuba-network
+
+  # ClickHouse 分析数据库
+  clickhouse:
+    image: clickhouse/clickhouse-server:24
+    container_name: cuba-clickhouse
+    environment:
+      CLICKHOUSE_DB: cuba
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cuba-network
+
+  # ============================================
+  # 应用服务 + Envoy Sidecar
+  # ============================================
+
+  # IAM Access 服务
+  iam-access:
+    build:
+      context: ../../
+      dockerfile: services/iam-access/Dockerfile
+    container_name: cuba-iam-access
+    environment:
+      # 注意：IAM 服务监听 50052，Envoy 监听 50051
+      GRPC_PORT: 50052
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/cuba
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: kafka:9092
+      CLICKHOUSE_URL: http://clickhouse:8123
+      RUST_LOG: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - cuba-network
+    # 不直接暴露端口，通过 Envoy 访问
+
+  # IAM Access Envoy Sidecar
+  iam-access-envoy:
+    image: envoyproxy/envoy:v1.29-latest
+    container_name: cuba-iam-access-envoy
+    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
+    ports:
+      - "50051:50051"  # gRPC 端口
+      - "9902:9902"    # Envoy Admin
+      - "8081:8080"    # 健康检查端口
+    volumes:
+      - ../envoy/iam-envoy.yaml:/etc/envoy/envoy.yaml:ro
+    depends_on:
+      - iam-access
+      - consul
+    networks:
+      - cuba-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:9902/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Gateway 服务
+  gateway:
+    build:
+      context: ../../
+      dockerfile: gateway/Dockerfile
+    container_name: cuba-gateway
+    environment:
+      GATEWAY_HOST: 0.0.0.0
+      GATEWAY_PORT: 8080
+      # 连接本地 Envoy Sidecar（而不是直接连接 IAM）
+      IAM_ENDPOINT: http://gateway-envoy:50051
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_URL: redis://redis:6379
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
+      RUST_LOG: info
+    depends_on:
+      redis:
+        condition: service_healthy
+      iam-access-envoy:
+        condition: service_healthy
+    networks:
+      - cuba-network
+    # 不直接暴露端口，通过 Nginx 或直接访问
+
+  # Gateway Envoy Sidecar
+  gateway-envoy:
+    image: envoyproxy/envoy:v1.29-latest
+    container_name: cuba-gateway-envoy
+    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
+    ports:
+      - "50053:50051"  # gRPC 出站端口（Gateway -> IAM）
+      - "9901:9901"    # Envoy Admin
+    volumes:
+      - ../envoy/gateway-envoy.yaml:/etc/envoy/envoy.yaml:ro
+    depends_on:
+      - consul
+      - iam-access-envoy
+    networks:
+      - cuba-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:9901/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # 可观测性（可选）
+  # ============================================
+
+  # Prometheus 指标收集
+  prometheus:
+    image: prom/prometheus:v2.48
+    container_name: cuba-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - cuba-network
+
+  # Grafana 可视化
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: cuba-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - cuba-network
+
+  # ============================================
+  # 服务注册（初始化）
+  # ============================================
+
+  # Consul 服务注册初始化
+  consul-registrator:
+    image: curlimages/curl:8.5.0
+    container_name: cuba-consul-registrator
+    depends_on:
+      consul:
+        condition: service_healthy
+    command: >
+      sh -c "
+        sleep 5 &&
+        curl -X PUT -d @/services/iam-access.json http://consul:8500/v1/agent/service/register &&
+        curl -X PUT -d @/services/gateway.json http://consul:8500/v1/agent/service/register &&
+        echo 'Services registered successfully'
+      "
+    volumes:
+      - ../consul/services:/services:ro
+    networks:
+      - cuba-network
+
+volumes:
+  consul_data:
+  postgres_data:
+  redis_data:
+  kafka_data:
+  clickhouse_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  cuba-network:
+    driver: bridge

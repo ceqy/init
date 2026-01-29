@@ -127,7 +127,12 @@ impl RoleRepository for PostgresRoleRepository {
         }
     }
 
-    async fn list_by_tenant(&self, tenant_id: &TenantId, page: u32, page_size: u32) -> AppResult<(Vec<Role>, i64)> {
+    async fn list_by_tenant(
+        &self,
+        tenant_id: &TenantId,
+        page: u32,
+        page_size: u32,
+    ) -> AppResult<(Vec<Role>, i64)> {
         let offset = (page.saturating_sub(1)) * page_size;
 
         let rows = sqlx::query_as::<_, RoleRow>(
@@ -160,15 +165,24 @@ impl RoleRepository for PostgresRoleRepository {
         let role_ids: Vec<Uuid> = rows.iter().map(|r| r.id).collect();
         let permissions_map = self.load_roles_permissions(&role_ids).await?;
 
-        let roles = rows.into_iter().map(|r| {
-            let permissions = permissions_map.get(&r.id).cloned().unwrap_or_default();
-            r.into_role(permissions)
-        }).collect();
+        let roles = rows
+            .into_iter()
+            .map(|r| {
+                let permissions = permissions_map.get(&r.id).cloned().unwrap_or_default();
+                r.into_role(permissions)
+            })
+            .collect();
 
         Ok((roles, total.0))
     }
 
-    async fn search(&self, tenant_id: &TenantId, query: &str, page: u32, page_size: u32) -> AppResult<(Vec<Role>, i64)> {
+    async fn search(
+        &self,
+        tenant_id: &TenantId,
+        query: &str,
+        page: u32,
+        page_size: u32,
+    ) -> AppResult<(Vec<Role>, i64)> {
         let offset = (page.saturating_sub(1)) * page_size;
         let search_pattern = format!("%{}%", query);
 
@@ -206,23 +220,25 @@ impl RoleRepository for PostgresRoleRepository {
         let role_ids: Vec<Uuid> = rows.iter().map(|r| r.id).collect();
         let permissions_map = self.load_roles_permissions(&role_ids).await?;
 
-        let roles = rows.into_iter().map(|r| {
-            let permissions = permissions_map.get(&r.id).cloned().unwrap_or_default();
-            r.into_role(permissions)
-        }).collect();
+        let roles = rows
+            .into_iter()
+            .map(|r| {
+                let permissions = permissions_map.get(&r.id).cloned().unwrap_or_default();
+                r.into_role(permissions)
+            })
+            .collect();
 
         Ok((roles, total.0))
     }
 
     async fn exists_by_code(&self, tenant_id: &TenantId, code: &str) -> AppResult<bool> {
-        let result: (bool,) = sqlx::query_as(
-            "SELECT EXISTS(SELECT 1 FROM roles WHERE tenant_id = $1 AND code = $2)",
-        )
-        .bind(tenant_id.0)
-        .bind(code)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(map_sqlx_error)?;
+        let result: (bool,) =
+            sqlx::query_as("SELECT EXISTS(SELECT 1 FROM roles WHERE tenant_id = $1 AND code = $2)")
+                .bind(tenant_id.0)
+                .bind(code)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(map_sqlx_error)?;
 
         Ok(result.0)
     }
@@ -246,7 +262,10 @@ impl PostgresRoleRepository {
 
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
-    async fn load_roles_permissions(&self, role_ids: &[Uuid]) -> AppResult<std::collections::HashMap<Uuid, Vec<Permission>>> {
+    async fn load_roles_permissions(
+        &self,
+        role_ids: &[Uuid],
+    ) -> AppResult<std::collections::HashMap<Uuid, Vec<Permission>>> {
         let rows = sqlx::query_as::<_, RolePermissionJoinRow>(
             r#"
             SELECT rp.role_id, p.id, p.code, p.name, p.description, p.resource, p.action, p.module, p.is_active, p.created_at
@@ -260,7 +279,8 @@ impl PostgresRoleRepository {
         .await
         .map_err(map_sqlx_error)?;
 
-        let mut map: std::collections::HashMap<Uuid, Vec<Permission>> = std::collections::HashMap::new();
+        let mut map: std::collections::HashMap<Uuid, Vec<Permission>> =
+            std::collections::HashMap::new();
         for row in rows {
             map.entry(row.role_id).or_default().push(row.permission());
         }

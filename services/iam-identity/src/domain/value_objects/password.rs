@@ -6,19 +6,49 @@
 //! - 可配置的复杂度要求
 
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// 常见弱密码列表（前 100 个最常用密码的子集）
 const COMMON_PASSWORDS: &[&str] = &[
-    "password", "123456", "12345678", "qwerty", "abc123", "monkey", "1234567",
-    "letmein", "trustno1", "dragon", "baseball", "111111", "iloveyou", "master",
-    "sunshine", "ashley", "bailey", "passw0rd", "shadow", "123123", "654321",
-    "superman", "qazwsx", "michael", "football", "welcome", "jesus", "ninja",
-    "mustang", "password1", "123456789", "admin", "root", "test", "guest",
+    "password",
+    "123456",
+    "12345678",
+    "qwerty",
+    "abc123",
+    "monkey",
+    "1234567",
+    "letmein",
+    "trustno1",
+    "dragon",
+    "baseball",
+    "111111",
+    "iloveyou",
+    "master",
+    "sunshine",
+    "ashley",
+    "bailey",
+    "passw0rd",
+    "shadow",
+    "123123",
+    "654321",
+    "superman",
+    "qazwsx",
+    "michael",
+    "football",
+    "welcome",
+    "jesus",
+    "ninja",
+    "mustang",
+    "password1",
+    "123456789",
+    "admin",
+    "root",
+    "test",
+    "guest",
 ];
 
 /// 密码强度等级
@@ -105,8 +135,8 @@ impl HashedPassword {
 
     /// 验证明文密码是否匹配
     pub fn verify(&self, plain_password: &str) -> Result<bool, PasswordError> {
-        let parsed_hash = PasswordHash::new(&self.0)
-            .map_err(|e| PasswordError::InvalidHash(e.to_string()))?;
+        let parsed_hash =
+            PasswordHash::new(&self.0).map_err(|e| PasswordError::InvalidHash(e.to_string()))?;
 
         Ok(Argon2::default()
             .verify_password(plain_password.as_bytes(), &parsed_hash)
@@ -168,7 +198,10 @@ impl Password {
         // 常见密码检查
         if config.check_common_passwords {
             let lowercase_password = password.to_lowercase();
-            if COMMON_PASSWORDS.iter().any(|&common| lowercase_password.contains(common)) {
+            if COMMON_PASSWORDS
+                .iter()
+                .any(|&common| lowercase_password.contains(common))
+            {
                 return Err(PasswordError::CommonPassword);
             }
         }
@@ -219,13 +252,24 @@ impl Password {
         let has_digit = password.chars().any(|c| c.is_numeric());
         let has_special = password.chars().any(|c| !c.is_alphanumeric());
 
-        if has_lowercase { score += 10; }
-        if has_uppercase { score += 10; }
-        if has_digit { score += 10; }
-        if has_special { score += 10; }
+        if has_lowercase {
+            score += 10;
+        }
+        if has_uppercase {
+            score += 10;
+        }
+        if has_digit {
+            score += 10;
+        }
+        if has_special {
+            score += 10;
+        }
 
         // 字符多样性（最多 20 分）
-        let unique_chars = password.chars().collect::<std::collections::HashSet<_>>().len();
+        let unique_chars = password
+            .chars()
+            .collect::<std::collections::HashSet<_>>()
+            .len();
         let diversity_score = ((unique_chars as f32 / password.len() as f32) * 20.0) as u8;
         score += diversity_score;
 
@@ -278,7 +322,9 @@ pub enum PasswordError {
     #[error("Password is too long (maximum {0} characters)")]
     TooLong(usize),
 
-    #[error("Password is too weak (requires {required_types} character types, found {found_types})")]
+    #[error(
+        "Password is too weak (requires {required_types} character types, found {found_types})"
+    )]
     TooWeak {
         required_types: usize,
         found_types: usize,

@@ -20,7 +20,11 @@ impl PostgresRefreshTokenRepository {
 
 #[async_trait]
 impl RefreshTokenRepository for PostgresRefreshTokenRepository {
-    async fn find_by_token(&self, token: &str, tenant_id: &TenantId) -> AppResult<Option<RefreshToken>> {
+    async fn find_by_token(
+        &self,
+        token: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<RefreshToken>> {
         debug!("Finding refresh token");
 
         let row = sqlx::query_as::<_, RefreshTokenRow>(
@@ -100,44 +104,51 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
     }
 
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
-        let result = sqlx::query(
-            "DELETE FROM refresh_tokens WHERE tenant_id = $1 AND expires_at < NOW()",
-        )
-        .bind(tenant_id.0)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete expired tokens: {}", e)))?;
+        let result =
+            sqlx::query("DELETE FROM refresh_tokens WHERE tenant_id = $1 AND expires_at < NOW()")
+                .bind(tenant_id.0)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| {
+                    AppError::database(format!("Failed to delete expired tokens: {}", e))
+                })?;
 
         Ok(result.rows_affected())
     }
 
     async fn delete_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<u64> {
-        let result = sqlx::query(
-            "DELETE FROM refresh_tokens WHERE user_id = $1 AND tenant_id = $2",
-        )
-        .bind(user_id.0)
-        .bind(tenant_id.0)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
+        let result =
+            sqlx::query("DELETE FROM refresh_tokens WHERE user_id = $1 AND tenant_id = $2")
+                .bind(user_id.0)
+                .bind(tenant_id.0)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
 
         Ok(result.rows_affected())
     }
 
-    async fn delete_by_client_id(&self, client_id: &OAuthClientId, tenant_id: &TenantId) -> AppResult<u64> {
-        let result = sqlx::query(
-            "DELETE FROM refresh_tokens WHERE client_id = $1 AND tenant_id = $2",
-        )
-        .bind(client_id.0)
-        .bind(tenant_id.0)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
+    async fn delete_by_client_id(
+        &self,
+        client_id: &OAuthClientId,
+        tenant_id: &TenantId,
+    ) -> AppResult<u64> {
+        let result =
+            sqlx::query("DELETE FROM refresh_tokens WHERE client_id = $1 AND tenant_id = $2")
+                .bind(client_id.0)
+                .bind(tenant_id.0)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to delete tokens: {}", e)))?;
 
         Ok(result.rows_affected())
     }
 
-    async fn find_by_access_token(&self, access_token: &str, tenant_id: &TenantId) -> AppResult<Option<RefreshToken>> {
+    async fn find_by_access_token(
+        &self,
+        access_token: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<RefreshToken>> {
         let row = sqlx::query_as::<_, RefreshTokenRow>(
             r#"
             SELECT token, tenant_id, client_id, user_id, access_token, scopes,
@@ -155,7 +166,11 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         Ok(row.map(|r| r.into()))
     }
 
-    async fn list_active_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<RefreshToken>> {
+    async fn list_active_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<RefreshToken>> {
         let rows = sqlx::query_as::<_, RefreshTokenRow>(
             r#"
             SELECT token, tenant_id, client_id, user_id, access_token, scopes,
@@ -196,7 +211,11 @@ impl From<RefreshTokenRow> for RefreshToken {
             client_id: OAuthClientId::from_uuid(row.client_id),
             user_id: UserId::from_uuid(row.user_id),
             access_token: row.access_token,
-            scopes: row.scopes.split_whitespace().map(|s| s.to_string()).collect(),
+            scopes: row
+                .scopes
+                .split_whitespace()
+                .map(|s| s.to_string())
+                .collect(),
             revoked: row.revoked,
             expires_at: row.expires_at,
             created_at: row.created_at,

@@ -52,9 +52,13 @@ impl LoginLogRepository for PostgresLoginLogRepository {
         Ok(())
     }
 
-    async fn find_by_id(&self, id: &LoginLogId, tenant_id: &TenantId) -> AppResult<Option<LoginLog>> {
+    async fn find_by_id(
+        &self,
+        id: &LoginLogId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<LoginLog>> {
         sqlx::query_as::<_, LoginLogRow>(
-            "SELECT * FROM login_logs WHERE id = $1 AND tenant_id = $2"
+            "SELECT * FROM login_logs WHERE id = $1 AND tenant_id = $2",
         )
         .bind(id.0)
         .bind(tenant_id.0)
@@ -64,7 +68,12 @@ impl LoginLogRepository for PostgresLoginLogRepository {
         .map_err(|e| AppError::database(format!("Failed to find login log: {}", e)))
     }
 
-    async fn find_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId, limit: i32) -> AppResult<Vec<LoginLog>> {
+    async fn find_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+        limit: i32,
+    ) -> AppResult<Vec<LoginLog>> {
         sqlx::query_as::<_, LoginLogRow>(
             "SELECT * FROM login_logs WHERE user_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT $3"
         )
@@ -97,7 +106,11 @@ impl LoginLogRepository for PostgresLoginLogRepository {
         .map_err(|e| AppError::database(format!("Failed to find login logs: {}", e)))
     }
 
-    async fn find_last_successful_login(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Option<LoginLog>> {
+    async fn find_last_successful_login(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<LoginLog>> {
         sqlx::query_as::<_, LoginLogRow>(
             "SELECT * FROM login_logs WHERE user_id = $1 AND tenant_id = $2 AND result = 'Success' ORDER BY created_at DESC LIMIT 1"
         )
@@ -109,7 +122,12 @@ impl LoginLogRepository for PostgresLoginLogRepository {
         .map_err(|e| AppError::database(format!("Failed to find last successful login: {}", e)))
     }
 
-    async fn find_by_user_and_ip(&self, user_id: &UserId, tenant_id: &TenantId, ip_address: &str) -> AppResult<Vec<LoginLog>> {
+    async fn find_by_user_and_ip(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+        ip_address: &str,
+    ) -> AppResult<Vec<LoginLog>> {
         sqlx::query_as::<_, LoginLogRow>(
             "SELECT * FROM login_logs WHERE user_id = $1 AND tenant_id = $2 AND ip_address = $3 ORDER BY created_at DESC"
         )
@@ -140,7 +158,12 @@ impl LoginLogRepository for PostgresLoginLogRepository {
         .map_err(|e| AppError::database(format!("Failed to find login logs by device: {}", e)))
     }
 
-    async fn count_failed_attempts(&self, user_id: &UserId, tenant_id: &TenantId, start_time: DateTime<Utc>) -> AppResult<i64> {
+    async fn count_failed_attempts(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+        start_time: DateTime<Utc>,
+    ) -> AppResult<i64> {
         let result: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM login_logs WHERE user_id = $1 AND tenant_id = $2 AND result = 'Failed' AND created_at >= $3"
         )
@@ -154,7 +177,12 @@ impl LoginLogRepository for PostgresLoginLogRepository {
         Ok(result.0)
     }
 
-    async fn find_suspicious_logins(&self, tenant_id: &TenantId, start_time: DateTime<Utc>, limit: i32) -> AppResult<Vec<LoginLog>> {
+    async fn find_suspicious_logins(
+        &self,
+        tenant_id: &TenantId,
+        start_time: DateTime<Utc>,
+        limit: i32,
+    ) -> AppResult<Vec<LoginLog>> {
         sqlx::query_as::<_, LoginLogRow>(
             "SELECT * FROM login_logs WHERE tenant_id = $1 AND created_at >= $2 AND is_suspicious = true ORDER BY created_at DESC LIMIT $3"
         )
@@ -198,7 +226,11 @@ impl LoginLogRepository for PostgresLoginLogRepository {
         Ok((rows.into_iter().map(Into::into).collect(), total.0))
     }
 
-    async fn delete_older_than(&self, tenant_id: &TenantId, before: DateTime<Utc>) -> AppResult<u64> {
+    async fn delete_older_than(
+        &self,
+        tenant_id: &TenantId,
+        before: DateTime<Utc>,
+    ) -> AppResult<u64> {
         let result = sqlx::query("DELETE FROM login_logs WHERE tenant_id = $1 AND created_at < $2")
             .bind(tenant_id.0)
             .bind(before)

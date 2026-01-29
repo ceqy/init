@@ -20,13 +20,11 @@ use crate::application::handlers::user::{
     SendEmailVerificationHandler, SendPhoneVerificationHandler, VerifyEmailHandler,
     VerifyPhoneHandler,
 };
-use crate::domain::user::{User, UserStatus};
 use crate::domain::repositories::user::UserRepository;
+use crate::domain::user::{User, UserStatus};
 use crate::domain::value_objects::{Email, HashedPassword, Username};
 
-use super::user_proto::{
-    self, user_service_server::UserService, *,
-};
+use super::user_proto::{self, user_service_server::UserService, *};
 
 use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
 use chrono::Utc;
@@ -147,7 +145,11 @@ impl UserService for UserServiceImpl {
             .map_err(|e| Status::invalid_argument(format!("Invalid email: {}", e)))?;
 
         // 开始事务
-        let uow = self.uow_factory.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let uow = self
+            .uow_factory
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         let user_repo = uow.users();
 
         // 检查用户名和邮箱是否已存在
@@ -194,16 +196,20 @@ impl UserService for UserServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 提交事务
-        uow.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        uow.commit()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         // 发布用户创建事件
-        self.event_publisher.publish(IamDomainEvent::UserCreated {
-            user_id: user.id.clone(),
-            tenant_id: user.tenant_id.clone(),
-            username: user.username.as_str().to_string(),
-            email: user.email.as_str().to_string(),
-            timestamp: Utc::now(),
-        }).await;
+        self.event_publisher
+            .publish(IamDomainEvent::UserCreated {
+                user_id: user.id.clone(),
+                tenant_id: user.tenant_id.clone(),
+                username: user.username.as_str().to_string(),
+                email: user.email.as_str().to_string(),
+                timestamp: Utc::now(),
+            })
+            .await;
 
         info!("User registered successfully: {}", user.id);
 
@@ -339,23 +345,41 @@ impl UserService for UserServiceImpl {
 
         // 收集更新的字段作为审计记录
         let mut updated_fields = Vec::new();
-        if !req.username.is_empty() { updated_fields.push("username".to_string()); }
-        if !req.email.is_empty() { updated_fields.push("email".to_string()); }
-        if !req.display_name.is_empty() { updated_fields.push("display_name".to_string()); }
-        if !req.phone.is_empty() { updated_fields.push("phone".to_string()); }
-        if !req.avatar_url.is_empty() { updated_fields.push("avatar_url".to_string()); }
-        if !req.language.is_empty() { updated_fields.push("language".to_string()); }
-        if !req.timezone.is_empty() { updated_fields.push("timezone".to_string()); }
-        if !req.status.is_empty() { updated_fields.push("status".to_string()); }
+        if !req.username.is_empty() {
+            updated_fields.push("username".to_string());
+        }
+        if !req.email.is_empty() {
+            updated_fields.push("email".to_string());
+        }
+        if !req.display_name.is_empty() {
+            updated_fields.push("display_name".to_string());
+        }
+        if !req.phone.is_empty() {
+            updated_fields.push("phone".to_string());
+        }
+        if !req.avatar_url.is_empty() {
+            updated_fields.push("avatar_url".to_string());
+        }
+        if !req.language.is_empty() {
+            updated_fields.push("language".to_string());
+        }
+        if !req.timezone.is_empty() {
+            updated_fields.push("timezone".to_string());
+        }
+        if !req.status.is_empty() {
+            updated_fields.push("status".to_string());
+        }
 
         // 发布用户更新事件
         if !updated_fields.is_empty() {
-            self.event_publisher.publish(IamDomainEvent::UserUpdated {
-                user_id: user.id.clone(),
-                tenant_id: user.tenant_id.clone(),
-                updated_fields,
-                timestamp: Utc::now(),
-            }).await;
+            self.event_publisher
+                .publish(IamDomainEvent::UserUpdated {
+                    user_id: user.id.clone(),
+                    tenant_id: user.tenant_id.clone(),
+                    updated_fields,
+                    timestamp: Utc::now(),
+                })
+                .await;
         }
 
         Ok(Response::new(UpdateUserResponse {
@@ -375,7 +399,9 @@ impl UserService for UserServiceImpl {
         // 验证用户只能更新自己的资料
         let req = request.into_inner();
         if claims.sub != req.user_id {
-            return Err(Status::permission_denied("Cannot update other user's profile"));
+            return Err(Status::permission_denied(
+                "Cannot update other user's profile",
+            ));
         }
 
         let user_id = UserId::from_str(&req.user_id)
@@ -421,21 +447,35 @@ impl UserService for UserServiceImpl {
 
         // 收集更新的字段
         let mut updated_fields = Vec::new();
-        if !req.display_name.is_empty() { updated_fields.push("display_name".to_string()); }
-        if !req.email.is_empty() { updated_fields.push("email".to_string()); }
-        if !req.phone.is_empty() { updated_fields.push("phone".to_string()); }
-        if !req.avatar_url.is_empty() { updated_fields.push("avatar_url".to_string()); }
-        if !req.language.is_empty() { updated_fields.push("language".to_string()); }
-        if !req.timezone.is_empty() { updated_fields.push("timezone".to_string()); }
+        if !req.display_name.is_empty() {
+            updated_fields.push("display_name".to_string());
+        }
+        if !req.email.is_empty() {
+            updated_fields.push("email".to_string());
+        }
+        if !req.phone.is_empty() {
+            updated_fields.push("phone".to_string());
+        }
+        if !req.avatar_url.is_empty() {
+            updated_fields.push("avatar_url".to_string());
+        }
+        if !req.language.is_empty() {
+            updated_fields.push("language".to_string());
+        }
+        if !req.timezone.is_empty() {
+            updated_fields.push("timezone".to_string());
+        }
 
         // 发布用户资料更新事件
         if !updated_fields.is_empty() {
-            self.event_publisher.publish(IamDomainEvent::UserProfileUpdated {
-                user_id: user.id.clone(),
-                tenant_id: user.tenant_id.clone(),
-                updated_fields,
-                timestamp: Utc::now(),
-            }).await;
+            self.event_publisher
+                .publish(IamDomainEvent::UserProfileUpdated {
+                    user_id: user.id.clone(),
+                    tenant_id: user.tenant_id.clone(),
+                    updated_fields,
+                    timestamp: Utc::now(),
+                })
+                .await;
         }
 
         Ok(Response::new(UpdateProfileResponse {
@@ -480,7 +520,7 @@ impl UserService for UserServiceImpl {
 
         // 覆盖请求中的 tenant_id (或验证必须匹配)
         if !req.tenant_id.is_empty() && req.tenant_id != tenant_id.0.to_string() {
-              // 简单实现：忽略请求中的 tenant_id，强制使用 token 中的
+            // 简单实现：忽略请求中的 tenant_id，强制使用 token 中的
         }
 
         // 解析状态
@@ -508,19 +548,13 @@ impl UserService for UserServiceImpl {
         // 查询用户列表
         let (users, total) = self
             .user_repo
-            .list(
-                &tenant_id,
-                status,
-                search,
-                &req.role_ids,
-                page,
-                page_size,
-            )
+            .list(&tenant_id, status, search, &req.role_ids, page, page_size)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // 转换为 proto
-        let proto_users: Vec<user_proto::User> = users.iter().map(|u| self.user_to_proto(u)).collect();
+        let proto_users: Vec<user_proto::User> =
+            users.iter().map(|u| self.user_to_proto(u)).collect();
 
         // 计算总页数
         let total_pages = ((total as f64) / (page_size as f64)).ceil() as i32;
@@ -749,7 +783,9 @@ impl UserService for UserServiceImpl {
     ) -> Result<Response<GetUserRolesResponse>, Status> {
         // 角色管理由独立的 RBAC 服务负责
         // 当 RBAC 服务实现后，这里应该通过 gRPC 调用 RBAC 服务
-        Err(Status::unimplemented("GetUserRoles is managed by RBAC service"))
+        Err(Status::unimplemented(
+            "GetUserRoles is managed by RBAC service",
+        ))
     }
 
     /// 发送邮箱验证码
@@ -764,12 +800,14 @@ impl UserService for UserServiceImpl {
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
             .to_string();
-        
+
         let req = request.into_inner();
         info!("Sending email verification for user: {}", req.user_id);
 
         if tenant_id.is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required in metadata"));
+            return Err(Status::invalid_argument(
+                "tenant_id is required in metadata",
+            ));
         }
 
         // 创建命令
@@ -804,12 +842,14 @@ impl UserService for UserServiceImpl {
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
             .to_string();
-        
+
         let req = request.into_inner();
         info!("Verifying email for user: {}", req.user_id);
 
         if tenant_id.is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required in metadata"));
+            return Err(Status::invalid_argument(
+                "tenant_id is required in metadata",
+            ));
         }
 
         // 创建命令
@@ -844,12 +884,14 @@ impl UserService for UserServiceImpl {
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
             .to_string();
-        
+
         let req = request.into_inner();
         info!("Sending phone verification for user: {}", req.user_id);
 
         if tenant_id.is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required in metadata"));
+            return Err(Status::invalid_argument(
+                "tenant_id is required in metadata",
+            ));
         }
 
         // 创建命令
@@ -884,12 +926,14 @@ impl UserService for UserServiceImpl {
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
             .to_string();
-        
+
         let req = request.into_inner();
         info!("Verifying phone for user: {}", req.user_id);
 
         if tenant_id.is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required in metadata"));
+            return Err(Status::invalid_argument(
+                "tenant_id is required in metadata",
+            ));
         }
 
         // 创建命令

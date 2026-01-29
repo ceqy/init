@@ -39,10 +39,10 @@ impl std::str::FromStr for PermissionId {
 }
 
 /// 权限实体
-/// 
+///
 /// 权限代表对某个资源执行某个操作的许可
 /// 例如: users:read, orders:write, products:delete
-#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Permission {
     pub id: PermissionId,
     /// 权限代码 (唯一标识符，如 "users:read")
@@ -94,7 +94,14 @@ impl Permission {
     pub fn quick(resource: &str, action: &str, module: &str) -> Self {
         let code = Self::generate_code(resource, action);
         let name = format!("{} {}", action.to_uppercase(), resource);
-        Self::new(code, name, None, resource.to_string(), action.to_string(), module.to_string())
+        Self::new(
+            code,
+            name,
+            None,
+            resource.to_string(),
+            action.to_string(),
+            module.to_string(),
+        )
     }
 
     /// 激活权限
@@ -109,8 +116,8 @@ impl Permission {
 
     /// 检查是否匹配资源和操作
     pub fn matches(&self, resource: &str, action: &str) -> bool {
-        (self.resource == resource || self.resource == "*") &&
-        (self.action == action || self.action == "*")
+        (self.resource == resource || self.resource == "*")
+            && (self.action == action || self.action == "*")
     }
 }
 
@@ -121,6 +128,12 @@ impl PartialEq for Permission {
 }
 
 impl Eq for Permission {}
+
+impl std::hash::Hash for Permission {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
 
 #[cfg(test)]
 mod tests {

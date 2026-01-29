@@ -6,8 +6,8 @@ use cuba_errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::domain::user::{User, UserStatus};
 use crate::domain::repositories::user::UserRepository;
+use crate::domain::user::{User, UserStatus};
 use crate::domain::value_objects::{Email, HashedPassword, Username};
 
 pub struct PostgresUserRepository {
@@ -48,7 +48,11 @@ impl UserRepository for PostgresUserRepository {
         }
     }
 
-    async fn find_by_username(&self, username: &Username, tenant_id: &TenantId) -> AppResult<Option<User>> {
+    async fn find_by_username(
+        &self,
+        username: &Username,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<User>> {
         let row = sqlx::query_as::<_, UserRow>(
             r#"
             SELECT id, username, email, password_hash, display_name, phone, avatar_url,
@@ -204,7 +208,11 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
-    async fn exists_by_username(&self, username: &Username, tenant_id: &TenantId) -> AppResult<bool> {
+    async fn exists_by_username(
+        &self,
+        username: &Username,
+        tenant_id: &TenantId,
+    ) -> AppResult<bool> {
         let result: (bool,) = sqlx::query_as(
             "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND tenant_id = $2)",
         )
@@ -242,13 +250,11 @@ impl UserRepository for PostgresUserRepository {
         let offset = (page - 1).max(0) * page_size;
 
         // 查询总数
-        let total: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM users WHERE tenant_id = $1"
-        )
-        .bind(tenant_id.0)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to count users: {}", e)))?;
+        let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
+            .bind(tenant_id.0)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to count users: {}", e)))?;
 
         // 查询数据
         let rows = sqlx::query_as::<_, UserRow>(
@@ -264,7 +270,7 @@ impl UserRepository for PostgresUserRepository {
             WHERE tenant_id = $1
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3
-            "#
+            "#,
         )
         .bind(tenant_id.0)
         .bind(page_size)
@@ -280,13 +286,11 @@ impl UserRepository for PostgresUserRepository {
     }
 
     async fn count_by_tenant(&self, tenant_id: &TenantId) -> AppResult<i64> {
-        let result: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM users WHERE tenant_id = $1"
-        )
-        .bind(tenant_id.0)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to count users: {}", e)))?;
+        let result: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
+            .bind(tenant_id.0)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| AppError::database(format!("Failed to count users: {}", e)))?;
 
         Ok(result.0)
     }

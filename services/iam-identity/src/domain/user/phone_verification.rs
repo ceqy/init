@@ -142,4 +142,3 @@ pub enum PhoneVerificationError {
     #[error("Invalid verification code")]
     InvalidCode,
 }
-

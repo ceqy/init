@@ -110,14 +110,15 @@ impl DeviceInfo {
     pub fn from_user_agent(user_agent: &str) -> Self {
         // 简化的解析逻辑，实际应使用专门的 User-Agent 解析库
         let is_mobile = user_agent.contains("Mobile") || user_agent.contains("Android");
-        
+
         let device_type = if user_agent.contains("Tablet") {
             "Tablet"
         } else if is_mobile {
             "Mobile"
         } else {
             "Desktop"
-        }.to_string();
+        }
+        .to_string();
 
         let (os, os_version) = Self::parse_os(user_agent);
         let (browser, browser_version) = Self::parse_browser(user_agent);
@@ -165,12 +166,7 @@ impl DeviceInfo {
 
     /// 生成设备指纹
     pub fn fingerprint(&self) -> String {
-        format!(
-            "{}:{}:{}",
-            self.device_type,
-            self.os,
-            self.browser
-        )
+        format!("{}:{}:{}", self.device_type, self.os, self.browser)
     }
 }
 
@@ -277,4 +273,3 @@ impl LoginLog {
         self.city = Some(city);
     }
 }
-

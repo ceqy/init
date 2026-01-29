@@ -50,7 +50,10 @@ impl WebAuthnService {
 
         // 获取用户现有的凭证
         let user_id_typed = cuba_common::UserId::from_uuid(user_id);
-        let existing_credentials = self.credential_repo.find_by_user_id(&user_id_typed, tenant_id).await?;
+        let existing_credentials = self
+            .credential_repo
+            .find_by_user_id(&user_id_typed, tenant_id)
+            .await?;
 
         // 转换为 CredentialID 格式
         let exclude_credentials: Vec<CredentialID> = existing_credentials
@@ -88,7 +91,9 @@ impl WebAuthnService {
         let passkey = self
             .webauthn
             .finish_passkey_registration(reg, state)
-            .map_err(|e| AppError::validation(format!("Registration verification failed: {}", e)))?;
+            .map_err(|e| {
+                AppError::validation(format!("Registration verification failed: {}", e))
+            })?;
 
         // 提取传输方式
         let transports: Vec<String> = reg
@@ -126,7 +131,10 @@ impl WebAuthnService {
 
         // 获取用户的凭证
         let user_id_typed = cuba_common::UserId::from_uuid(user_id);
-        let credentials = self.credential_repo.find_by_user_id(&user_id_typed, tenant_id).await?;
+        let credentials = self
+            .credential_repo
+            .find_by_user_id(&user_id_typed, tenant_id)
+            .await?;
 
         if credentials.is_empty() {
             return Err(AppError::not_found("No WebAuthn credentials found"));
@@ -165,7 +173,9 @@ impl WebAuthnService {
         let auth_result = self
             .webauthn
             .finish_passkey_authentication(auth, state)
-            .map_err(|e| AppError::validation(format!("Authentication verification failed: {}", e)))?;
+            .map_err(|e| {
+                AppError::validation(format!("Authentication verification failed: {}", e))
+            })?;
 
         // 查找凭证
         let credential_id = auth_result.cred_id().as_ref();
@@ -179,18 +189,32 @@ impl WebAuthnService {
         credential.update_from_authentication(&auth_result);
         self.credential_repo.update(&credential).await?;
 
-        info!("WebAuthn authentication successful for user: {}", credential.user_id);
+        info!(
+            "WebAuthn authentication successful for user: {}",
+            credential.user_id
+        );
         Ok(credential.user_id)
     }
 
     /// 获取用户的所有凭证
-    pub async fn list_credentials(&self, user_id: Uuid, tenant_id: &TenantId) -> AppResult<Vec<WebAuthnCredential>> {
+    pub async fn list_credentials(
+        &self,
+        user_id: Uuid,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<WebAuthnCredential>> {
         let user_id_typed = cuba_common::UserId::from_uuid(user_id);
-        self.credential_repo.find_by_user_id(&user_id_typed, tenant_id).await
+        self.credential_repo
+            .find_by_user_id(&user_id_typed, tenant_id)
+            .await
     }
 
     /// 删除凭证
-    pub async fn delete_credential(&self, user_id: Uuid, credential_id: Uuid, tenant_id: &TenantId) -> AppResult<()> {
+    pub async fn delete_credential(
+        &self,
+        user_id: Uuid,
+        credential_id: Uuid,
+        tenant_id: &TenantId,
+    ) -> AppResult<()> {
         // 验证凭证属于该用户
         let cred_id = WebAuthnCredentialId::from_uuid(credential_id);
         let credential = self
@@ -200,7 +224,9 @@ impl WebAuthnService {
             .ok_or_else(|| AppError::not_found("Credential not found"))?;
 
         if credential.user_id != user_id {
-            return Err(AppError::forbidden("Cannot delete credential of another user"));
+            return Err(AppError::forbidden(
+                "Cannot delete credential of another user",
+            ));
         }
 
         self.credential_repo.delete(&cred_id, tenant_id).await
@@ -209,7 +235,8 @@ impl WebAuthnService {
     /// 检查用户是否有 WebAuthn 凭证
     pub async fn has_credentials(&self, user_id: Uuid, tenant_id: &TenantId) -> AppResult<bool> {
         let user_id_typed = cuba_common::UserId::from_uuid(user_id);
-        self.credential_repo.has_credentials(&user_id_typed, tenant_id).await
+        self.credential_repo
+            .has_credentials(&user_id_typed, tenant_id)
+            .await
     }
 }
-

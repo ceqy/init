@@ -1,6 +1,6 @@
 //! API 路由
 
-use axum::{routing::get, Json, Router};
+use axum::{Json, Router, routing::get};
 use serde::Serialize;
 
 pub fn api_routes() -> Router {
@@ -39,11 +39,9 @@ async fn readiness_check() -> Json<ReadinessResponse> {
     // 可以通过 gRPC health check 协议来实现
     Json(ReadinessResponse {
         ready: true,
-        checks: vec![
-            ServiceCheck {
-                name: "iam-identity".to_string(),
-                healthy: true,
-            },
-        ],
+        checks: vec![ServiceCheck {
+            name: "iam-identity".to_string(),
+            healthy: true,
+        }],
     })
 }

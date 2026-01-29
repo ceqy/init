@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, Utc};
 use cuba_common::{TenantId, UserId};
 use serde::{Deserialize, Serialize};
 
-use super::{OAuthClientId, OAuthClientError};
+use super::{OAuthClientError, OAuthClientId};
 
 /// 授权码
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,7 +90,7 @@ impl AuthorizationCode {
                     _ => {
                         return Err(OAuthClientError::Validation(
                             "Invalid code_challenge_method".to_string(),
-                        ))
+                        ));
                     }
                 };
 
@@ -103,4 +103,3 @@ impl AuthorizationCode {
         }
     }
 }
-

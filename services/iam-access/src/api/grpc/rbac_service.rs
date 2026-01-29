@@ -5,15 +5,17 @@ use std::sync::Arc;
 use cuba_common::TenantId;
 use tonic::{Request, Response, Status};
 
+use crate::api::grpc::conversions::datetime_to_timestamp;
 use crate::api::proto::rbac::{
     AssignPermissionsToRoleRequest, AssignPermissionsToRoleResponse, AssignRolesToUserRequest,
     AssignRolesToUserResponse, CheckPermissionRequest, CheckPermissionResponse,
     CheckPermissionsRequest, CheckPermissionsResponse, CreatePermissionRequest,
     CreatePermissionResponse, CreateRoleRequest, CreateRoleResponse, DeletePermissionRequest,
-    DeletePermissionResponse, DeleteRoleRequest, DeleteRoleResponse, GetPermissionRequest,
-    GetPermissionResponse, GetRolePermissionsRequest, GetRolePermissionsResponse, GetRoleRequest,
-    GetRoleResponse, GetUserPermissionsRequest, GetUserPermissionsResponse, GetUserRolesRequest,
-    GetUserRolesResponse, ListPermissionsRequest, ListPermissionsResponse, ListRolesRequest,
+    DeletePermissionResponse, DeleteRoleRequest, DeleteRoleResponse, ExportRolesRequest,
+    GetPermissionRequest, GetPermissionResponse, GetRolePermissionsRequest,
+    GetRolePermissionsResponse, GetRoleRequest, GetRoleResponse, GetUserPermissionsRequest,
+    GetUserPermissionsResponse, GetUserRolesRequest, GetUserRolesResponse, ImportRoleRequest,
+    ImportRolesResponse, ListPermissionsRequest, ListPermissionsResponse, ListRolesRequest,
     ListRolesResponse, Permission as ProtoPermission, RemovePermissionsFromRoleRequest,
     RemovePermissionsFromRoleResponse, RemoveRolesFromUserRequest, RemoveRolesFromUserResponse,
     Role as ProtoRole, UpdatePermissionRequest, UpdatePermissionResponse, UpdateRoleRequest,
@@ -77,14 +79,8 @@ fn role_to_proto(role: &Role) -> ProtoRole {
         is_system: role.is_system,
         is_active: role.is_active,
         permissions: role.permissions.iter().map(permission_to_proto).collect(),
-        created_at: Some(prost_types::Timestamp {
-            seconds: role.audit_info.created_at.timestamp(),
-            nanos: role.audit_info.created_at.timestamp_subsec_nanos() as i32,
-        }),
-        updated_at: Some(prost_types::Timestamp {
-            seconds: role.audit_info.updated_at.timestamp(),
-            nanos: role.audit_info.updated_at.timestamp_subsec_nanos() as i32,
-        }),
+        created_at: Some(datetime_to_timestamp(role.audit_info.created_at)),
+        updated_at: Some(datetime_to_timestamp(role.audit_info.updated_at)),
     }
 }
 
@@ -98,10 +94,7 @@ fn permission_to_proto(perm: &Permission) -> ProtoPermission {
         action: perm.action.clone(),
         module: perm.module.clone(),
         is_active: perm.is_active,
-        created_at: Some(prost_types::Timestamp {
-            seconds: perm.created_at.timestamp(),
-            nanos: perm.created_at.timestamp_subsec_nanos() as i32,
-        }),
+        created_at: Some(datetime_to_timestamp(perm.created_at)),
     }
 }
 
@@ -219,7 +212,7 @@ where
             .role_cmd_handler
             .handle_update(cmd)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(UpdateRoleResponse {
             role: Some(role_to_proto(&role)),
@@ -245,7 +238,7 @@ where
         self.role_cmd_handler
             .handle_delete(cmd)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(DeleteRoleResponse { success: true }))
     }
@@ -262,7 +255,7 @@ where
             .role_query_handler
             .handle_get(query)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(GetRoleResponse {
             role: Some(role_to_proto(&role)),
@@ -296,7 +289,7 @@ where
             };
             self.role_query_handler.handle_search(query).await
         }
-        .map_err(|e| Status::from(e))?;
+        .map_err(Status::from)?;
 
         Ok(Response::new(ListRolesResponse {
             roles: result.roles.iter().map(role_to_proto).collect(),
@@ -335,7 +328,7 @@ where
         self.permission_repo
             .create(&permission)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(CreatePermissionResponse {
             permission: Some(permission_to_proto(&permission)),
@@ -357,7 +350,7 @@ where
             .permission_repo
             .find_by_id(&perm_id)
             .await
-            .map_err(|e| Status::from(e))?
+            .map_err(Status::from)?
             .ok_or_else(|| Status::not_found("Permission not found"))?;
 
         permission.name = req.name;
@@ -375,7 +368,7 @@ where
         self.permission_repo
             .update(&permission)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(UpdatePermissionResponse {
             permission: Some(permission_to_proto(&permission)),
@@ -396,7 +389,7 @@ where
         self.permission_repo
             .delete(&perm_id)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(DeletePermissionResponse { success: true }))
     }
@@ -416,7 +409,7 @@ where
             .permission_repo
             .find_by_id(&perm_id)
             .await
-            .map_err(|e| Status::from(e))?
+            .map_err(Status::from)?
             .ok_or_else(|| Status::not_found("Permission not found"))?;
 
         Ok(Response::new(GetPermissionResponse {
@@ -435,7 +428,7 @@ where
                 .permission_repo
                 .list_by_module(&req.module)
                 .await
-                .map_err(|e| Status::from(e))?;
+                .map_err(Status::from)?;
             let len = perms.len() as i64;
             (perms, len)
         } else if !req.resource.is_empty() {
@@ -443,14 +436,14 @@ where
                 .permission_repo
                 .list_by_resource(&req.resource)
                 .await
-                .map_err(|e| Status::from(e))?;
+                .map_err(Status::from)?;
             let len = perms.len() as i64;
             (perms, len)
         } else {
             self.permission_repo
                 .list_all(req.page.max(1) as u32, req.page_size.clamp(1, 100) as u32)
                 .await
-                .map_err(|e| Status::from(e))?
+                .map_err(Status::from)?
         };
 
         Ok(Response::new(ListPermissionsResponse {
@@ -481,7 +474,7 @@ where
         self.role_cmd_handler
             .handle_assign_permissions(cmd)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(AssignPermissionsToRoleResponse {
             success: true,
@@ -508,7 +501,7 @@ where
         self.role_cmd_handler
             .handle_remove_permissions(cmd)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(RemovePermissionsFromRoleResponse {
             success: true,
@@ -529,7 +522,7 @@ where
             .role_query_handler
             .handle_get(query)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(GetRolePermissionsResponse {
             permissions: role.permissions.iter().map(permission_to_proto).collect(),
@@ -564,7 +557,7 @@ where
         self.role_cmd_handler
             .handle_assign_roles_to_user(cmd)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(AssignRolesToUserResponse { success: true }))
     }
@@ -595,7 +588,7 @@ where
         self.role_cmd_handler
             .handle_remove_roles_from_user(cmd)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(RemoveRolesFromUserResponse { success: true }))
     }
@@ -620,7 +613,7 @@ where
             .role_query_handler
             .handle_get_user_roles(query)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(GetUserRolesResponse {
             roles: roles.iter().map(role_to_proto).collect(),
@@ -647,7 +640,7 @@ where
             .role_query_handler
             .handle_get_user_permissions(query)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         let permission_codes: Vec<String> = permissions.iter().map(|p| p.code.clone()).collect();
 
@@ -680,7 +673,7 @@ where
             .role_query_handler
             .handle_check_user_permission(query)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(CheckPermissionResponse { allowed }))
     }
@@ -696,46 +689,197 @@ where
             .parse()
             .map_err(|_| Status::invalid_argument("Invalid tenant_id"))?;
 
-        let mut results = std::collections::HashMap::new();
+        // 并行检查所有权限以提高性能
+        let checks: Vec<_> = req
+            .permission_codes
+            .into_iter()
+            .map(|code| {
+                let user_id = req.user_id.clone();
+                let tenant_id = tenant_id.clone();
+                let handler = &self.role_query_handler;
 
-        for code in req.permission_codes {
-            let query = CheckUserPermissionQuery {
-                user_id: req.user_id.clone(),
-                tenant_id: tenant_id.clone(),
-                permission_code: code.clone(),
-            };
+                async move {
+                    let query = CheckUserPermissionQuery {
+                        user_id,
+                        tenant_id,
+                        permission_code: code.clone(),
+                    };
 
-            let allowed = self
-                .role_query_handler
-                .handle_check_user_permission(query)
-                .await
-                .map_err(|e| Status::from(e))?;
+                    let allowed = handler.handle_check_user_permission(query).await?;
+                    Ok::<_, cuba_errors::AppError>((code, allowed))
+                }
+            })
+            .collect();
 
-            results.insert(code, allowed);
-        }
+        let results_vec: Vec<(String, bool)> = futures::future::try_join_all(checks)
+            .await
+            .map_err(Status::from)?;
+
+        let results = results_vec.into_iter().collect();
 
         Ok(Response::new(CheckPermissionsResponse { results }))
     }
 
-    // ===== 导入导出 (待实现) =====
+    // ===== 导入导出 =====
 
-    type ExportRolesStream = std::pin::Pin<
-        Box<dyn futures::Stream<Item = Result<crate::api::proto::rbac::Role, Status>> + Send>,
-    >;
+    type ExportRolesStream =
+        std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProtoRole, Status>> + Send>>;
 
     async fn export_roles(
         &self,
-        _request: Request<crate::api::proto::rbac::ExportRolesRequest>,
+        request: Request<ExportRolesRequest>,
     ) -> Result<Response<Self::ExportRolesStream>, Status> {
-        // TODO: Implement streaming export
-        Err(Status::unimplemented("ExportRoles is not yet implemented"))
+        let req = request.into_inner();
+
+        let tenant_id: TenantId = req
+            .tenant_id
+            .parse()
+            .map_err(|_| Status::invalid_argument("Invalid tenant_id"))?;
+
+        // 获取所有角色
+        let query = ListRolesQuery {
+            tenant_id,
+            page: 1,
+            page_size: 1000, // 大批量导出
+        };
+
+        let result = self
+            .role_query_handler
+            .handle_list(query)
+            .await
+            .map_err(Status::from)?;
+
+        // 创建流式响应
+        let stream = futures::stream::iter(
+            result
+                .roles
+                .into_iter()
+                .map(|role| Ok(role_to_proto(&role))),
+        );
+
+        Ok(Response::new(Box::pin(stream)))
     }
 
     async fn import_roles(
         &self,
-        _request: Request<tonic::Streaming<crate::api::proto::rbac::ImportRoleRequest>>,
-    ) -> Result<Response<crate::api::proto::rbac::ImportRolesResponse>, Status> {
-        // TODO: Implement streaming import
-        Err(Status::unimplemented("ImportRoles is not yet implemented"))
+        request: Request<tonic::Streaming<ImportRoleRequest>>,
+    ) -> Result<Response<ImportRolesResponse>, Status> {
+        use futures::StreamExt;
+
+        // 从请求扩展中获取执行者信息
+        let performed_by = request
+            .extensions()
+            .get::<crate::api::grpc::interceptor::UserInfo>()
+            .and_then(|u| u.user_id.parse::<uuid::Uuid>().ok());
+
+        let mut stream = request.into_inner();
+        let mut imported_count = 0;
+        let mut skipped_count = 0;
+        let mut error_count = 0;
+        let mut errors = Vec::new();
+
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(import_req) => {
+                    let role = match import_req.role {
+                        Some(r) => r,
+                        None => {
+                            error_count += 1;
+                            errors.push("Missing role data".to_string());
+                            continue;
+                        }
+                    };
+
+                    let tenant_id: TenantId = match role.tenant_id.parse() {
+                        Ok(id) => id,
+                        Err(_) => {
+                            error_count += 1;
+                            errors.push(format!("Invalid tenant_id: {}", role.tenant_id));
+                            continue;
+                        }
+                    };
+
+                    // 检查角色是否已存在
+                    let existing = self
+                        .role_query_handler
+                        .handle_get(GetRoleQuery {
+                            role_id: role.id.clone(),
+                        })
+                        .await;
+
+                    match (existing, import_req.mode) {
+                        (Ok(_), 1) => {
+                            // IMPORT_MODE_SKIP: 跳过已存在的角色
+                            skipped_count += 1;
+                        }
+                        (Ok(_), 2) => {
+                            // IMPORT_MODE_OVERWRITE: 更新已存在的角色
+                            let cmd = UpdateRoleCommand {
+                                role_id: role.id.clone(),
+                                name: role.name.clone(),
+                                description: if role.description.is_empty() {
+                                    None
+                                } else {
+                                    Some(role.description.clone())
+                                },
+                                performed_by,
+                            };
+
+                            match self.role_cmd_handler.handle_update(cmd).await {
+                                Ok(_) => imported_count += 1,
+                                Err(e) => {
+                                    error_count += 1;
+                                    errors.push(format!(
+                                        "Failed to update role {}: {}",
+                                        role.code, e
+                                    ));
+                                }
+                            }
+                        }
+                        (Err(_), _) => {
+                            // 角色不存在，创建新角色
+                            let cmd = CreateRoleCommand {
+                                tenant_id,
+                                code: role.code.clone(),
+                                name: role.name.clone(),
+                                description: if role.description.is_empty() {
+                                    None
+                                } else {
+                                    Some(role.description.clone())
+                                },
+                                is_system: role.is_system,
+                                performed_by,
+                            };
+
+                            match self.role_cmd_handler.handle_create(cmd).await {
+                                Ok(_) => imported_count += 1,
+                                Err(e) => {
+                                    error_count += 1;
+                                    errors.push(format!(
+                                        "Failed to create role {}: {}",
+                                        role.code, e
+                                    ));
+                                }
+                            }
+                        }
+                        _ => {
+                            // 其他情况，跳过
+                            skipped_count += 1;
+                        }
+                    }
+                }
+                Err(e) => {
+                    error_count += 1;
+                    errors.push(format!("Stream error: {}", e));
+                }
+            }
+        }
+
+        Ok(Response::new(ImportRolesResponse {
+            imported_count,
+            skipped_count,
+            error_count,
+            errors,
+        }))
     }
 }

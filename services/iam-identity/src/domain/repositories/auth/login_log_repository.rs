@@ -14,7 +14,11 @@ pub trait LoginLogRepository: Send + Sync {
     async fn save(&self, log: &LoginLog) -> AppResult<()>;
 
     /// 根据 ID 查找日志
-    async fn find_by_id(&self, id: &LoginLogId, tenant_id: &TenantId) -> AppResult<Option<LoginLog>>;
+    async fn find_by_id(
+        &self,
+        id: &LoginLogId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<LoginLog>>;
 
     /// 查询用户的登录历史
     async fn find_by_user_id(

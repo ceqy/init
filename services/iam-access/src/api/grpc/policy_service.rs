@@ -115,7 +115,7 @@ where
             .policy_cmd_handler
             .handle_create(cmd)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(CreatePolicyResponse {
             policy: Some(policy_to_proto(policy)),
@@ -163,7 +163,7 @@ where
             .policy_cmd_handler
             .handle_update(cmd)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(UpdatePolicyResponse {
             policy: Some(policy_to_proto(policy)),
@@ -190,7 +190,7 @@ where
         self.policy_cmd_handler
             .handle_delete(cmd)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(DeletePolicyResponse { success: true }))
     }
@@ -209,7 +209,7 @@ where
             .policy_repo
             .find_by_id(&id)
             .await
-            .map_err(|e| Status::from(e))?
+            .map_err(Status::from)?
             .ok_or_else(|| Status::not_found("Policy not found"))?;
 
         Ok(Response::new(GetPolicyResponse {
@@ -238,7 +238,7 @@ where
             .policy_repo
             .list_by_tenant(&tenant_id, page, page_size)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         Ok(Response::new(ListPoliciesResponse {
             policies: policies.into_iter().map(policy_to_proto).collect(),

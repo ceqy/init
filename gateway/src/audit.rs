@@ -1,13 +1,13 @@
 //! 审计路由
 
+use crate::grpc::{self, GrpcClients};
+use crate::middleware::AuthToken;
 use axum::{
+    Json, Router,
     extract::{Query, State},
     http::StatusCode,
     routing::get,
-    Json, Router,
 };
-use crate::grpc::{self, GrpcClients};
-use crate::middleware::AuthToken;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
@@ -62,13 +62,10 @@ async fn list_events(
         page_token: String::new(),
     };
 
-    let response = client
-        .list_events(request)
-        .await
-        .map_err(|e| {
-            error!("Failed to list events: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, e.message().to_string())
-        })?;
+    let response = client.list_events(request).await.map_err(|e| {
+        error!("Failed to list events: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, e.message().to_string())
+    })?;
 
     let inner = response.into_inner();
     let events: Vec<AuditEventResponse> = inner
@@ -122,13 +119,10 @@ async fn get_user_audit_history(
         page_token: String::new(),
     };
 
-    let response = client
-        .get_user_audit_history(request)
-        .await
-        .map_err(|e| {
-            error!("Failed to get user audit history: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, e.message().to_string())
-        })?;
+    let response = client.get_user_audit_history(request).await.map_err(|e| {
+        error!("Failed to get user audit history: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, e.message().to_string())
+    })?;
 
     let inner = response.into_inner();
     let events: Vec<AuditEventResponse> = inner

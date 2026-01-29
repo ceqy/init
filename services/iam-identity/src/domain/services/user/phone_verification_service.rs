@@ -7,8 +7,8 @@ use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use tracing::{debug, info, warn};
 
-use crate::domain::user::PhoneVerification;
 use crate::domain::repositories::user::{PhoneVerificationRepository, UserRepository};
+use crate::domain::user::PhoneVerification;
 
 /// 短信发送器接口
 #[async_trait]
@@ -90,11 +90,8 @@ impl PhoneVerificationService {
         }
 
         // 6. 创建验证记录
-        let verification = PhoneVerification::new(
-            user_id.clone(),
-            tenant_id.clone(),
-            phone.clone(),
-        );
+        let verification =
+            PhoneVerification::new(user_id.clone(), tenant_id.clone(), phone.clone());
 
         // 7. 保存验证记录
         self.phone_verification_repo.save(&verification).await?;
@@ -179,10 +176,12 @@ impl PhoneVerificationService {
     pub async fn cleanup_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
         debug!(tenant_id = %tenant_id, "Cleaning up expired phone verifications");
 
-        let deleted = self.phone_verification_repo.delete_expired(tenant_id).await?;
+        let deleted = self
+            .phone_verification_repo
+            .delete_expired(tenant_id)
+            .await?;
 
         info!(tenant_id = %tenant_id, deleted = deleted, "Expired phone verifications cleaned up");
         Ok(deleted)
     }
 }
-

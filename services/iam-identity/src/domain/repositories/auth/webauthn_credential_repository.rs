@@ -13,13 +13,25 @@ pub trait WebAuthnCredentialRepository: Send + Sync {
     async fn save(&self, credential: &WebAuthnCredential) -> AppResult<()>;
 
     /// 根据 ID 查找凭证（带租户隔离）
-    async fn find_by_id(&self, id: &WebAuthnCredentialId, tenant_id: &TenantId) -> AppResult<Option<WebAuthnCredential>>;
+    async fn find_by_id(
+        &self,
+        id: &WebAuthnCredentialId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<WebAuthnCredential>>;
 
     /// 根据凭证 ID 查找（带租户隔离）
-    async fn find_by_credential_id(&self, credential_id: &[u8], tenant_id: &TenantId) -> AppResult<Option<WebAuthnCredential>>;
+    async fn find_by_credential_id(
+        &self,
+        credential_id: &[u8],
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<WebAuthnCredential>>;
 
     /// 根据用户 ID 查找所有凭证（带租户隔离）
-    async fn find_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<WebAuthnCredential>>;
+    async fn find_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<WebAuthnCredential>>;
 
     /// 更新凭证（验证 tenant_id 匹配）
     async fn update(&self, credential: &WebAuthnCredential) -> AppResult<()>;

@@ -40,9 +40,5 @@ pub trait EmailVerificationRepository: Send + Sync {
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64>;
 
     /// 统计用户今天发送的验证码数量（防止滥用）
-    async fn count_today_by_user(
-        &self,
-        user_id: &UserId,
-        tenant_id: &TenantId,
-    ) -> AppResult<i64>;
+    async fn count_today_by_user(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64>;
 }

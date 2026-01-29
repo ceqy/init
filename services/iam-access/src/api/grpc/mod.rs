@@ -1,6 +1,7 @@
 //! gRPC 服务模块
 
 mod authorization_service;
+mod conversions;
 mod interceptor;
 mod policy_service;
 pub mod rbac_service;

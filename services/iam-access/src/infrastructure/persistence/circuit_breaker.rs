@@ -81,13 +81,13 @@ impl CircuitBreaker {
         match state.state {
             State::Closed => Ok(()),
             State::Open => {
-                if let Some(last_failure) = state.last_failure_time {
-                    if last_failure.elapsed() >= self.config.reset_timeout {
-                        // 尝试转为 HalfOpen
-                        state.state = State::HalfOpen;
-                        state.success_count = 0;
-                        return Ok(());
-                    }
+                if let Some(last_failure) = state.last_failure_time
+                    && last_failure.elapsed() >= self.config.reset_timeout
+                {
+                    // 尝试转为 HalfOpen
+                    state.state = State::HalfOpen;
+                    state.success_count = 0;
+                    return Ok(());
                 }
                 Err(AppError::external_service("Circuit breaker is open"))
             }

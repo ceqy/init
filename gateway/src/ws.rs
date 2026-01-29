@@ -1,14 +1,17 @@
 use axum::{
-    extract::{ws::{Message, WebSocket, WebSocketUpgrade}, State, Query},
-    response::IntoResponse,
+    extract::{
+        Query, State,
+        ws::{Message, WebSocket, WebSocketUpgrade},
+    },
     http::StatusCode,
+    response::IntoResponse,
 };
+use cuba_auth_core::TokenService;
 use futures::{sink::SinkExt, stream::StreamExt};
+use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{info, warn};
-use serde::Deserialize;
-use cuba_auth_core::TokenService;
 
 /// WebSocket 状态
 #[derive(Clone)]
@@ -32,7 +35,8 @@ pub async fn websocket_handler(
     Query(query): Query<WsQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
     // 验证 token
-    let claims = state.token_service
+    let claims = state
+        .token_service
         .validate_token(&query.token)
         .map_err(|e| {
             warn!("WebSocket authentication failed: {}", e);
@@ -46,7 +50,9 @@ pub async fn websocket_handler(
     );
 
     // Token 验证成功，升级连接
-    Ok(ws.on_upgrade(move |socket| handle_socket(socket, state.notify_tx, claims.sub, claims.tenant_id)))
+    Ok(ws.on_upgrade(move |socket| {
+        handle_socket(socket, state.notify_tx, claims.sub, claims.tenant_id)
+    }))
 }
 
 async fn handle_socket(
@@ -77,8 +83,8 @@ async fn handle_socket(
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
                 Message::Close(_) => break,
-                Message::Ping(_) => {}, // axum/tungstenite handles pong automatically
-                _ => {}, // 忽略客户端发送的其他消息
+                Message::Ping(_) => {} // axum/tungstenite handles pong automatically
+                _ => {}                // 忽略客户端发送的其他消息
             }
         }
     });

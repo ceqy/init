@@ -28,11 +28,7 @@ impl TotpService {
     }
 
     /// 生成 QR 码 URL（otpauth:// 格式）
-    pub fn generate_qr_code_url(
-        &self,
-        username: &str,
-        secret: &str,
-    ) -> AppResult<String> {
+    pub fn generate_qr_code_url(&self, username: &str, secret: &str) -> AppResult<String> {
         // 构建 otpauth:// URL
         let url = format!(
             "otpauth://totp/{}:{}?secret={}&issuer={}&algorithm=SHA1&digits=6&period=30",
@@ -45,12 +41,7 @@ impl TotpService {
     }
 
     /// 验证 TOTP 码
-    pub fn verify_code(
-        &self,
-        _username: &str,
-        secret: &str,
-        code: &str,
-    ) -> AppResult<bool> {
+    pub fn verify_code(&self, _username: &str, secret: &str, code: &str) -> AppResult<bool> {
         let totp = self.create_totp(secret)?;
         Ok(totp.check_current(code).unwrap_or(false))
     }
@@ -71,4 +62,3 @@ impl TotpService {
         .map_err(|e| AppError::internal(format!("Failed to create TOTP: {}", e)))
     }
 }
-

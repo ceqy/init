@@ -39,7 +39,11 @@ impl SessionRepository for PostgresSessionRepository {
         Ok(row.map(|r| r.into_session()))
     }
 
-    async fn find_by_refresh_token_hash(&self, hash: &str, tenant_id: &TenantId) -> AppResult<Option<Session>> {
+    async fn find_by_refresh_token_hash(
+        &self,
+        hash: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<Session>> {
         let row = sqlx::query_as::<_, SessionRow>(
             r#"
             SELECT id, user_id, tenant_id, refresh_token_hash, device_info, ip_address, user_agent,
@@ -57,7 +61,11 @@ impl SessionRepository for PostgresSessionRepository {
         Ok(row.map(|r| r.into_session()))
     }
 
-    async fn find_active_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<Session>> {
+    async fn find_active_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<Session>> {
         let rows = sqlx::query_as::<_, SessionRow>(
             r#"
             SELECT id, user_id, tenant_id, refresh_token_hash, device_info, ip_address, user_agent,
@@ -145,11 +153,12 @@ impl SessionRepository for PostgresSessionRepository {
     }
 
     async fn cleanup_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
-        let result = sqlx::query("DELETE FROM sessions WHERE expires_at < NOW() AND tenant_id = $1")
-            .bind(tenant_id.0)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| AppError::database(format!("Failed to cleanup sessions: {}", e)))?;
+        let result =
+            sqlx::query("DELETE FROM sessions WHERE expires_at < NOW() AND tenant_id = $1")
+                .bind(tenant_id.0)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to cleanup sessions: {}", e)))?;
 
         Ok(result.rows_affected())
     }

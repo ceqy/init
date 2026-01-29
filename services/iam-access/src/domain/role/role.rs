@@ -1,6 +1,5 @@
 //! 角色实体
 
-
 use cuba_common::{AuditInfo, TenantId};
 use cuba_domain_core::{AggregateRoot, Entity};
 use serde::{Deserialize, Serialize};
@@ -103,8 +102,7 @@ impl Role {
     /// 检查是否有某个权限
     pub fn has_permission(&self, resource: &str, action: &str) -> bool {
         self.permissions.iter().any(|p| {
-            (p.resource == resource || p.resource == "*") && 
-            (p.action == action || p.action == "*")
+            (p.resource == resource || p.resource == "*") && (p.action == action || p.action == "*")
         })
     }
 

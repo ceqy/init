@@ -12,9 +12,9 @@
 
 use cuba_common::{TenantId, UserId};
 use iam_identity::domain::repositories::user::UserRepository;
-use iam_identity::infrastructure::persistence::user::PostgresUserRepository;
 use iam_identity::domain::user::{User, UserStatus};
 use iam_identity::domain::value_objects::{Email, HashedPassword, Username};
+use iam_identity::infrastructure::persistence::user::PostgresUserRepository;
 use sqlx::PgPool;
 use std::env;
 
@@ -28,7 +28,12 @@ async fn get_test_pool() -> PgPool {
 }
 
 /// 创建测试用户
-async fn create_test_user(pool: &PgPool, username: &str, email: &str, tenant_id: &TenantId) -> User {
+async fn create_test_user(
+    pool: &PgPool,
+    username: &str,
+    email: &str,
+    tenant_id: &TenantId,
+) -> User {
     // 首先创建租户
     let _ = sqlx::query("INSERT INTO tenants (id, name, display_name) VALUES ($1, $2, $2) ON CONFLICT (id) DO NOTHING")
         .bind(tenant_id.0)
@@ -49,7 +54,7 @@ async fn create_test_user(pool: &PgPool, username: &str, email: &str, tenant_id:
         INSERT INTO users (id, username, email, password_hash, display_name, tenant_id, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (id) DO NOTHING
-        "#
+        "#,
     )
     .bind(user.id.0)
     .bind(user.username.as_str())
@@ -79,7 +84,8 @@ async fn test_sql_injection_single_quote_in_username() {
 
     // 尝试使用单引号注入的用户名进行查询
     let malicious_username = "admin' OR '1'='1";
-    let username = Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
+    let username =
+        Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
 
     let result = repo.find_by_username(&username, &tenant_id).await;
 
@@ -120,8 +126,10 @@ async fn test_sql_injection_union_select() {
     let _ = create_test_user(&pool, "target_user", "target@example.com", &tenant_id).await;
 
     // 尝试 UNION SELECT 注入
-    let malicious_username = "admin' UNION SELECT 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24--";
-    let username = Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
+    let malicious_username =
+        "admin' UNION SELECT 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24--";
+    let username =
+        Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
 
     let result = repo.find_by_username(&username, &tenant_id).await;
 
@@ -156,7 +164,8 @@ async fn test_sql_injection_comment_bypass() {
 
     // 尝试使用注释绕过验证
     let malicious_username = "admin' --";
-    let username = Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
+    let username =
+        Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
 
     let result = repo.find_by_username(&username, &tenant_id).await;
 
@@ -192,14 +201,19 @@ async fn test_sql_injection_time_based_blind() {
 
     // 尝试时间盲注（如果注入成功，查询会延迟）
     let malicious_username = "admin' AND pg_sleep(5)--";
-    let username = Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
+    let username =
+        Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
 
     let _ = repo.find_by_username(&username, &tenant_id).await;
 
     let elapsed = start.elapsed();
 
     // 预期：查询应该在 2 秒内完成（没有 sleep 成功）
-    assert!(elapsed.as_secs() < 2, "Query took too long, possible time-based SQL injection: {:?}", elapsed);
+    assert!(
+        elapsed.as_secs() < 2,
+        "Query took too long, possible time-based SQL injection: {:?}",
+        elapsed
+    );
 }
 
 // ============================================================================
@@ -214,7 +228,8 @@ async fn test_sql_injection_in_email_field() {
 
     // 尝试在 email 字段注入
     let malicious_email = "test@example.com' OR '1'='1";
-    let email = Email::new(malicious_email).unwrap_or_else(|_| Email::new("test@example.com").unwrap());
+    let email =
+        Email::new(malicious_email).unwrap_or_else(|_| Email::new("test@example.com").unwrap());
 
     let result = repo.find_by_email(&email, &tenant_id).await;
 
@@ -247,7 +262,8 @@ async fn test_sql_injection_multi_statement() {
 
     // 尝试多语句注入（删除用户）
     let malicious_username = "admin'; DROP TABLE users; --";
-    let username = Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
+    let username =
+        Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
 
     let _ = repo.find_by_username(&username, &tenant_id).await;
 
@@ -275,7 +291,8 @@ async fn test_sql_injection_cascading() {
 
     // 尝试级联注入（绕过租户隔离）
     let malicious_username = "admin' AND tenant_id = '";
-    let username = Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
+    let username =
+        Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
 
     let result = repo.find_by_username(&username, &tenant_id).await;
 
@@ -308,7 +325,8 @@ async fn test_sql_injection_encoding_bypass() {
 
     // 尝试使用 URL 编码绕过
     let malicious_username = "admin%27%20OR%20%271%27%3D%271";
-    let username = Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
+    let username =
+        Username::new(malicious_username).unwrap_or_else(|_| Username::new("admin").unwrap());
 
     let result = repo.find_by_username(&username, &tenant_id).await;
 
@@ -353,7 +371,7 @@ async fn test_sql_injection_second_order() {
         INSERT INTO users (id, username, email, password_hash, display_name, tenant_id, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (id) DO NOTHING
-        "#
+        "#,
     )
     .bind(user_id.0)
     .bind("second_order")
@@ -373,7 +391,13 @@ async fn test_sql_injection_second_order() {
     match result {
         Ok(Some(found_user)) => {
             // 确保返回的数据是原始存储的数据，没有执行注入
-            assert!(found_user.display_name.as_deref().map(|s| s.contains("'")).unwrap_or(false));
+            assert!(
+                found_user
+                    .display_name
+                    .as_deref()
+                    .map(|s| s.contains("'"))
+                    .unwrap_or(false)
+            );
         }
         Ok(None) => {
             // 可接受的结果（用户可能因为其他原因未找到）
@@ -404,7 +428,7 @@ async fn test_sql_injection_like_wildcards() {
 
     // 直接查询（模拟可能存在的模糊搜索功能）
     let result = sqlx::query_as::<_, (String,)>(
-        "SELECT username FROM users WHERE username LIKE $1 AND tenant_id = $2 LIMIT 10"
+        "SELECT username FROM users WHERE username LIKE $1 AND tenant_id = $2 LIMIT 10",
     )
     .bind(wildcard_username)
     .bind(tenant_id.0)
@@ -421,7 +445,10 @@ async fn test_sql_injection_like_wildcards() {
 
             // 验证所有返回的用户都以 "admin" 开头
             for (username,) in users {
-                assert!(username.starts_with("admin"), "All results should start with 'admin'");
+                assert!(
+                    username.starts_with("admin"),
+                    "All results should start with 'admin'"
+                );
             }
         }
         Err(e) => {

@@ -159,13 +159,12 @@ impl PermissionRepository for PostgresPermissionRepository {
     }
 
     async fn exists_by_code(&self, code: &str) -> AppResult<bool> {
-        let result: (bool,) = sqlx::query_as(
-            "SELECT EXISTS(SELECT 1 FROM permissions WHERE code = $1)",
-        )
-        .bind(code)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(map_sqlx_error)?;
+        let result: (bool,) =
+            sqlx::query_as("SELECT EXISTS(SELECT 1 FROM permissions WHERE code = $1)")
+                .bind(code)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(map_sqlx_error)?;
 
         Ok(result.0)
     }

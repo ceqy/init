@@ -1,0 +1,47 @@
+# Prometheus 配置 - 监控 Envoy 和应用指标
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'cuba-erp'
+    environment: 'development'
+
+# 告警规则文件
+# rule_files:
+#   - 'alerts/*.yml'
+
+scrape_configs:
+  # Envoy Gateway Sidecar 指标
+  - job_name: 'envoy-gateway'
+    static_configs:
+      - targets: ['gateway-envoy:9901']
+        labels:
+          service: 'gateway'
+          sidecar: 'envoy'
+
+  # Envoy IAM Sidecar 指标
+  - job_name: 'envoy-iam'
+    static_configs:
+      - targets: ['iam-access-envoy:9902']
+        labels:
+          service: 'iam-access'
+          sidecar: 'envoy'
+
+  # Consul 指标
+  - job_name: 'consul'
+    static_configs:
+      - targets: ['consul:8500']
+        labels:
+          service: 'consul'
+
+  # 通过 Consul 自动发现服务（高级用法）
+  # - job_name: 'consul-services'
+  #   consul_sd_configs:
+  #     - server: 'consul:8500'
+  #       datacenter: 'dc1'
+  #   relabel_configs:
+  #     - source_labels: [__meta_consul_service]
+  #       target_label: service
+  #     - source_labels: [__meta_consul_tags]
+  #       target_label: tags

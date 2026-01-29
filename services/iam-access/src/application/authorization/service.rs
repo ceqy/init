@@ -267,10 +267,10 @@ where
         tenant_id: &TenantId,
     ) -> AppResult<Vec<crate::domain::policy::Policy>> {
         // 尝试从缓存获取
-        if let Some(cache) = &self.cache {
-            if let Ok(Some(policies)) = cache.get_tenant_policies(tenant_id).await {
-                return Ok(policies);
-            }
+        if let Some(cache) = &self.cache
+            && let Ok(Some(policies)) = cache.get_tenant_policies(tenant_id).await
+        {
+            return Ok(policies);
         }
 
         // 缓存未命中，从数据库加载

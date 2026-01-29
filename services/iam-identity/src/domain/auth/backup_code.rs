@@ -70,4 +70,3 @@ impl Entity for BackupCode {
         &self.id
     }
 }
-

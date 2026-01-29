@@ -1,16 +1,16 @@
 //! 认证路由
 
+use crate::grpc::{self, GrpcClients};
+use crate::middleware::AuthToken;
 use axum::{
+    Router,
     extract::{Json, State},
     http::StatusCode,
     routing::post,
-    Router,
 };
-use crate::middleware::AuthToken;
-use crate::grpc::{self, GrpcClients};
 use serde::{Deserialize, Serialize};
-use tonic::{metadata::MetadataValue, Request};
-use tracing::{error, warn, info, debug};
+use tonic::{Request, metadata::MetadataValue};
+use tracing::{debug, error, info, warn};
 
 pub fn auth_routes() -> Router<GrpcClients> {
     Router::new()
@@ -69,7 +69,10 @@ async fn login(
         "tenant-id",
         MetadataValue::try_from(&req.tenant_id).map_err(|e| {
             error!("Failed to create metadata: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string())
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal error".to_string(),
+            )
         })?,
     );
 
@@ -97,7 +100,7 @@ async fn login(
     })?;
 
     let resp = response.into_inner();
-    
+
     let user_info = resp.user.map(|u| UserInfo {
         id: u.id,
         username: u.username,
@@ -151,7 +154,10 @@ async fn register(
         "tenant-id",
         MetadataValue::try_from(&req.tenant_id).map_err(|e| {
             error!("Failed to create metadata: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string())
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal error".to_string(),
+            )
         })?,
     );
 
@@ -167,7 +173,7 @@ async fn register(
     })?;
 
     let resp = response.into_inner();
-    
+
     let user_info = resp.user.map(|u| UserInfo {
         id: u.id,
         username: u.username,
@@ -317,4 +323,3 @@ pub async fn get_current_user(
         },
     }))
 }
-

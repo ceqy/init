@@ -21,14 +21,20 @@ impl TokenHandler {
         oauth_service: Arc<OAuthService>,
         uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
     ) -> Self {
-        Self { oauth_service, uow_factory }
+        Self {
+            oauth_service,
+            uow_factory,
+        }
     }
 }
 
 #[async_trait]
 impl CommandHandler<TokenCommand> for TokenHandler {
     async fn handle(&self, command: TokenCommand) -> AppResult<(String, String, i64)> {
-        info!("Processing token request: grant_type={}", command.grant_type);
+        info!(
+            "Processing token request: grant_type={}",
+            command.grant_type
+        );
 
         let client_id = OAuthClientId::from_str(&command.client_id)
             .map_err(|e| AppError::validation(format!("Invalid client_id: {}", e)))?;
@@ -47,7 +53,8 @@ impl CommandHandler<TokenCommand> for TokenHandler {
                     .redirect_uri
                     .ok_or_else(|| AppError::validation("redirect_uri is required"))?;
 
-                match self.oauth_service
+                match self
+                    .oauth_service
                     .exchange_code_for_token(
                         uow.as_ref(),
                         &code,
@@ -56,28 +63,31 @@ impl CommandHandler<TokenCommand> for TokenHandler {
                         &redirect_uri,
                         command.code_verifier.as_deref(),
                     )
-                    .await {
-                        Ok(tokens) => tokens,
-                        Err(e) => {
-                            let _ = uow.rollback().await;
-                            return Err(e);
-                        }
+                    .await
+                {
+                    Ok(tokens) => tokens,
+                    Err(e) => {
+                        let _ = uow.rollback().await;
+                        return Err(e);
                     }
+                }
             }
             "refresh_token" => {
                 let refresh_token = command
                     .refresh_token
                     .ok_or_else(|| AppError::validation("refresh_token is required"))?;
 
-                match self.oauth_service
+                match self
+                    .oauth_service
                     .refresh_access_token(uow.as_ref(), &refresh_token, &client_id, &tenant_id)
-                    .await {
-                        Ok(tokens) => tokens,
-                        Err(e) => {
-                            let _ = uow.rollback().await;
-                            return Err(e);
-                        }
+                    .await
+                {
+                    Ok(tokens) => tokens,
+                    Err(e) => {
+                        let _ = uow.rollback().await;
+                        return Err(e);
                     }
+                }
             }
             _ => {
                 let _ = uow.rollback().await;

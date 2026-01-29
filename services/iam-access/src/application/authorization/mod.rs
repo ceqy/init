@@ -3,8 +3,5 @@
 pub mod service;
 
 pub use service::{
-    AuthorizationCheckRequest,
-    AuthorizationCheckResult,
-    AuthorizationService,
-    DecisionSource,
+    AuthorizationCheckRequest, AuthorizationCheckResult, AuthorizationService, DecisionSource,
 };

@@ -1,0 +1,58 @@
+app_name = "iam-access"
+app_env = "production"
+
+[database]
+# 生产环境数据库连接 (主库 - 读写)
+url = "postgres://postgres:postgres@postgres-primary:5432/cuba"
+# 生产环境: 100 个连接，支持高并发场景
+# 根据服务器规格调整: CPU 核心数 * 2 + 有效磁盘数
+# 例如: 16 核 CPU + SSD = 16 * 2 + 1 = 33，可以设置为 50-100
+max_connections = 100
+
+# 可选: 读库配置 (用于读写分离)
+# database_read_url = "postgres://postgres:postgres@postgres-replica:5432/cuba"
+# database_read_max_connections = 150
+
+[redis]
+url = "redis://redis-cluster:6379"
+
+[jwt]
+secret = "${JWT_SECRET}"  # 从环境变量读取
+expires_in = 3600
+refresh_expires_in = 604800
+
+[server]
+host = "0.0.0.0"
+port = 50052
+
+[email]
+smtp_host = "${SMTP_HOST}"
+smtp_port = 587
+username = "${SMTP_USERNAME}"
+password = "${SMTP_PASSWORD}"
+from_email = "noreply@cuba-erp.com"
+from_name = "Cuba ERP"
+use_tls = true
+timeout_secs = 30
+
+[password_reset]
+token_expires_minutes = 15
+max_requests_per_hour = 3
+reset_link_base_url = "https://app.cuba-erp.com/reset-password"
+
+[telemetry]
+log_level = "info"
+otlp_endpoint = "${OTLP_ENDPOINT}"
+
+[webauthn]
+rp_id = "cuba-erp.com"
+rp_origin = "https://app.cuba-erp.com"
+
+# 可选: Kafka 配置 (用于事件发布)
+# [kafka]
+# brokers = "kafka-1:9092,kafka-2:9092,kafka-3:9092"
+
+# 可选: ClickHouse 配置 (用于分析查询)
+# [clickhouse]
+# url = "http://clickhouse:8123"
+# database = "cuba_analytics"

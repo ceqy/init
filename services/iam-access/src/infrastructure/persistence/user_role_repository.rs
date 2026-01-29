@@ -131,15 +131,14 @@ impl UserRoleRepository for PostgresUserRoleRepository {
             .map_err(|_| AppError::validation("Invalid user_id"))?;
         let user_id_obj = cuba_common::UserId::from_uuid(user_uuid);
 
-        if let Some(cache) = &self.auth_cache {
-            if let Ok(Some(roles)) = cache.get_user_roles(tenant_id, &user_id_obj).await {
-                return Ok(roles);
-            }
+        if let Some(cache) = &self.auth_cache
+            && let Ok(Some(roles)) = cache.get_user_roles(tenant_id, &user_id_obj).await
+        {
+            return Ok(roles);
         }
 
         let pool = self.pool.clone();
-        let query = format!(
-            r#"
+        let query = r#"
             SELECT r.id, r.tenant_id, r.code, r.name, r.description, r.is_system, r.is_active,
                    r.created_at, r.created_by, r.updated_at, r.updated_by
             FROM roles r
@@ -147,7 +146,7 @@ impl UserRoleRepository for PostgresUserRoleRepository {
             WHERE ur.user_id = $1 AND ur.tenant_id = $2 AND r.is_active = TRUE
             ORDER BY r.is_system DESC, r.name
             "#
-        );
+        .to_string();
         let user_uuid_copy = user_uuid;
         let tenant_id_copy = tenant_id.clone();
 
@@ -383,13 +382,13 @@ impl PostgresUserRoleRepository {
             std::collections::HashMap::new();
         for row in rows {
             map.entry(row.role_id)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(row.into_permission());
         }
 
         // 确保所有角色都有条目 (即使没有权限)
         for role_id in role_ids {
-            map.entry(*role_id).or_insert_with(Vec::new);
+            map.entry(*role_id).or_default();
         }
 
         Ok(map)

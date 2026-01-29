@@ -1,7 +1,7 @@
-use std::sync::Arc;
+use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
 use async_trait::async_trait;
 use cuba_adapter_email::EmailSender;
-use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
+use std::sync::Arc;
 
 /// 通知监听器
 ///
@@ -17,9 +17,16 @@ impl NotificationListener {
 
     async fn handle_user_created(&self, email: &str, username: &str) {
         let subject = "Welcome to Cuba ERP";
-        let body = format!("Hello {},\n\nWelcome to Cuba ERP! Your account has been created successfully.", username);
-        
-        if let Err(e) = self.email_sender.send_html_email(email, subject, &body, None).await {
+        let body = format!(
+            "Hello {},\n\nWelcome to Cuba ERP! Your account has been created successfully.",
+            username
+        );
+
+        if let Err(e) = self
+            .email_sender
+            .send_html_email(email, subject, &body, None)
+            .await
+        {
             tracing::error!("Failed to send welcome email: {}", e);
         } else {
             tracing::info!("Welcome email sent to {}", email);
@@ -37,7 +44,9 @@ impl NotificationListener {
 impl EventPublisher for NotificationListener {
     async fn publish(&self, event: IamDomainEvent) {
         match event {
-            IamDomainEvent::UserCreated { email, username, .. } => {
+            IamDomainEvent::UserCreated {
+                email, username, ..
+            } => {
                 self.handle_user_created(&email, &username).await;
             }
             IamDomainEvent::TwoFactorEnabled { user_id, .. } => {

@@ -21,7 +21,10 @@ impl AuthorizeHandler {
         oauth_service: Arc<OAuthService>,
         uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
     ) -> Self {
-        Self { oauth_service, uow_factory }
+        Self {
+            oauth_service,
+            uow_factory,
+        }
     }
 }
 
@@ -31,7 +34,9 @@ impl CommandHandler<AuthorizeCommand> for AuthorizeHandler {
         info!("Authorizing client: {}", command.client_id);
 
         if command.response_type != "code" {
-            return Err(AppError::validation("Only 'code' response type is supported"));
+            return Err(AppError::validation(
+                "Only 'code' response type is supported",
+            ));
         }
 
         let client_id = OAuthClientId::from_str(&command.client_id)
@@ -53,7 +58,11 @@ impl CommandHandler<AuthorizeCommand> for AuthorizeHandler {
                 &user_id,
                 &tenant_id,
                 command.redirect_uri,
-                command.scope.split_whitespace().map(|s| s.to_string()).collect(),
+                command
+                    .scope
+                    .split_whitespace()
+                    .map(|s| s.to_string())
+                    .collect(),
                 command.code_challenge,
                 command.code_challenge_method,
             )

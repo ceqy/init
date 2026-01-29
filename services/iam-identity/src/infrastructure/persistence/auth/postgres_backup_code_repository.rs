@@ -101,7 +101,11 @@ impl BackupCodeRepository for PostgresBackupCodeRepository {
         Ok(())
     }
 
-    async fn find_by_id(&self, id: &BackupCodeId, tenant_id: &cuba_common::TenantId) -> AppResult<Option<BackupCode>> {
+    async fn find_by_id(
+        &self,
+        id: &BackupCodeId,
+        tenant_id: &cuba_common::TenantId,
+    ) -> AppResult<Option<BackupCode>> {
         let row = sqlx::query_as::<_, BackupCodeRow>(
             r#"
             SELECT id, user_id, tenant_id, code_hash, used, used_at, created_at
@@ -118,7 +122,11 @@ impl BackupCodeRepository for PostgresBackupCodeRepository {
         Ok(row.map(|r| r.into_backup_code()))
     }
 
-    async fn find_available_by_user_id(&self, user_id: &UserId, tenant_id: &cuba_common::TenantId) -> AppResult<Vec<BackupCode>> {
+    async fn find_available_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &cuba_common::TenantId,
+    ) -> AppResult<Vec<BackupCode>> {
         let rows = sqlx::query_as::<_, BackupCodeRow>(
             r#"
             SELECT id, user_id, tenant_id, code_hash, used, used_at, created_at
@@ -155,7 +163,11 @@ impl BackupCodeRepository for PostgresBackupCodeRepository {
         Ok(())
     }
 
-    async fn delete_by_user_id(&self, user_id: &UserId, tenant_id: &cuba_common::TenantId) -> AppResult<()> {
+    async fn delete_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &cuba_common::TenantId,
+    ) -> AppResult<()> {
         sqlx::query(
             r#"
             DELETE FROM backup_codes
@@ -171,7 +183,11 @@ impl BackupCodeRepository for PostgresBackupCodeRepository {
         Ok(())
     }
 
-    async fn count_available_by_user_id(&self, user_id: &UserId, tenant_id: &cuba_common::TenantId) -> AppResult<i64> {
+    async fn count_available_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &cuba_common::TenantId,
+    ) -> AppResult<i64> {
         let count: (i64,) = sqlx::query_as(
             r#"
             SELECT COUNT(*) FROM backup_codes

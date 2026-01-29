@@ -39,10 +39,10 @@ impl CreateRoleCommand {
         if self.name.len() > 200 {
             return Err("Role name cannot exceed 200 characters".to_string());
         }
-        if let Some(ref desc) = self.description {
-            if desc.len() > 1000 {
-                return Err("Role description cannot exceed 1000 characters".to_string());
-            }
+        if let Some(ref desc) = self.description
+            && desc.len() > 1000
+        {
+            return Err("Role description cannot exceed 1000 characters".to_string());
         }
         Ok(())
     }

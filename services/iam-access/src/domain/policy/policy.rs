@@ -1,6 +1,5 @@
 //! 策略实体
 
-
 use cuba_common::{AuditInfo, TenantId};
 use cuba_domain_core::{AggregateRoot, Entity};
 use serde::{Deserialize, Serialize};
@@ -41,18 +40,13 @@ impl std::str::FromStr for PolicyId {
 }
 
 /// 策略效果
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Effect {
     /// 允许
+    #[default]
     Allow,
     /// 拒绝
     Deny,
-}
-
-impl Default for Effect {
-    fn default() -> Self {
-        Self::Allow
-    }
 }
 
 impl std::fmt::Display for Effect {
@@ -77,7 +71,7 @@ impl std::str::FromStr for Effect {
 }
 
 /// 策略实体
-/// 
+///
 /// 策略用于 ABAC (Attribute-Based Access Control)
 /// 定义了在什么条件下，什么主体可以对什么资源执行什么操作
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -170,7 +164,7 @@ impl Policy {
         // 验证是否为有效 JSON
         serde_json::from_str::<serde_json::Value>(&conditions)
             .map_err(|e| format!("Invalid JSON: {}", e))?;
-        
+
         self.conditions = Some(conditions);
         Ok(())
     }
@@ -202,23 +196,21 @@ impl Policy {
 
     /// 检查主体是否匹配
     pub fn matches_subject(&self, subject: &str) -> bool {
-        self.subjects.iter().any(|s| {
-            s == subject || s == "*" || Self::wildcard_match(s, subject)
-        })
+        self.subjects
+            .iter()
+            .any(|s| s == subject || s == "*" || Self::wildcard_match(s, subject))
     }
 
     /// 检查资源是否匹配
     pub fn matches_resource(&self, resource: &str) -> bool {
-        self.resources.iter().any(|r| {
-            r == resource || r == "*" || Self::wildcard_match(r, resource)
-        })
+        self.resources
+            .iter()
+            .any(|r| r == resource || r == "*" || Self::wildcard_match(r, resource))
     }
 
     /// 检查操作是否匹配
     pub fn matches_action(&self, action: &str) -> bool {
-        self.actions.iter().any(|a| {
-            a == action || a == "*"
-        })
+        self.actions.iter().any(|a| a == action || a == "*")
     }
 
     /// 通配符匹配 (简单实现，支持 * 作为后缀)
@@ -232,10 +224,10 @@ impl Policy {
 
     /// 完整匹配检查
     pub fn matches(&self, subject: &str, resource: &str, action: &str) -> bool {
-        self.is_active &&
-        self.matches_subject(subject) &&
-        self.matches_resource(resource) &&
-        self.matches_action(action)
+        self.is_active
+            && self.matches_subject(subject)
+            && self.matches_resource(resource)
+            && self.matches_action(action)
     }
 }
 

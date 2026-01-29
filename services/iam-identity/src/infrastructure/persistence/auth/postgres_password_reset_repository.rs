@@ -182,11 +182,7 @@ impl PasswordResetRepository for PostgresPasswordResetRepository {
         Ok(())
     }
 
-    async fn mark_as_used(
-        &self,
-        id: &PasswordResetTokenId,
-        tenant_id: &TenantId,
-    ) -> AppResult<()> {
+    async fn mark_as_used(&self, id: &PasswordResetTokenId, tenant_id: &TenantId) -> AppResult<()> {
         debug!(token_id = %id, tenant_id = %tenant_id, "Marking password reset token as used");
 
         let result = sqlx::query!(
@@ -296,4 +292,3 @@ impl PasswordResetRepository for PostgresPasswordResetRepository {
         Ok(row.count.unwrap_or(0))
     }
 }
-

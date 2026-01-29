@@ -135,7 +135,12 @@ impl PolicyRepository for PostgresPolicyRepository {
         Ok(row.map(|r| r.into()))
     }
 
-    async fn list_by_tenant(&self, tenant_id: &TenantId, page: u32, page_size: u32) -> AppResult<(Vec<Policy>, i64)> {
+    async fn list_by_tenant(
+        &self,
+        tenant_id: &TenantId,
+        page: u32,
+        page_size: u32,
+    ) -> AppResult<(Vec<Policy>, i64)> {
         let offset = (page.saturating_sub(1)) * page_size;
 
         let rows = sqlx::query_as::<_, PolicyRow>(
@@ -201,7 +206,11 @@ impl PolicyRepository for PostgresPolicyRepository {
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
 
-    async fn find_by_resource(&self, tenant_id: &TenantId, resource: &str) -> AppResult<Vec<Policy>> {
+    async fn find_by_resource(
+        &self,
+        tenant_id: &TenantId,
+        resource: &str,
+    ) -> AppResult<Vec<Policy>> {
         let rows = sqlx::query_as::<_, PolicyRow>(
             r#"
             SELECT id, tenant_id, name, description, effect, subjects, resources, actions, 

@@ -10,8 +10,8 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::application::commands::user::{VerifyPhoneCommand, VerifyPhoneResult};
-use crate::domain::unit_of_work::UnitOfWorkFactory;
 use crate::domain::services::user::PhoneVerificationService;
+use crate::domain::unit_of_work::UnitOfWorkFactory;
 
 /// 验证手机处理器
 pub struct VerifyPhoneHandler {
@@ -41,15 +41,14 @@ impl CommandHandler<VerifyPhoneCommand> for VerifyPhoneHandler {
         );
 
         // 解析 UUID
-        let user_id = UserId::from_uuid(
-            Uuid::parse_str(&command.user_id)
-                .map_err(|e| cuba_errors::AppError::validation(format!("Invalid user_id: {}", e)))?,
-        );
-        let tenant_id = TenantId::from_uuid(
-            Uuid::parse_str(&command.tenant_id).map_err(|e| {
+        let user_id =
+            UserId::from_uuid(Uuid::parse_str(&command.user_id).map_err(|e| {
+                cuba_errors::AppError::validation(format!("Invalid user_id: {}", e))
+            })?);
+        let tenant_id =
+            TenantId::from_uuid(Uuid::parse_str(&command.tenant_id).map_err(|e| {
                 cuba_errors::AppError::validation(format!("Invalid tenant_id: {}", e))
-            })?,
-        );
+            })?);
 
         // 开始事务
         let uow = self.uow_factory.begin().await?;
@@ -92,4 +91,3 @@ impl CommandHandler<VerifyPhoneCommand> for VerifyPhoneHandler {
         }
     }
 }
-

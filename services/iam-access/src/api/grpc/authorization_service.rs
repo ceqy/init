@@ -2,19 +2,16 @@
 
 use std::sync::Arc;
 
-use tonic::{Request, Response, Status};
 use cuba_common::TenantId;
+use tonic::{Request, Response, Status};
 
 use crate::api::proto::authorization::{
+    BatchCheckRequest, BatchCheckResponse, CheckRequest, CheckResponse,
+    CheckResult as ProtoCheckResult, GetUserGrantedPermissionsRequest,
+    GetUserGrantedPermissionsResponse,
     authorization_service_server::AuthorizationService as GrpcAuthorizationService,
-    CheckRequest, CheckResponse,
-    BatchCheckRequest, BatchCheckResponse,
-    GetUserGrantedPermissionsRequest, GetUserGrantedPermissionsResponse,
-    CheckResult as ProtoCheckResult,
 };
-use crate::application::{
-    AuthorizationService, AuthorizationCheckRequest,
-};
+use crate::application::{AuthorizationCheckRequest, AuthorizationService};
 use crate::domain::policy::PolicyRepository;
 use crate::domain::role::UserRoleRepository;
 
@@ -72,15 +69,17 @@ where
             "Authorization check request received"
         );
 
-        let tenant_id: TenantId = req.tenant_id.parse()
+        let tenant_id: TenantId = req
+            .tenant_id
+            .parse()
             .map_err(|_| Status::invalid_argument("Invalid tenant_id"))?;
 
         let user_id = extract_user_id(&req.subject);
 
         // 将 protobuf Struct 转换为 JSON 字符串
-        let context = req.context.map(|c| {
-            serde_json::to_string(&struct_to_json(c)).unwrap_or_default()
-        });
+        let context = req
+            .context
+            .map(|c| serde_json::to_string(&struct_to_json(c)).unwrap_or_default());
 
         let check_request = AuthorizationCheckRequest {
             user_id,
@@ -90,8 +89,11 @@ where
             context,
         };
 
-        let result = self.auth_service.check(check_request).await
-            .map_err(|e| Status::from(e))?;
+        let result = self
+            .auth_service
+            .check(check_request)
+            .await
+            .map_err(Status::from)?;
 
         tracing::info!(
             allowed = result.allowed,
@@ -114,41 +116,52 @@ where
 
         let req = request.into_inner();
 
-        let tenant_id: TenantId = req.tenant_id.parse()
+        let tenant_id: TenantId = req
+            .tenant_id
+            .parse()
             .map_err(|_| Status::invalid_argument("Invalid tenant_id"))?;
 
         let user_id = extract_user_id(&req.subject);
 
         // 将 protobuf Struct 转换为 JSON 字符串
-        let context = req.context.map(|c| {
-            serde_json::to_string(&struct_to_json(c)).unwrap_or_default()
-        });
+        let context = req
+            .context
+            .map(|c| serde_json::to_string(&struct_to_json(c)).unwrap_or_default());
 
         // 保存 checks 用于后续构建响应
-        let checks_copy: Vec<_> = req.checks.iter()
+        let checks_copy: Vec<_> = req
+            .checks
+            .iter()
             .map(|c| (c.resource.clone(), c.action.clone()))
             .collect();
 
-        let requests: Vec<AuthorizationCheckRequest> = req.checks.into_iter().map(|c| {
-            AuthorizationCheckRequest {
+        let requests: Vec<AuthorizationCheckRequest> = req
+            .checks
+            .into_iter()
+            .map(|c| AuthorizationCheckRequest {
                 user_id: user_id.clone(),
                 tenant_id: tenant_id.clone(),
                 resource: c.resource,
                 action: c.action,
                 context: context.clone(),
-            }
-        }).collect();
+            })
+            .collect();
 
-        let results = self.auth_service.batch_check(requests).await
-            .map_err(|e| Status::from(e))?;
+        let results = self
+            .auth_service
+            .batch_check(requests)
+            .await
+            .map_err(Status::from)?;
 
-        let check_results: Vec<ProtoCheckResult> = checks_copy.iter().zip(results.iter()).map(|((resource, action), r)| {
-            ProtoCheckResult {
+        let check_results: Vec<ProtoCheckResult> = checks_copy
+            .iter()
+            .zip(results.iter())
+            .map(|((resource, action), r)| ProtoCheckResult {
                 resource: resource.clone(),
                 action: action.clone(),
                 allowed: r.allowed,
-            }
-        }).collect();
+            })
+            .collect();
 
         Ok(Response::new(BatchCheckResponse {
             results: check_results,
@@ -161,21 +174,25 @@ where
     ) -> Result<Response<GetUserGrantedPermissionsResponse>, Status> {
         let req = request.into_inner();
 
-        let tenant_id: TenantId = req.tenant_id.parse()
+        let tenant_id: TenantId = req
+            .tenant_id
+            .parse()
             .map_err(|_| Status::invalid_argument("Invalid tenant_id"))?;
 
-        let permissions = self.auth_service
+        let permissions = self
+            .auth_service
             .get_user_granted_permissions(&req.user_id, &tenant_id)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
 
         let permission_codes: Vec<String> = permissions.iter().map(|p| p.code.clone()).collect();
 
         // 获取用户角色代码
-        let roles = self.auth_service
+        let roles = self
+            .auth_service
             .get_user_roles(&req.user_id, &tenant_id)
             .await
-            .map_err(|e| Status::from(e))?;
+            .map_err(Status::from)?;
         let role_codes: Vec<String> = roles.iter().map(|r| r.code.clone()).collect();
 
         Ok(Response::new(GetUserGrantedPermissionsResponse {
@@ -199,7 +216,9 @@ fn value_to_json(v: prost_types::Value) -> serde_json::Value {
     use prost_types::value::Kind;
     match v.kind {
         Some(Kind::NullValue(_)) => serde_json::Value::Null,
-        Some(Kind::NumberValue(n)) => serde_json::Value::Number(serde_json::Number::from_f64(n).unwrap_or(serde_json::Number::from(0))),
+        Some(Kind::NumberValue(n)) => serde_json::Value::Number(
+            serde_json::Number::from_f64(n).unwrap_or(serde_json::Number::from(0)),
+        ),
         Some(Kind::StringValue(s)) => serde_json::Value::String(s),
         Some(Kind::BoolValue(b)) => serde_json::Value::Bool(b),
         Some(Kind::StructValue(s)) => struct_to_json(s),

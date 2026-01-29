@@ -1,6 +1,6 @@
 fn main() {
     let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
-    
+
     // 编译 auth.proto
     tonic_build::configure()
         .build_server(false)

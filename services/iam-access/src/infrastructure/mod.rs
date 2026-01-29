@@ -1,13 +1,10 @@
 //! 基础设施层
 
-pub mod persistence;
-pub mod events;
 pub mod cache;
+pub mod events;
+pub mod persistence;
 
 pub use persistence::{
-    PostgresPermissionRepository,
-    PostgresPolicyRepository,
-    PostgresRoleRepository,
-    PostgresRolePermissionRepository,
-    PostgresUserRoleRepository,
+    PostgresPermissionRepository, PostgresPolicyRepository, PostgresRolePermissionRepository,
+    PostgresRoleRepository, PostgresUserRoleRepository,
 };

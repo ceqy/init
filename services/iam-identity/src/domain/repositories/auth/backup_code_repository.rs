@@ -15,10 +15,18 @@ pub trait BackupCodeRepository: Send + Sync {
     async fn save_batch(&self, backup_codes: &[BackupCode]) -> AppResult<()>;
 
     /// 根据 ID 查找备份码（带租户隔离）
-    async fn find_by_id(&self, id: &BackupCodeId, tenant_id: &TenantId) -> AppResult<Option<BackupCode>>;
+    async fn find_by_id(
+        &self,
+        id: &BackupCodeId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<BackupCode>>;
 
     /// 查找用户的所有可用备份码（带租户隔离）
-    async fn find_available_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<Vec<BackupCode>>;
+    async fn find_available_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<BackupCode>>;
 
     /// 更新备份码（验证 tenant_id 匹配）
     async fn update(&self, backup_code: &BackupCode) -> AppResult<()>;
@@ -27,5 +35,9 @@ pub trait BackupCodeRepository: Send + Sync {
     async fn delete_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<()>;
 
     /// 统计用户的可用备份码数量（带租户隔离）
-    async fn count_available_by_user_id(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64>;
+    async fn count_available_by_user_id(
+        &self,
+        user_id: &UserId,
+        tenant_id: &TenantId,
+    ) -> AppResult<i64>;
 }

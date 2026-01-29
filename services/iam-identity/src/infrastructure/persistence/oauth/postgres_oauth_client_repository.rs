@@ -41,7 +41,7 @@ pub struct OAuthClientRow {
 
 impl From<OAuthClientRow> for OAuthClient {
     fn from(row: OAuthClientRow) -> Self {
-        use crate::domain::oauth::{GrantType, OAuthClientType, OAuthClientId};
+        use crate::domain::oauth::{GrantType, OAuthClientId, OAuthClientType};
 
         let client_type = match row.client_type.as_str() {
             "Confidential" => OAuthClientType::Confidential,
@@ -49,16 +49,20 @@ impl From<OAuthClientRow> for OAuthClient {
             _ => OAuthClientType::Confidential, // Default or Error
         };
 
-        let grant_types = row.grant_types.iter().map(|s| {
-            match s.as_str() {
-                "authorization_code" => GrantType::AuthorizationCode,
-                "client_credentials" => GrantType::ClientCredentials,
-                "refresh_token" => GrantType::RefreshToken,
-                "implicit" => GrantType::Implicit,
-                "password" => GrantType::Password,
-                _ => GrantType::AuthorizationCode, // Fallback
-            }
-        }).collect();
+        let grant_types = row
+            .grant_types
+            .iter()
+            .map(|s| {
+                match s.as_str() {
+                    "authorization_code" => GrantType::AuthorizationCode,
+                    "client_credentials" => GrantType::ClientCredentials,
+                    "refresh_token" => GrantType::RefreshToken,
+                    "implicit" => GrantType::Implicit,
+                    "password" => GrantType::Password,
+                    _ => GrantType::AuthorizationCode, // Fallback
+                }
+            })
+            .collect();
 
         Self {
             id: OAuthClientId::from_uuid(row.id),
@@ -96,7 +100,11 @@ impl PostgresOAuthClientRepository {
 
 #[async_trait]
 impl OAuthClientRepository for PostgresOAuthClientRepository {
-    async fn find_by_id(&self, id: &OAuthClientId, tenant_id: &TenantId) -> AppResult<Option<OAuthClient>> {
+    async fn find_by_id(
+        &self,
+        id: &OAuthClientId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<OAuthClient>> {
         debug!("Finding OAuth client by id: {}", id);
 
         let row = sqlx::query_as::<_, OAuthClientRow>(
@@ -228,7 +236,12 @@ impl OAuthClientRepository for PostgresOAuthClientRepository {
         Ok(result.0)
     }
 
-    async fn list_by_tenant(&self, tenant_id: &TenantId, page: i64, page_size: i64) -> AppResult<Vec<OAuthClient>> {
+    async fn list_by_tenant(
+        &self,
+        tenant_id: &TenantId,
+        page: i64,
+        page_size: i64,
+    ) -> AppResult<Vec<OAuthClient>> {
         let offset = (page - 1) * page_size;
 
         let rows = sqlx::query_as::<_, OAuthClientRow>(
@@ -255,15 +268,13 @@ impl OAuthClientRepository for PostgresOAuthClientRepository {
     }
 
     async fn count_by_tenant(&self, tenant_id: &TenantId) -> AppResult<i64> {
-        let count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM oauth_clients WHERE tenant_id = $1",
-        )
-        .bind(tenant_id.0)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| AppError::database(format!("Failed to count OAuth clients: {}", e)))?;
+        let count: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM oauth_clients WHERE tenant_id = $1")
+                .bind(tenant_id.0)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e| AppError::database(format!("Failed to count OAuth clients: {}", e)))?;
 
         Ok(count.0)
     }
 }
-

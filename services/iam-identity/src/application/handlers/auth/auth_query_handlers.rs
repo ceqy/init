@@ -8,12 +8,13 @@ use cuba_errors::AppResult;
 use tracing::info;
 
 use crate::application::queries::auth::{
-    ListUserSessionsQuery, SessionQueryResult,
-    GetUser2FAStatusQuery, User2FAStatusResult,
-    GetBackupCodeCountQuery, BackupCodeCountResult,
+    BackupCodeCountResult, GetBackupCodeCountQuery, GetUser2FAStatusQuery, ListUserSessionsQuery,
+    SessionQueryResult, User2FAStatusResult,
 };
 use crate::domain::auth::Session;
-use crate::domain::repositories::auth::{SessionRepository, BackupCodeRepository, WebAuthnCredentialRepository};
+use crate::domain::repositories::auth::{
+    BackupCodeRepository, SessionRepository, WebAuthnCredentialRepository,
+};
 
 /// 获取用户会话列表处理器
 pub struct ListUserSessionsHandler {
@@ -38,26 +39,30 @@ impl QueryHandler<ListUserSessionsQuery> for ListUserSessionsHandler {
 
         let user_id = cuba_common::UserId::from_uuid(
             uuid::Uuid::parse_str(&query.user_id)
-                .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?
+                .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?,
         );
 
         // 获取活跃会话
-        let sessions: Vec<Session> = self.session_repository
+        let sessions: Vec<Session> = self
+            .session_repository
             .find_active_by_user_id(&user_id, &query.tenant_id)
             .await?;
 
-        Ok(sessions.into_iter().map(|s| SessionQueryResult {
-            id: s.id.0.to_string(),
-            user_id: s.user_id.0.to_string(),
-            tenant_id: s.tenant_id.0.to_string(),
-            device_info: s.device_info.clone(),
-            ip_address: s.ip_address.clone(),
-            user_agent: s.user_agent.clone(),
-            is_active: !s.is_expired() && !s.revoked,
-            created_at: s.created_at,
-            expires_at: s.expires_at,
-            last_activity_at: Some(s.last_activity_at),
-        }).collect())
+        Ok(sessions
+            .into_iter()
+            .map(|s| SessionQueryResult {
+                id: s.id.0.to_string(),
+                user_id: s.user_id.0.to_string(),
+                tenant_id: s.tenant_id.0.to_string(),
+                device_info: s.device_info.clone(),
+                ip_address: s.ip_address.clone(),
+                user_agent: s.user_agent.clone(),
+                is_active: !s.is_expired() && !s.revoked,
+                created_at: s.created_at,
+                expires_at: s.expires_at,
+                last_activity_at: Some(s.last_activity_at),
+            })
+            .collect())
     }
 }
 
@@ -68,7 +73,9 @@ pub struct GetBackupCodeCountHandler {
 
 impl GetBackupCodeCountHandler {
     pub fn new(backup_code_repository: Arc<dyn BackupCodeRepository>) -> Self {
-        Self { backup_code_repository }
+        Self {
+            backup_code_repository,
+        }
     }
 }
 
@@ -83,10 +90,11 @@ impl QueryHandler<GetBackupCodeCountQuery> for GetBackupCodeCountHandler {
 
         let user_id = cuba_common::UserId::from_uuid(
             uuid::Uuid::parse_str(&query.user_id)
-                .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?
+                .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?,
         );
 
-        let remaining = self.backup_code_repository
+        let remaining = self
+            .backup_code_repository
             .count_available_by_user_id(&user_id, &query.tenant_id)
             .await? as u32;
 
@@ -113,7 +121,7 @@ impl GetUser2FAStatusHandler {
         backup_code_repository: Arc<dyn BackupCodeRepository>,
         webauthn_repository: Arc<dyn WebAuthnCredentialRepository>,
     ) -> Self {
-        Self { 
+        Self {
             backup_code_repository,
             webauthn_repository,
         }
@@ -131,17 +139,19 @@ impl QueryHandler<GetUser2FAStatusQuery> for GetUser2FAStatusHandler {
 
         let user_id = cuba_common::UserId::from_uuid(
             uuid::Uuid::parse_str(&query.user_id)
-                .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?
+                .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?,
         );
 
         // 检查备份码
-        let backup_count = self.backup_code_repository
+        let backup_count = self
+            .backup_code_repository
             .count_available_by_user_id(&user_id, &query.tenant_id)
             .await?;
         let has_backup_codes = backup_count > 0;
 
         // 检查 WebAuthn
-        let webauthn_credentials = self.webauthn_repository
+        let webauthn_credentials = self
+            .webauthn_repository
             .find_by_user_id(&user_id, &query.tenant_id)
             .await?;
         let webauthn_enabled = !webauthn_credentials.is_empty();

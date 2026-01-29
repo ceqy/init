@@ -44,7 +44,9 @@ impl TenantContext {
 
     /// 检查 OAuth scope 是否允许
     pub fn is_oauth_scope_allowed(&self, scope: &str) -> bool {
-        self.settings.allowed_oauth_scopes.contains(&scope.to_string())
+        self.settings
+            .allowed_oauth_scopes
+            .contains(&scope.to_string())
     }
 }
 
@@ -170,4 +172,3 @@ pub enum PasswordPolicyError {
     #[error("Password must contain at least one special character")]
     MissingSpecialChar,
 }
-

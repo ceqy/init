@@ -12,15 +12,14 @@
 
 use reqwest::Client;
 use std::env;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
 /// 获取网关 URL
 fn gateway_url() -> String {
-    env::var("GATEWAY_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:8080".to_string())
+    env::var("GATEWAY_URL").unwrap_or_else(|_| "http://127.0.0.1:8080".to_string())
 }
 
 /// 获取测试客户端
@@ -66,11 +65,7 @@ async fn test_ddos_high_concurrent_login() {
                 });
 
                 let start = Instant::now();
-                let result = client
-                    .post(&url)
-                    .json(&payload)
-                    .send()
-                    .await;
+                let result = client.post(&url).json(&payload).send().await;
 
                 let elapsed = start.elapsed();
 
@@ -111,7 +106,10 @@ async fn test_ddos_high_concurrent_login() {
     println!("失败: {}", failure);
     println!("超时: {}", timeout);
     println!("总耗时: {:?}", total_elapsed);
-    println!("平均响应时间: {:?}", total_elapsed / concurrent_requests as u32);
+    println!(
+        "平均响应时间: {:?}",
+        total_elapsed / concurrent_requests as u32
+    );
 
     // 风险评估：
     // - 如果没有速率限制，系统可能被 DDOS 攻击压垮
@@ -139,8 +137,16 @@ async fn test_ddos_brute_force_password() {
 
     // 尝试多个密码
     let passwords = vec![
-        "password", "123456", "admin", "password123", "qwerty",
-        "letmein", "welcome", "monkey", "sunshine", "password1",
+        "password",
+        "123456",
+        "admin",
+        "password123",
+        "qwerty",
+        "letmein",
+        "welcome",
+        "monkey",
+        "sunshine",
+        "password1",
     ];
 
     let mut blocked_after = 0;
@@ -153,11 +159,7 @@ async fn test_ddos_brute_force_password() {
         });
 
         let start = Instant::now();
-        let response = client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await;
+        let response = client.post(&url).json(&payload).send().await;
 
         let elapsed = start.elapsed();
 
@@ -241,11 +243,7 @@ async fn test_ddos_distributed_brute_force() {
                         "tenant_id": "00000000-0000-0000-0000-000000000001"
                     });
 
-                    let response = client
-                        .post(&url)
-                        .json(&payload)
-                        .send()
-                        .await;
+                    let response = client.post(&url).json(&payload).send().await;
 
                     if let Ok(resp) = response {
                         if resp.status().is_success() {
@@ -318,11 +316,7 @@ async fn test_ddos_large_payload_attack() {
         });
 
         let start = Instant::now();
-        let response = client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await;
+        let response = client.post(&url).json(&payload).send().await;
 
         let elapsed = start.elapsed();
 
@@ -382,22 +376,13 @@ async fn test_ddos_slowloris_attack() {
                 });
 
                 let start = Instant::now();
-                let response = client
-                    .post(&url)
-                    .json(&payload)
-                    .send()
-                    .await;
+                let response = client.post(&url).json(&payload).send().await;
 
                 let elapsed = start.elapsed();
 
                 match response {
                     Ok(resp) => {
-                        println!(
-                            "连接 {}: 状态码={}, 耗时={:?}",
-                            i,
-                            resp.status(),
-                            elapsed
-                        );
+                        println!("连接 {}: 状态码={}, 耗时={:?}", i, resp.status(), elapsed);
                         elapsed.as_millis()
                     }
                     Err(e) => {
@@ -557,11 +542,7 @@ async fn test_ddos_account_lockout_bypass() {
             "tenant_id": tenant_id
         });
 
-        let response = client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await;
+        let response = client.post(&url).json(&payload).send().await;
 
         if let Ok(resp) = response {
             println!("尝试 {}: 状态码={}", i + 1, resp.status());
@@ -591,11 +572,7 @@ async fn test_ddos_account_lockout_bypass() {
             "tenant_id": tenant_id
         });
 
-        let response = client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await;
+        let response = client.post(&url).json(&payload).send().await;
 
         match response {
             Ok(resp) => {
@@ -646,12 +623,8 @@ async fn test_ddos_connection_pool_exhaustion() {
                 let elapsed = request_start.elapsed();
 
                 match response {
-                    Ok(resp) => {
-                        (resp.status().as_u16(), elapsed.as_millis())
-                    }
-                    Err(_) => {
-                        (0, elapsed.as_millis())
-                    }
+                    Ok(resp) => (resp.status().as_u16(), elapsed.as_millis()),
+                    Err(_) => (0, elapsed.as_millis()),
                 }
             })
         })
@@ -669,7 +642,8 @@ async fn test_ddos_connection_pool_exhaustion() {
     let failures = results.len() - success;
 
     if !results.is_empty() {
-        let avg_response_time: u128 = results.iter().map(|(_, t)| t).sum::<u128>() / results.len() as u128;
+        let avg_response_time: u128 =
+            results.iter().map(|(_, t)| t).sum::<u128>() / results.len() as u128;
 
         println!("=== 连接池耗尽测试结果 ===");
         println!("并发连接数: {}", num_connections);
@@ -714,11 +688,7 @@ async fn test_ddos_registration_flood() {
             "tenant_id": "00000000-0000-0000-0000-000000000001"
         });
 
-        let response = client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await;
+        let response = client.post(&url).json(&payload).send().await;
 
         match response {
             Ok(resp) => {

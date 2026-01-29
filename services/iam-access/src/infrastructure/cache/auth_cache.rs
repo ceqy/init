@@ -5,21 +5,48 @@ use cuba_ports::CachePort;
 use std::sync::Arc;
 use std::time::Duration;
 
+/// 认证缓存配置
+#[derive(Clone)]
+pub struct AuthCacheConfig {
+    /// 用户角色缓存 TTL（秒）
+    pub user_roles_ttl_secs: u64,
+    /// 角色缓存 TTL（秒）
+    pub role_ttl_secs: u64,
+    /// 策略缓存 TTL（秒）
+    pub policy_ttl_secs: u64,
+}
+
+impl Default for AuthCacheConfig {
+    fn default() -> Self {
+        Self {
+            user_roles_ttl_secs: 300, // 5 分钟
+            role_ttl_secs: 600,       // 10 分钟
+            policy_ttl_secs: 600,     // 10 分钟
+        }
+    }
+}
+
 pub struct AuthCache {
     cache: Arc<dyn CachePort>,
-    ttl: Duration,
+    config: AuthCacheConfig,
 }
 
 impl AuthCache {
     pub fn new(cache: Arc<dyn CachePort>) -> Self {
         Self {
             cache,
-            ttl: Duration::from_secs(300), // 5 minutes default
+            config: AuthCacheConfig::default(),
         }
     }
 
+    pub fn with_config(mut self, config: AuthCacheConfig) -> Self {
+        self.config = config;
+        self
+    }
+
+    /// 兼容旧的 API
     pub fn with_ttl(mut self, ttl: Duration) -> Self {
-        self.ttl = ttl;
+        self.config.user_roles_ttl_secs = ttl.as_secs();
         self
     }
 
@@ -60,7 +87,8 @@ impl AuthCache {
             cuba_errors::AppError::internal(format!("Failed to serialize roles for cache: {}", e))
         })?;
 
-        self.cache.set(&key, &json, Some(self.ttl)).await
+        let ttl = Duration::from_secs(self.config.user_roles_ttl_secs);
+        self.cache.set(&key, &json, Some(ttl)).await
     }
 
     pub async fn invalidate_user_roles(
@@ -106,9 +134,10 @@ impl AuthCache {
             cuba_errors::AppError::internal(format!("Failed to serialize role: {}", e))
         })?;
 
+        let ttl = Duration::from_secs(self.config.role_ttl_secs);
         // 存储两个键
-        self.cache.set(&key_id, &json, Some(self.ttl)).await?;
-        self.cache.set(&key_code, &json, Some(self.ttl)).await
+        self.cache.set(&key_id, &json, Some(ttl)).await?;
+        self.cache.set(&key_code, &json, Some(ttl)).await
     }
 
     /// 获取角色 (按 code)
@@ -168,7 +197,7 @@ impl AuthCache {
         }
     }
 
-    /// 设置租户策略缓存 (TTL: 10分钟)
+    /// 设置租户策略缓存
     pub async fn set_tenant_policies(
         &self,
         tenant_id: &TenantId,
@@ -182,10 +211,8 @@ impl AuthCache {
             ))
         })?;
 
-        // 策略缓存使用较长的 TTL (10分钟)
-        self.cache
-            .set(&key, &json, Some(Duration::from_secs(600)))
-            .await
+        let ttl = Duration::from_secs(self.config.policy_ttl_secs);
+        self.cache.set(&key, &json, Some(ttl)).await
     }
 
     /// 失效租户策略缓存

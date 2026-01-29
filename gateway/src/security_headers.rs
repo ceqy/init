@@ -1,10 +1,6 @@
 //! 安全响应头中间件
 
-use axum::{
-    extract::Request,
-    middleware::Next,
-    response::Response,
-};
+use axum::{extract::Request, middleware::Next, response::Response};
 
 /// 添加安全响应头的中间件
 ///
@@ -16,10 +12,7 @@ use axum::{
 /// - Content-Security-Policy: 内容安全策略
 /// - Referrer-Policy: 控制 Referer 头信息
 /// - Permissions-Policy: 控制浏览器功能权限
-pub async fn security_headers_middleware(
-    request: Request,
-    next: Next,
-) -> Response {
+pub async fn security_headers_middleware(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
 
@@ -30,22 +23,13 @@ pub async fn security_headers_middleware(
     );
 
     // X-Frame-Options: 防止页面被嵌入到 iframe 中
-    headers.insert(
-        "X-Frame-Options",
-        "DENY".parse().unwrap(),
-    );
+    headers.insert("X-Frame-Options", "DENY".parse().unwrap());
 
     // X-Content-Type-Options: 防止浏览器进行 MIME 类型嗅探
-    headers.insert(
-        "X-Content-Type-Options",
-        "nosniff".parse().unwrap(),
-    );
+    headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
 
     // X-XSS-Protection: 启用浏览器的 XSS 过滤器
-    headers.insert(
-        "X-XSS-Protection",
-        "1; mode=block".parse().unwrap(),
-    );
+    headers.insert("X-XSS-Protection", "1; mode=block".parse().unwrap());
 
     // Content-Security-Policy: 内容安全策略
     // 这是一个相对宽松的策略，生产环境应该根据实际需求调整
@@ -73,11 +57,11 @@ pub async fn security_headers_middleware(
 mod tests {
     use super::*;
     use axum::{
+        Router,
         body::Body,
         http::{Request, StatusCode},
-        routing::get,
-        Router,
         middleware,
+        routing::get,
     };
     use tower::ServiceExt;
 
@@ -91,10 +75,7 @@ mod tests {
             .route("/", get(handler))
             .layer(middleware::from_fn(security_headers_middleware));
 
-        let req = Request::builder()
-            .uri("/")
-            .body(Body::empty())
-            .unwrap();
+        let req = Request::builder().uri("/").body(Body::empty()).unwrap();
 
         let response = app.oneshot(req).await.unwrap();
 
@@ -112,13 +93,7 @@ mod tests {
         assert!(headers.contains_key("Permissions-Policy"));
 
         // 验证具体值
-        assert_eq!(
-            headers.get("X-Frame-Options").unwrap(),
-            "DENY"
-        );
-        assert_eq!(
-            headers.get("X-Content-Type-Options").unwrap(),
-            "nosniff"
-        );
+        assert_eq!(headers.get("X-Frame-Options").unwrap(), "DENY");
+        assert_eq!(headers.get("X-Content-Type-Options").unwrap(), "nosniff");
     }
 }

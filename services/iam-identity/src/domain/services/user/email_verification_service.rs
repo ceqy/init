@@ -7,8 +7,8 @@ use cuba_common::{TenantId, UserId};
 use cuba_errors::{AppError, AppResult};
 use tracing::{debug, info, warn};
 
-use crate::domain::user::EmailVerification;
 use crate::domain::repositories::user::{EmailVerificationRepository, UserRepository};
+use crate::domain::user::EmailVerification;
 
 /// 邮箱验证服务
 pub struct EmailVerificationService {
@@ -77,11 +77,8 @@ impl EmailVerificationService {
         }
 
         // 5. 创建验证记录
-        let verification = EmailVerification::new(
-            user_id.clone(),
-            tenant_id.clone(),
-            user.email.to_string(),
-        );
+        let verification =
+            EmailVerification::new(user_id.clone(), tenant_id.clone(), user.email.to_string());
 
         // 6. 保存验证记录
         self.email_verification_repo.save(&verification).await?;
@@ -90,9 +87,7 @@ impl EmailVerificationService {
         let subject = "邮箱验证码";
         let body = format!(
             "您好，{}！\n\n您的邮箱验证码是：{}\n\n验证码将在 {} 分钟后失效。\n\n如果您没有请求验证，请忽略此邮件。",
-            user.username,
-            verification.code,
-            10
+            user.username, verification.code, 10
         );
 
         self.email_sender
@@ -174,10 +169,12 @@ impl EmailVerificationService {
     pub async fn cleanup_expired(&self, tenant_id: &TenantId) -> AppResult<u64> {
         debug!(tenant_id = %tenant_id, "Cleaning up expired email verifications");
 
-        let deleted = self.email_verification_repo.delete_expired(tenant_id).await?;
+        let deleted = self
+            .email_verification_repo
+            .delete_expired(tenant_id)
+            .await?;
 
         info!(tenant_id = %tenant_id, deleted = deleted, "Expired email verifications cleaned up");
         Ok(deleted)
     }
 }
-
