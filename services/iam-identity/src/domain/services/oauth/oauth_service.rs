@@ -267,7 +267,7 @@ impl OAuthService {
         let access_token_repo = uow.access_tokens();
         let access_token = access_token_repo.find_by_token(token, tenant_id).await?;
 
-        if let Some(token) = &access_token {
+        if let Some(token) = access_token.as_ref() {
             if token.revoked || token.is_expired() {
                 return Ok(None);
             }

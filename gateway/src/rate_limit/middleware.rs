@@ -134,10 +134,11 @@ impl RateLimitMiddleware {
         }
 
         // Retry-After: 建议重试等待时间（仅在拒绝时）
-        if let Some(retry_after) = result.retry_after {
-            if let Ok(val) = HeaderValue::from_str(&retry_after.to_string()) {
-                headers.insert("Retry-After", val);
-            }
+        if let Some(val) = result
+            .retry_after
+            .and_then(|ra| HeaderValue::from_str(&ra.to_string()).ok())
+        {
+            headers.insert("Retry-After", val);
         }
     }
 }

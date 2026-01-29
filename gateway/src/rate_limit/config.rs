@@ -82,8 +82,7 @@ impl ConfigManager {
 
         // 缓存过期，重新加载
         debug!("Config cache expired, reloading from Redis");
-        let new_config = self.reload_config().await;
-        new_config
+        self.reload_config().await
     }
 
     /// 强制重新加载配置

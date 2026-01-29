@@ -114,8 +114,7 @@ impl RateLimiter {
         let key = format!("{}:{}:{}", key_prefix, identifier, window_start);
 
         // 执行 Lua 脚本
-        let result = self
-            .execute_script(&key, window_start, rule)
+        self.execute_script(&key, window_start, rule)
             .await
             .unwrap_or_else(|e| {
                 warn!(error = %e, key = %key, "Rate limit script failed, allowing request (fail-open)");
@@ -128,9 +127,7 @@ impl RateLimiter {
                     reset_at,
                     retry_after: None,
                 }
-            });
-
-        result
+            })
     }
 
     /// 执行 Lua 脚本
