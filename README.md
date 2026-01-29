@@ -74,6 +74,18 @@ just dev
 - **CQRS**: 命令查询职责分离
 - **事件溯源**: 通过事件记录状态变更
 
+详细架构说明请查看 [架构文档](docs/architecture/README.md)。
+
+## 文档
+
+完整文档请访问 [文档中心](docs/README.md)：
+
+- [开发指南](docs/guides/development.md) - 开发规范和流程
+- [架构文档](docs/architecture/README.md) - 系统架构设计
+- [API 文档](docs/api/README.md) - API 接口说明
+- [安全指南](docs/guides/security.md) - 安全最佳实践
+- [多租户指南](docs/guides/multi-tenancy.md) - 多租户架构
+
 ## 许可证
 
 Apache License 2.0
