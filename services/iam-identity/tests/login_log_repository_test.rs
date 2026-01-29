@@ -123,7 +123,7 @@ async fn test_find_by_user_id() {
 
     create_dummy_user(&pool, &user_id, &tenant_id, "user_multi").await;
 
-    for i in 0..5 {
+    for _ in 0..5 {
         let log = LoginLog::success(
             user_id.clone(),
             tenant_id.clone(),

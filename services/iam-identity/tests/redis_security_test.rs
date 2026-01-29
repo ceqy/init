@@ -515,7 +515,7 @@ async fn test_redis_key_expiration_policies() {
 
 #[tokio::test]
 async fn test_redis_access_control() {
-    let mut conn = get_redis_client().await;
+    let _conn = get_redis_client().await;
 
     // 测试是否可以执行危险命令
     let _dangerous_commands: Vec<&str> = vec![

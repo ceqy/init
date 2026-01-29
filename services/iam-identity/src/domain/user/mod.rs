@@ -1,5 +1,7 @@
 //! 用户领域实体
 
+#![allow(clippy::module_inception)]
+
 pub mod email_verification;
 pub mod phone_verification;
 pub mod tenant;

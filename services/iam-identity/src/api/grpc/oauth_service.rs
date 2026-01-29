@@ -49,6 +49,7 @@ impl OAuthServiceImpl {
         }
     }
 
+    #[allow(clippy::result_large_err)]
     fn extract_tenant_id(request: &Request<impl std::fmt::Debug>) -> Result<String, Status> {
         request
             .metadata()

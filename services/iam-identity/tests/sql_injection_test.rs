@@ -12,7 +12,7 @@
 
 use cuba_common::{TenantId, UserId};
 use iam_identity::domain::repositories::user::UserRepository;
-use iam_identity::domain::user::{User, UserStatus};
+use iam_identity::domain::user::User;
 use iam_identity::domain::value_objects::{Email, HashedPassword, Username};
 use iam_identity::infrastructure::persistence::user::PostgresUserRepository;
 use sqlx::PgPool;

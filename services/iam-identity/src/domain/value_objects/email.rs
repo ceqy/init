@@ -23,10 +23,8 @@ impl Email {
         }
 
         // 额外验证：域名至少要有一个点（例如 example.com）
-        if let Some(domain) = email.split('@').nth(1) {
-            if !domain.contains('.') {
-                return Err(EmailError::InvalidFormat(email));
-            }
+        if email.split('@').nth(1).is_some_and(|d| !d.contains('.')) {
+            return Err(EmailError::InvalidFormat(email));
         }
 
         Ok(Self(email.to_lowercase()))

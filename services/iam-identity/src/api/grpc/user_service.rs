@@ -42,6 +42,7 @@ pub struct UserServiceImpl {
 }
 
 impl UserServiceImpl {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         user_repo: Arc<dyn UserRepository>,
         token_service: Arc<TokenService>,
@@ -109,6 +110,7 @@ impl UserServiceImpl {
     }
 
     /// 从请求 metadata 中验证 token 并获取 claims
+    #[allow(clippy::result_large_err)]
     fn validate_request_token<T>(&self, request: &Request<T>) -> Result<Claims, Status> {
         let token = request
             .metadata()

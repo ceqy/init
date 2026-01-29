@@ -8,9 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::domain::value_objects::{PasswordPolicy, TenantSettings};
 
 /// 租户状态
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum TenantStatus {
     /// 试用中
+    #[default]
     Trial,
     /// 激活
     Active,
@@ -18,12 +19,6 @@ pub enum TenantStatus {
     Suspended,
     /// 已取消
     Cancelled,
-}
-
-impl Default for TenantStatus {
-    fn default() -> Self {
-        Self::Trial
-    }
 }
 
 /// 租户聚合根

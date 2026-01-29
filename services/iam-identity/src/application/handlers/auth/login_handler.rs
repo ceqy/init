@@ -59,6 +59,7 @@ impl LoginHandler {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn log_login(
         &self,
         uow: &dyn UnitOfWork,

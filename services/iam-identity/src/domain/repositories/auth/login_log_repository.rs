@@ -77,6 +77,7 @@ pub trait LoginLogRepository: Send + Sync {
     ) -> AppResult<Vec<LoginLog>>;
 
     /// 分页查询登录日志
+    #[allow(clippy::too_many_arguments)]
     async fn list(
         &self,
         tenant_id: &TenantId,

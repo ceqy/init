@@ -8,18 +8,13 @@ use serde::{Deserialize, Serialize};
 use crate::domain::value_objects::{Email, HashedPassword, Username};
 
 /// 用户状态
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum UserStatus {
     Active,
     Inactive,
     Locked,
+    #[default]
     PendingVerification,
-}
-
-impl Default for UserStatus {
-    fn default() -> Self {
-        Self::PendingVerification
-    }
 }
 
 impl std::fmt::Display for UserStatus {

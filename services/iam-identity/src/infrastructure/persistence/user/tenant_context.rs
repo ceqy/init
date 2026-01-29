@@ -30,10 +30,10 @@ where
         .map_err(|e| cuba_errors::AppError::database(e.to_string()))?;
 
     // 设置租户上下文
-    set_tenant_context(&mut *tx, tenant_id).await?;
+    set_tenant_context(&mut tx, tenant_id).await?;
 
     // 执行操作
-    let result = f(&mut *tx).await?;
+    let result = f(&mut tx).await?;
 
     tx.commit()
         .await

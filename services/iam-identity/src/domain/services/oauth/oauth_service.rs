@@ -11,11 +11,18 @@ pub struct OAuthService {
     // 仓库现在通过 UnitOfWork 传递，这里可以保持为空，或者仅保留非仓库的依赖
 }
 
+impl Default for OAuthService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OAuthService {
     pub fn new() -> Self {
         Self {}
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_authorization_code(
         &self,
         uow: &dyn crate::domain::unit_of_work::UnitOfWork,
@@ -287,7 +294,7 @@ impl OAuthService {
                 let mut hasher = Sha256::new();
                 hasher.update(verifier.as_bytes());
                 let result = hasher.finalize();
-                let computed = general_purpose::URL_SAFE_NO_PAD.encode(&result);
+                let computed = general_purpose::URL_SAFE_NO_PAD.encode(result);
                 computed == challenge
             }
             Some("plain") | None => verifier == challenge,

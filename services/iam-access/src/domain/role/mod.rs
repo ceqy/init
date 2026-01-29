@@ -1,5 +1,7 @@
 //! RBAC 角色权限领域模块
 
+#![allow(clippy::module_inception)]
+
 pub mod events;
 pub mod permission;
 pub mod repository;

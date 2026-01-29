@@ -79,6 +79,7 @@ impl AuthServiceImpl {
     }
 
     /// 从请求 metadata 中验证 token 并获取 claims
+    #[allow(clippy::result_large_err)]
     fn validate_request_token<T>(&self, request: &Request<T>) -> Result<Claims, Status> {
         let token = request
             .metadata()
@@ -93,6 +94,7 @@ impl AuthServiceImpl {
     }
 
     /// 从请求 metadata 中提取 tenant_id
+    #[allow(clippy::result_large_err)]
     fn extract_tenant_id<T>(request: &Request<T>) -> Result<TenantId, Status> {
         let tenant_id_str = request
             .metadata()

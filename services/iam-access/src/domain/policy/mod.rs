@@ -1,5 +1,7 @@
 //! Policy 策略领域模块
 
+#![allow(clippy::module_inception)]
+
 pub mod evaluator;
 pub mod events;
 pub mod policy;

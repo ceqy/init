@@ -86,7 +86,7 @@ impl UserRepository for TxUserRepository {
         .map_err(|e| AppError::database(format!("Failed to find user: {}", e)))?;
 
         match row {
-            Some(r) => Ok(Some(r.into_user().map_err(|e| AppError::database(e))?)),
+            Some(r) => Ok(Some(r.into_user().map_err(AppError::database)?)),
             None => Ok(None),
         }
     }
@@ -164,7 +164,7 @@ impl UserRepository for TxUserRepository {
         .map_err(|e| AppError::database(format!("Failed to find user by username: {}", e)))?;
 
         match row {
-            Some(r) => Ok(Some(r.into_user().map_err(|e| AppError::database(e))?)),
+            Some(r) => Ok(Some(r.into_user().map_err(AppError::database)?)),
             None => Ok(None),
         }
     }
@@ -200,7 +200,7 @@ impl UserRepository for TxUserRepository {
         .map_err(|e| AppError::database(format!("Failed to find user by email: {}", e)))?;
 
         match row {
-            Some(r) => Ok(Some(r.into_user().map_err(|e| AppError::database(e))?)),
+            Some(r) => Ok(Some(r.into_user().map_err(AppError::database)?)),
             None => Ok(None),
         }
     }
@@ -430,7 +430,7 @@ impl UserRepository for TxUserRepository {
             .into_iter()
             .map(|r| r.into_user())
             .collect::<Result<Vec<_>, String>>()
-            .map_err(|e| AppError::database(e))?;
+            .map_err(AppError::database)?;
 
         // Execute Count Query
         let count: (i64,) = count_builder

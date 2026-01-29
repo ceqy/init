@@ -38,10 +38,12 @@ impl Username {
         }
 
         // 必须以字母或数字开头
-        if let Some(first_char) = username.chars().next() {
-            if !first_char.is_alphanumeric() {
-                return Err(UsernameError::InvalidStart);
-            }
+        if username
+            .chars()
+            .next()
+            .is_some_and(|c| !c.is_alphanumeric())
+        {
+            return Err(UsernameError::InvalidStart);
         }
 
         Ok(())

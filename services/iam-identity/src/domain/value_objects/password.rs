@@ -292,14 +292,17 @@ impl Password {
             }
 
             // 检查连续递增/递减
-            if let (Some(a), Some(b), Some(c)) = (
+            if match (
                 window[0].to_digit(36),
                 window[1].to_digit(36),
                 window[2].to_digit(36),
             ) {
-                if (b == a + 1 && c == b + 1) || (b + 1 == a && c + 1 == b) {
-                    return true;
+                (Some(a), Some(b), Some(c)) => {
+                    (b == a + 1 && c == b + 1) || (b + 1 == a && c + 1 == b)
                 }
+                _ => false,
+            } {
+                return true;
             }
         }
 

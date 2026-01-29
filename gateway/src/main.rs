@@ -339,17 +339,6 @@ mod tests {
             .layer(cors)
     }
 
-    fn create_test_config() -> config::GatewayConfig {
-        config::GatewayConfig {
-            host: "127.0.0.1".to_string(),
-            port: 8080,
-            jwt_secret: "test_secret_at_least_32_characters_long".to_string(),
-            iam_endpoint: "http://127.0.0.1:50051".to_string(),
-            redis_url: "redis://localhost:6379".to_string(),
-            cors_allowed_origins: vec!["http://localhost:3000".to_string()],
-        }
-    }
-
     #[tokio::test]
     async fn test_health_check_public() {
         // Use app without rate limiting for basic tests

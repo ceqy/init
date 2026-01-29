@@ -50,6 +50,7 @@ pub struct WebAuthnCredential {
 
 impl WebAuthnCredential {
     /// 创建新凭证
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         user_id: Uuid,
         credential_id: Vec<u8>,

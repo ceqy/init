@@ -43,7 +43,7 @@ impl UserRepository for PostgresUserRepository {
         .map_err(|e| AppError::database(format!("Failed to find user: {}", e)))?;
 
         match row {
-            Some(r) => Ok(Some(r.into_user().map_err(|e| AppError::database(e))?)),
+            Some(r) => Ok(Some(r.into_user().map_err(AppError::database)?)),
             None => Ok(None),
         }
     }
@@ -73,7 +73,7 @@ impl UserRepository for PostgresUserRepository {
         .map_err(|e| AppError::database(format!("Failed to find user: {}", e)))?;
 
         match row {
-            Some(r) => Ok(Some(r.into_user().map_err(|e| AppError::database(e))?)),
+            Some(r) => Ok(Some(r.into_user().map_err(AppError::database)?)),
             None => Ok(None),
         }
     }
@@ -99,7 +99,7 @@ impl UserRepository for PostgresUserRepository {
         .map_err(|e| AppError::database(format!("Failed to find user: {}", e)))?;
 
         match row {
-            Some(r) => Ok(Some(r.into_user().map_err(|e| AppError::database(e))?)),
+            Some(r) => Ok(Some(r.into_user().map_err(AppError::database)?)),
             None => Ok(None),
         }
     }
@@ -280,7 +280,7 @@ impl UserRepository for PostgresUserRepository {
         .map_err(|e| AppError::database(format!("Failed to list users: {}", e)))?;
 
         let users: Result<Vec<_>, _> = rows.into_iter().map(|r| r.into_user()).collect();
-        let users = users.map_err(|e| AppError::database(e))?;
+        let users = users.map_err(AppError::database)?;
 
         Ok((users, total.0))
     }

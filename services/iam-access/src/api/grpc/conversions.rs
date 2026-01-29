@@ -14,6 +14,7 @@ pub fn datetime_to_timestamp(dt: DateTime<Utc>) -> Timestamp {
 }
 
 /// 将可选的字符串转换为默认值
+#[allow(dead_code)]
 pub fn option_string_to_default(opt: Option<String>) -> String {
     opt.unwrap_or_default()
 }

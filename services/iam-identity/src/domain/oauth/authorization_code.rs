@@ -35,6 +35,7 @@ pub struct AuthorizationCode {
 
 impl AuthorizationCode {
     /// 创建新的授权码
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         code: String,
         client_id: OAuthClientId,
@@ -84,7 +85,7 @@ impl AuthorizationCode {
                         use base64::Engine;
                         use sha2::{Digest, Sha256};
                         let hash = Sha256::digest(code_verifier.as_bytes());
-                        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&hash)
+                        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(hash)
                     }
                     "plain" => code_verifier.to_string(),
                     _ => {
