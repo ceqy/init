@@ -262,6 +262,30 @@ impl PasswordResetRepository for PostgresPasswordResetRepository {
         Ok(deleted)
     }
 
+    async fn delete_all_expired(&self) -> AppResult<u64> {
+        debug!("Deleting all expired password reset tokens");
+
+        let result = sqlx::query!(
+            r#"
+            DELETE FROM password_reset_tokens
+            WHERE expires_at < NOW()
+            "#
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| {
+            warn!(error = %e, "Failed to delete all expired tokens");
+            AppError::database(format!("Failed to delete all expired tokens: {}", e))
+        })?;
+
+        let deleted = result.rows_affected();
+        debug!(
+            deleted = deleted,
+            "All expired password reset tokens deleted"
+        );
+        Ok(deleted)
+    }
+
     async fn count_unused_by_user_id(
         &self,
         user_id: &UserId,

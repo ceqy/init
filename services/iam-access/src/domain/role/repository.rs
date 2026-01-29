@@ -44,6 +44,9 @@ pub trait RoleRepository: Send + Sync {
 
     /// 检查角色代码是否存在
     async fn exists_by_code(&self, tenant_id: &TenantId, code: &str) -> AppResult<bool>;
+
+    /// 获取所有活跃租户 ID (用于缓存预热)
+    async fn list_active_tenants(&self) -> AppResult<Vec<TenantId>>;
 }
 
 /// 权限仓储接口

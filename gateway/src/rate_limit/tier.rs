@@ -26,24 +26,12 @@ impl UserTier {
             Self::Anonymous
         }
     }
-
-    /// 从 permissions 列表检测用户等级
-    pub fn from_permissions(permissions: &[String]) -> Self {
-        if permissions.contains(&"rate_limit:vip".to_string()) {
-            return Self::Vip;
-        }
-        if permissions.contains(&"rate_limit:premium".to_string()) {
-            return Self::Premium;
-        }
-        Self::Standard
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use cuba_auth_core::Claims;
-    use std::collections::HashMap;
 
     fn create_test_claims(permissions: Vec<String>) -> Claims {
         Claims {

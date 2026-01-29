@@ -129,19 +129,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 async move {
                     info!("Starting cache warming...");
 
-                    // 获取需要预热的租户列表
-                    // TODO: 从配置文件或数据库读取租户列表
-                    let tenant_ids = vec![
-                        // 添加你的租户 ID
-                        // 例如: TenantId::from_str("tenant-1").unwrap(),
-                    ];
-
-                    if let Err(e) =
-                        start_cache_warming(auth_cache, policy_repo, role_repo, tenant_ids).await
-                    {
-                        tracing::warn!("Cache warming failed: {}", e);
-                    } else {
-                        info!("Cache warming completed successfully");
+                    // 动态获取需要预热的租户列表
+                    use crate::domain::role::RoleRepository;
+                    match role_repo.list_active_tenants().await {
+                        Ok(tenant_ids) => {
+                            let tenant_ids: Vec<cuba_common::TenantId> = tenant_ids;
+                            info!("Starting cache warming for {} tenants", tenant_ids.len());
+                            if let Err(e) =
+                                start_cache_warming(auth_cache, policy_repo, role_repo, tenant_ids)
+                                    .await
+                            {
+                                tracing::warn!("Cache warming failed: {}", e);
+                            } else {
+                                info!("Cache warming completed successfully");
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to list active tenants for warming: {}", e);
+                        }
                     }
                 }
             });

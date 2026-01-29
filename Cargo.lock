@@ -835,6 +835,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "tonic",
+ "tonic-reflection",
  "tower",
  "tracing",
 ]
@@ -916,6 +917,7 @@ dependencies = [
  "cuba-telemetry",
  "dotenvy",
  "futures",
+ "metrics",
  "once_cell",
  "prost",
  "prost-types",
@@ -1734,6 +1736,7 @@ dependencies = [
  "sqlx",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-util",
  "tonic",
  "tonic-build",
  "tonic-reflection",
@@ -4142,6 +4145,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]

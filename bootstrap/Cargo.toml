@@ -19,6 +19,7 @@ cuba-adapter-clickhouse = { workspace = true }
 
 # gRPC
 tonic = { workspace = true }
+tonic-reflection = { version = "0.13" }
 http = { workspace = true }
 
 # HTTP (健康检查端点)

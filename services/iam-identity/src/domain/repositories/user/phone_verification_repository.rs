@@ -39,6 +39,9 @@ pub trait PhoneVerificationRepository: Send + Sync {
     /// 删除过期的验证记录
     async fn delete_expired(&self, tenant_id: &TenantId) -> AppResult<u64>;
 
+    /// 删除所有过期的验证记录 (全局清理)
+    async fn delete_all_expired(&self) -> AppResult<u64>;
+
     /// 统计用户今天发送的验证码数量（防止滥用）
     async fn count_today_by_user(&self, user_id: &UserId, tenant_id: &TenantId) -> AppResult<i64>;
 }

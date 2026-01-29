@@ -242,6 +242,23 @@ impl RoleRepository for PostgresRoleRepository {
 
         Ok(result.0)
     }
+
+    async fn list_active_tenants(&self) -> AppResult<Vec<TenantId>> {
+        let rows = sqlx::query_as::<_, TenantIdRow>("SELECT DISTINCT tenant_id FROM roles")
+            .fetch_all(&self.pool)
+            .await
+            .map_err(map_sqlx_error)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| TenantId::from_uuid(r.tenant_id))
+            .collect())
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct TenantIdRow {
+    tenant_id: Uuid,
 }
 
 impl PostgresRoleRepository {
