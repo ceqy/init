@@ -8,7 +8,6 @@ use iam_identity::infrastructure::persistence::auth::{
 };
 use sqlx::PgPool;
 use std::env;
-use uuid::Uuid;
 
 async fn get_test_pool() -> PgPool {
     let db_url = env::var("DATABASE_URL")

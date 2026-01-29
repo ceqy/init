@@ -241,54 +241,6 @@ mod tests {
     use tonic::transport::Channel;
     use tower::ServiceExt;
 
-    /// Create test state (requires Redis to be running for rate limiting)
-    /// For tests without Redis, use create_test_app_no_rate_limit instead
-    async fn create_test_state() -> AppState {
-        let token_service = TokenService::new(
-            "test_secret_at_least_32_characters_long",
-            3600,
-            3600,
-            "test-issuer".to_string(),
-            "test-audience".to_string(),
-        );
-        let channel = Channel::from_static("http://[::1]:50051").connect_lazy();
-
-        let grpc_clients = grpc::GrpcClients {
-            auth: AuthServiceClient::new(channel.clone()),
-            user: UserServiceClient::new(channel.clone()),
-            audit: AuditServiceClient::new(channel),
-        };
-
-        let (notify_tx, _rx) = broadcast::channel::<String>(100);
-        let notify_tx = Arc::new(notify_tx);
-
-        // Initialize rate limiting (requires Redis)
-        let redis_conn = create_connection_manager("redis://localhost:6379")
-            .await
-            .expect("Tests require Redis to be running");
-        let config_manager = Arc::new(rate_limit::ConfigManager::new(redis_conn.clone()).await);
-        let rate_limiter = Arc::new(rate_limit::RateLimiter::new(redis_conn));
-        let classifier = Arc::new(rate_limit::EndpointClassifier::new());
-        let rate_limit_middleware = Arc::new(rate_limit::RateLimitMiddleware::new(
-            config_manager,
-            rate_limiter,
-            classifier,
-        ));
-
-        AppState {
-            grpc_clients,
-            token_service,
-            notify_tx,
-            rate_limit_middleware,
-        }
-    }
-
-    /// Create test state without rate limiting (for basic integration tests)
-    /// Note: This requires proper test infrastructure with mocks
-    fn create_test_state_no_rate_limit() -> AppState {
-        unimplemented!("create_test_state_no_rate_limit requires proper test infrastructure");
-    }
-
     /// Create test app without rate limiting (for basic integration tests)
     fn create_test_app_no_rate_limit() -> Router {
         let token_service = TokenService::new(
