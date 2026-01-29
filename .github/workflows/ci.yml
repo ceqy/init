@@ -9,8 +9,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  # SQLx 离线模式 - 跳过编译时数据库验证
-  SQLX_OFFLINE: true
 
 jobs:
   check-and-test:
@@ -54,8 +52,11 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.93" # 指定用户要求的 1.93 版本
+          toolchain: "1.93"
           components: clippy, rustfmt
+
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features postgres
 
       - name: Cache dependencies
         uses: actions/cache@v4
@@ -69,6 +70,19 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+
+      - name: Run database migrations
+        run: |
+          # 运行所有迁移脚本
+          sqlx database create || true
+          for dir in services/iam-identity/migrations services/iam-access/migrations crates/adapters/postgres/migrations; do
+            if [ -d "$dir" ]; then
+              echo "Running migrations from $dir"
+              sqlx migrate run --source "$dir" || true
+            fi
+          done
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/cuba_test
 
       - name: Rustfmt check
         run: cargo fmt --all -- --check
