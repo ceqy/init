@@ -8,11 +8,10 @@ use crate::rate_limit::config::ConfigManager;
 use crate::rate_limit::limiter::RateLimiter;
 use crate::rate_limit::types::{RateLimitResult, UserTier};
 use axum::{
-    Response,
-    extract::{Request, State},
+    extract::Request,
     http::{HeaderValue, StatusCode, header},
     middleware::Next,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
 };
 use std::sync::Arc;
 use tracing::{debug, warn};
@@ -148,7 +147,7 @@ pub async fn rate_limit_middleware(
     axum::extract::State(state): axum::extract::State<Arc<RateLimitMiddleware>>,
     request: Request,
     next: Next,
-) -> Result<axum::http::Response<axum::body::Body>, axum::http::StatusCode> {
+) -> Response {
     // 检查限流
     let result = state.check_rate_limit(&request).await;
 
@@ -184,10 +183,10 @@ pub async fn rate_limit_middleware(
     );
 
     // 继续处理请求
-    let response = next.run(request).await;
+    let mut response = next.run(request).await;
 
     // 添加限流头
     RateLimitMiddleware::add_rate_limit_headers(&mut response, &result);
 
-    Ok(response)
+    response
 }

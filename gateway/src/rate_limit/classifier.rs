@@ -170,7 +170,7 @@ mod tests {
         );
         assert_eq!(
             classifier.classify(&create_uri("/api/items/123"), &Method::DELETE),
-            EndpointType::Delete
+            EndpointType::Write
         );
         assert_eq!(
             classifier.classify(&create_uri("/api/users/123"), &Method::PATCH),

@@ -16,6 +16,8 @@ mod tests {
         let config = DatabaseConfig {
             url: Secret::new("postgres://user:pass@localhost:5432/db".to_string()),
             max_connections: 10,
+            read_url: None,
+            read_max_connections: 20,
         };
         let debug_output = format!("{:?}", config);
         assert!(!debug_output.contains("pass"));
