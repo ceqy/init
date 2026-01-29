@@ -2,6 +2,10 @@
 //!
 //! 基于用户等级和接口类型的动态限流机制
 
+// TODO: 移除此 allow，修复 rate_limit_middleware 的 trait bound 问题后启用
+#![allow(unused_imports)]
+#![allow(dead_code)]
+
 pub mod classifier;
 pub mod config;
 pub mod limiter;
