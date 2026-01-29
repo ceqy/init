@@ -14,9 +14,17 @@ jobs:
   check-and-test:
     name: Check, Lint and Test
     runs-on: ubuntu-latest
+    env:
+      # 清除 macOS 路径，使用系统 OpenSSL
+      OPENSSL_DIR: ""
     
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config protobuf-compiler librdkafka-dev cmake
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
