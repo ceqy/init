@@ -1,0 +1,598 @@
+syntax = "proto3";
+
+package hr.ta.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service TimeAttendanceService {
+    rpc ClockIn(ClockInRequest) returns (ClockInResponse);
+    rpc ClockOut(ClockOutRequest) returns (ClockOutResponse);
+    rpc GetCurrentStatus(GetCurrentStatusRequest) returns (GetCurrentStatusResponse);
+
+    rpc CreateTimeEntry(CreateTimeEntryRequest) returns (CreateTimeEntryResponse);
+    rpc GetTimeEntry(GetTimeEntryRequest) returns (GetTimeEntryResponse);
+    rpc UpdateTimeEntry(UpdateTimeEntryRequest) returns (UpdateTimeEntryResponse);
+    rpc DeleteTimeEntry(DeleteTimeEntryRequest) returns (google.protobuf.Empty);
+    rpc ListTimeEntries(ListTimeEntriesRequest) returns (ListTimeEntriesResponse);
+
+    rpc SubmitTimesheet(SubmitTimesheetRequest) returns (SubmitTimesheetResponse);
+    rpc GetTimesheet(GetTimesheetRequest) returns (GetTimesheetResponse);
+    rpc ApproveTimesheet(ApproveTimesheetRequest) returns (ApproveTimesheetResponse);
+    rpc RejectTimesheet(RejectTimesheetRequest) returns (RejectTimesheetResponse);
+    rpc ListTimesheets(ListTimesheetsRequest) returns (ListTimesheetsResponse);
+
+    rpc CreateLeaveRequest(CreateLeaveRequestRequest) returns (CreateLeaveRequestResponse);
+    rpc GetLeaveRequest(GetLeaveRequestRequest) returns (GetLeaveRequestResponse);
+    rpc UpdateLeaveRequest(UpdateLeaveRequestRequest) returns (UpdateLeaveRequestResponse);
+    rpc CancelLeaveRequest(CancelLeaveRequestRequest) returns (CancelLeaveRequestResponse);
+    rpc ApproveLeaveRequest(ApproveLeaveRequestRequest) returns (ApproveLeaveRequestResponse);
+    rpc RejectLeaveRequest(RejectLeaveRequestRequest) returns (RejectLeaveRequestResponse);
+    rpc ListLeaveRequests(ListLeaveRequestsRequest) returns (ListLeaveRequestsResponse);
+
+    rpc GetLeaveBalance(GetLeaveBalanceRequest) returns (GetLeaveBalanceResponse);
+    rpc GetLeaveCalendar(GetLeaveCalendarRequest) returns (GetLeaveCalendarResponse);
+
+    rpc CreateShiftSchedule(CreateShiftScheduleRequest) returns (CreateShiftScheduleResponse);
+    rpc GetShiftSchedule(GetShiftScheduleRequest) returns (GetShiftScheduleResponse);
+    rpc UpdateShiftSchedule(UpdateShiftScheduleRequest) returns (UpdateShiftScheduleResponse);
+    rpc ListShiftSchedules(ListShiftSchedulesRequest) returns (ListShiftSchedulesResponse);
+    rpc AssignShift(AssignShiftRequest) returns (AssignShiftResponse);
+
+    rpc GetAttendanceReport(GetAttendanceReportRequest) returns (GetAttendanceReportResponse);
+    rpc GetOvertimeReport(GetOvertimeReportRequest) returns (GetOvertimeReportResponse);
+}
+
+message TimeEntry {
+    string id = 1;
+    string employee_id = 2;
+    string employee_name = 3;
+    google.protobuf.Timestamp clock_in = 4;
+    google.protobuf.Timestamp clock_out = 5;
+    double hours_worked = 6;
+    double regular_hours = 7;
+    double overtime_hours = 8;
+    string clock_in_location = 9;
+    string clock_out_location = 10;
+    string clock_in_method = 11;
+    string clock_out_method = 12;
+    TimeEntryStatus status = 13;
+    string shift_id = 14;
+    string project_id = 15;
+    string task_id = 16;
+    string notes = 17;
+    bool is_manual = 18;
+    string approved_by = 19;
+    google.protobuf.Timestamp approved_at = 20;
+    common.v1.AuditInfo audit_info = 21;
+}
+
+enum TimeEntryStatus {
+    TIME_ENTRY_STATUS_UNSPECIFIED = 0;
+    TIME_ENTRY_STATUS_ACTIVE = 1;
+    TIME_ENTRY_STATUS_COMPLETED = 2;
+    TIME_ENTRY_STATUS_PENDING_APPROVAL = 3;
+    TIME_ENTRY_STATUS_APPROVED = 4;
+    TIME_ENTRY_STATUS_REJECTED = 5;
+}
+
+message AttendanceStatus {
+    string employee_id = 1;
+    string employee_name = 2;
+    bool is_clocked_in = 3;
+    google.protobuf.Timestamp last_clock_in = 4;
+    google.protobuf.Timestamp last_clock_out = 5;
+    double hours_today = 6;
+    string current_location = 7;
+    ShiftAssignment current_shift = 8;
+}
+
+message Timesheet {
+    string id = 1;
+    string timesheet_number = 2;
+    string employee_id = 3;
+    string employee_name = 4;
+    string department = 5;
+    google.protobuf.Timestamp period_start = 6;
+    google.protobuf.Timestamp period_end = 7;
+    repeated TimeEntry entries = 8;
+    double total_regular_hours = 9;
+    double total_overtime_hours = 10;
+    double total_hours = 11;
+    TimesheetStatus status = 12;
+    google.protobuf.Timestamp submitted_at = 13;
+    string approved_by = 14;
+    google.protobuf.Timestamp approved_at = 15;
+    string rejection_reason = 16;
+    string notes = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+enum TimesheetStatus {
+    TIMESHEET_STATUS_UNSPECIFIED = 0;
+    TIMESHEET_STATUS_DRAFT = 1;
+    TIMESHEET_STATUS_SUBMITTED = 2;
+    TIMESHEET_STATUS_APPROVED = 3;
+    TIMESHEET_STATUS_REJECTED = 4;
+    TIMESHEET_STATUS_PROCESSED = 5;
+}
+
+message LeaveRequest {
+    string id = 1;
+    string request_number = 2;
+    string employee_id = 3;
+    string employee_name = 4;
+    string department = 5;
+    LeaveType leave_type = 6;
+    google.protobuf.Timestamp start_date = 7;
+    google.protobuf.Timestamp end_date = 8;
+    double days_requested = 9;
+    bool half_day = 10;
+    string half_day_type = 11;
+    string reason = 12;
+    LeaveRequestStatus status = 13;
+    string approver_id = 14;
+    string approver_name = 15;
+    google.protobuf.Timestamp approved_at = 16;
+    string rejection_reason = 17;
+    repeated common.v1.Attachment attachments = 18;
+    string delegate_to = 19;
+    string handover_notes = 20;
+    common.v1.AuditInfo audit_info = 21;
+}
+
+enum LeaveType {
+    LEAVE_TYPE_UNSPECIFIED = 0;
+    LEAVE_TYPE_ANNUAL = 1;
+    LEAVE_TYPE_SICK = 2;
+    LEAVE_TYPE_PERSONAL = 3;
+    LEAVE_TYPE_MATERNITY = 4;
+    LEAVE_TYPE_PATERNITY = 5;
+    LEAVE_TYPE_BEREAVEMENT = 6;
+    LEAVE_TYPE_UNPAID = 7;
+    LEAVE_TYPE_COMPENSATORY = 8;
+    LEAVE_TYPE_STUDY = 9;
+    LEAVE_TYPE_OTHER = 10;
+}
+
+enum LeaveRequestStatus {
+    LEAVE_REQUEST_STATUS_UNSPECIFIED = 0;
+    LEAVE_REQUEST_STATUS_DRAFT = 1;
+    LEAVE_REQUEST_STATUS_PENDING = 2;
+    LEAVE_REQUEST_STATUS_APPROVED = 3;
+    LEAVE_REQUEST_STATUS_REJECTED = 4;
+    LEAVE_REQUEST_STATUS_CANCELLED = 5;
+}
+
+message LeaveBalance {
+    string employee_id = 1;
+    LeaveType leave_type = 2;
+    string leave_type_name = 3;
+    double entitled = 4;
+    double taken = 5;
+    double pending = 6;
+    double available = 7;
+    double carry_forward = 8;
+    google.protobuf.Timestamp expiry_date = 9;
+}
+
+message ShiftSchedule {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    google.protobuf.Timestamp start_time = 5;
+    google.protobuf.Timestamp end_time = 6;
+    double working_hours = 7;
+    repeated BreakPeriod breaks = 8;
+    repeated int32 working_days = 9;
+    bool is_night_shift = 10;
+    double overtime_threshold = 11;
+    common.v1.Status status = 12;
+    common.v1.AuditInfo audit_info = 13;
+}
+
+message BreakPeriod {
+    string name = 1;
+    google.protobuf.Timestamp start_time = 2;
+    google.protobuf.Timestamp end_time = 3;
+    bool paid = 4;
+}
+
+message ShiftAssignment {
+    string id = 1;
+    string employee_id = 2;
+    string employee_name = 3;
+    string shift_id = 4;
+    string shift_name = 5;
+    google.protobuf.Timestamp date = 6;
+    google.protobuf.Timestamp start_time = 7;
+    google.protobuf.Timestamp end_time = 8;
+    ShiftAssignmentStatus status = 9;
+    string notes = 10;
+    common.v1.AuditInfo audit_info = 11;
+}
+
+enum ShiftAssignmentStatus {
+    SHIFT_ASSIGNMENT_STATUS_UNSPECIFIED = 0;
+    SHIFT_ASSIGNMENT_STATUS_SCHEDULED = 1;
+    SHIFT_ASSIGNMENT_STATUS_CONFIRMED = 2;
+    SHIFT_ASSIGNMENT_STATUS_COMPLETED = 3;
+    SHIFT_ASSIGNMENT_STATUS_ABSENT = 4;
+    SHIFT_ASSIGNMENT_STATUS_CANCELLED = 5;
+}
+
+message ClockInRequest {
+    string employee_id = 1;
+    string location = 2;
+    string method = 3;
+    string shift_id = 4;
+    string project_id = 5;
+    string task_id = 6;
+    string notes = 7;
+}
+
+message ClockOutRequest {
+    string time_entry_id = 1;
+    string location = 2;
+    string method = 3;
+    string notes = 4;
+}
+
+message GetCurrentStatusRequest {
+    string employee_id = 1;
+}
+
+message CreateTimeEntryRequest {
+    string employee_id = 1;
+    google.protobuf.Timestamp clock_in = 2;
+    google.protobuf.Timestamp clock_out = 3;
+    string shift_id = 4;
+    string project_id = 5;
+    string task_id = 6;
+    string notes = 7;
+}
+
+message GetTimeEntryRequest {
+    string id = 1;
+}
+
+message UpdateTimeEntryRequest {
+    string id = 1;
+    google.protobuf.Timestamp clock_in = 2;
+    google.protobuf.Timestamp clock_out = 3;
+    string project_id = 4;
+    string task_id = 5;
+    string notes = 6;
+}
+
+message DeleteTimeEntryRequest {
+    string id = 1;
+}
+
+message ListTimeEntriesRequest {
+    string employee_id = 1;
+    string department = 2;
+    common.v1.DateRange date_range = 3;
+    TimeEntryStatus status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListTimeEntriesResponse {
+    repeated TimeEntry entries = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message SubmitTimesheetRequest {
+    string employee_id = 1;
+    google.protobuf.Timestamp period_start = 2;
+    google.protobuf.Timestamp period_end = 3;
+    string notes = 4;
+}
+
+message GetTimesheetRequest {
+    string id = 1;
+}
+
+message ApproveTimesheetRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message RejectTimesheetRequest {
+    string id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message ListTimesheetsRequest {
+    string employee_id = 1;
+    string department = 2;
+    TimesheetStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListTimesheetsResponse {
+    repeated Timesheet timesheets = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateLeaveRequestRequest {
+    string employee_id = 1;
+    LeaveType leave_type = 2;
+    google.protobuf.Timestamp start_date = 3;
+    google.protobuf.Timestamp end_date = 4;
+    bool half_day = 5;
+    string half_day_type = 6;
+    string reason = 7;
+    string delegate_to = 8;
+    string handover_notes = 9;
+}
+
+message GetLeaveRequestRequest {
+    string id = 1;
+}
+
+message UpdateLeaveRequestRequest {
+    string id = 1;
+    google.protobuf.Timestamp start_date = 2;
+    google.protobuf.Timestamp end_date = 3;
+    string reason = 4;
+    string delegate_to = 5;
+    string handover_notes = 6;
+}
+
+message CancelLeaveRequestRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message ApproveLeaveRequestRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message RejectLeaveRequestRequest {
+    string id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message ListLeaveRequestsRequest {
+    string employee_id = 1;
+    string department = 2;
+    LeaveType leave_type = 3;
+    LeaveRequestStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListLeaveRequestsResponse {
+    repeated LeaveRequest requests = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetLeaveBalanceRequest {
+    string employee_id = 1;
+    int32 year = 2;
+}
+
+message GetLeaveBalanceResponse {
+    string employee_id = 1;
+    string employee_name = 2;
+    int32 year = 3;
+    repeated LeaveBalance balances = 4;
+}
+
+message GetLeaveCalendarRequest {
+    string department = 1;
+    string team = 2;
+    google.protobuf.Timestamp month_start = 3;
+}
+
+message GetLeaveCalendarResponse {
+    repeated LeaveCalendarEntry entries = 1;
+}
+
+message LeaveCalendarEntry {
+    string employee_id = 1;
+    string employee_name = 2;
+    google.protobuf.Timestamp date = 3;
+    LeaveType leave_type = 4;
+    string leave_type_name = 5;
+    bool half_day = 6;
+    string half_day_type = 7;
+    LeaveRequestStatus status = 8;
+}
+
+message CreateShiftScheduleRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    google.protobuf.Timestamp start_time = 4;
+    google.protobuf.Timestamp end_time = 5;
+    repeated BreakPeriod breaks = 6;
+    repeated int32 working_days = 7;
+    bool is_night_shift = 8;
+    double overtime_threshold = 9;
+}
+
+message GetShiftScheduleRequest {
+    string id = 1;
+}
+
+message UpdateShiftScheduleRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    google.protobuf.Timestamp start_time = 4;
+    google.protobuf.Timestamp end_time = 5;
+    repeated BreakPeriod breaks = 6;
+    common.v1.Status status = 7;
+}
+
+message ListShiftSchedulesRequest {
+    common.v1.Status status = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message ListShiftSchedulesResponse {
+    repeated ShiftSchedule schedules = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message AssignShiftRequest {
+    string employee_id = 1;
+    string shift_id = 2;
+    google.protobuf.Timestamp date = 3;
+    string notes = 4;
+}
+
+message GetAttendanceReportRequest {
+    string department = 1;
+    string employee_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetAttendanceReportResponse {
+    repeated EmployeeAttendance attendance = 1;
+    AttendanceSummary summary = 2;
+}
+
+message EmployeeAttendance {
+    string employee_id = 1;
+    string employee_name = 2;
+    string department = 3;
+    int32 days_present = 4;
+    int32 days_absent = 5;
+    int32 days_late = 6;
+    int32 days_early_leave = 7;
+    double total_hours = 8;
+    double regular_hours = 9;
+    double overtime_hours = 10;
+    double attendance_rate = 11;
+}
+
+message AttendanceSummary {
+    int32 total_employees = 1;
+    double average_attendance_rate = 2;
+    double total_hours_worked = 3;
+    double total_overtime_hours = 4;
+    int32 total_late_arrivals = 5;
+    int32 total_early_leaves = 6;
+}
+
+message GetOvertimeReportRequest {
+    string department = 1;
+    string employee_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetOvertimeReportResponse {
+    repeated EmployeeOvertime overtime = 1;
+    OvertimeSummary summary = 2;
+}
+
+message EmployeeOvertime {
+    string employee_id = 1;
+    string employee_name = 2;
+    string department = 3;
+    double regular_overtime = 4;
+    double weekend_overtime = 5;
+    double holiday_overtime = 6;
+    double total_overtime = 7;
+    common.v1.Money overtime_pay = 8;
+}
+
+message OvertimeSummary {
+    double total_overtime_hours = 1;
+    common.v1.Money total_overtime_cost = 2;
+    double average_overtime_per_employee = 3;
+    int32 employees_with_overtime = 4;
+}
+
+// Auto-generated Response messages
+message ClockInResponse {
+    TimeEntry time_entry = 1;
+}
+
+message ClockOutResponse {
+    TimeEntry time_entry = 1;
+}
+
+message GetCurrentStatusResponse {
+    AttendanceStatus attendance_status = 1;
+}
+
+message CreateTimeEntryResponse {
+    TimeEntry time_entry = 1;
+}
+
+message GetTimeEntryResponse {
+    TimeEntry time_entry = 1;
+}
+
+message UpdateTimeEntryResponse {
+    TimeEntry time_entry = 1;
+}
+
+message SubmitTimesheetResponse {
+    Timesheet timesheet = 1;
+}
+
+message GetTimesheetResponse {
+    Timesheet timesheet = 1;
+}
+
+message ApproveTimesheetResponse {
+    Timesheet timesheet = 1;
+}
+
+message RejectTimesheetResponse {
+    Timesheet timesheet = 1;
+}
+
+message CreateLeaveRequestResponse {
+    LeaveRequest leave_request = 1;
+}
+
+message GetLeaveRequestResponse {
+    LeaveRequest leave_request = 1;
+}
+
+message UpdateLeaveRequestResponse {
+    LeaveRequest leave_request = 1;
+}
+
+message CancelLeaveRequestResponse {
+    LeaveRequest leave_request = 1;
+}
+
+message ApproveLeaveRequestResponse {
+    LeaveRequest leave_request = 1;
+}
+
+message RejectLeaveRequestResponse {
+    LeaveRequest leave_request = 1;
+}
+
+message CreateShiftScheduleResponse {
+    ShiftSchedule shift_schedule = 1;
+}
+
+message GetShiftScheduleResponse {
+    ShiftSchedule shift_schedule = 1;
+}
+
+message UpdateShiftScheduleResponse {
+    ShiftSchedule shift_schedule = 1;
+}
+
+message AssignShiftResponse {
+    ShiftAssignment shift_assignment = 1;
+}

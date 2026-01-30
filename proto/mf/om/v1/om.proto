@@ -1,0 +1,531 @@
+syntax = "proto3";
+
+package mf.om.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service ProductionOrderService {
+    rpc CreateProductionOrder(CreateProductionOrderRequest) returns (CreateProductionOrderResponse);
+    rpc GetProductionOrder(GetProductionOrderRequest) returns (GetProductionOrderResponse);
+    rpc UpdateProductionOrder(UpdateProductionOrderRequest) returns (UpdateProductionOrderResponse);
+    rpc DeleteProductionOrder(DeleteProductionOrderRequest) returns (google.protobuf.Empty);
+    rpc ListProductionOrders(ListProductionOrdersRequest) returns (ListProductionOrdersResponse);
+
+    rpc ReleaseProductionOrder(ReleaseProductionOrderRequest) returns (ReleaseProductionOrderResponse);
+    rpc StartProductionOrder(StartProductionOrderRequest) returns (StartProductionOrderResponse);
+    rpc CompleteProductionOrder(CompleteProductionOrderRequest) returns (CompleteProductionOrderResponse);
+    rpc CloseProductionOrder(CloseProductionOrderRequest) returns (CloseProductionOrderResponse);
+    rpc CancelProductionOrder(CancelProductionOrderRequest) returns (CancelProductionOrderResponse);
+
+    rpc ConfirmOperation(ConfirmOperationRequest) returns (ConfirmOperationResponse);
+    rpc GetOperationConfirmations(GetOperationConfirmationsRequest) returns (GetOperationConfirmationsResponse);
+    rpc ReverseConfirmation(ReverseConfirmationRequest) returns (google.protobuf.Empty);
+
+    rpc PostGoodsIssue(PostGoodsIssueRequest) returns (PostGoodsIssueResponse);
+    rpc PostGoodsReceipt(PostGoodsReceiptRequest) returns (PostGoodsReceiptResponse);
+    rpc GetGoodsMovements(GetGoodsMovementsRequest) returns (GetGoodsMovementsResponse);
+
+    rpc GetProductionOrderCosting(GetProductionOrderCostingRequest) returns (GetProductionOrderCostingResponse);
+    rpc CalculateVariance(CalculateVarianceRequest) returns (CalculateVarianceResponse);
+
+    rpc GetOrderProgress(GetOrderProgressRequest) returns (GetOrderProgressResponse);
+    rpc GetProductionSchedule(GetProductionScheduleRequest) returns (GetProductionScheduleResponse);
+}
+
+message ProductionOrder {
+    string id = 1;
+    string order_number = 2;
+    string company_code = 3;
+    string plant = 4;
+    string product_id = 5;
+    string product_code = 6;
+    string product_name = 7;
+    common.v1.Quantity planned_quantity = 8;
+    common.v1.Quantity confirmed_quantity = 9;
+    common.v1.Quantity scrapped_quantity = 10;
+    string unit = 11;
+    google.protobuf.Timestamp planned_start = 12;
+    google.protobuf.Timestamp planned_end = 13;
+    google.protobuf.Timestamp actual_start = 14;
+    google.protobuf.Timestamp actual_end = 15;
+    google.protobuf.Timestamp scheduled_start = 16;
+    google.protobuf.Timestamp scheduled_end = 17;
+    string bom_id = 18;
+    string routing_id = 19;
+    string sales_order_id = 20;
+    string sales_order_line_id = 21;
+    repeated ProductionOrderComponent components = 22;
+    repeated ProductionOrderOperation operations = 23;
+    ProductionOrderStatus status = 24;
+    ProductionOrderType order_type = 25;
+    int32 priority = 26;
+    string batch_number = 27;
+    string work_center = 28;
+    string mrp_controller = 29;
+    string production_supervisor = 30;
+    common.v1.AuditInfo audit_info = 31;
+}
+
+message ProductionOrderComponent {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    common.v1.Quantity required_quantity = 6;
+    common.v1.Quantity issued_quantity = 7;
+    common.v1.Quantity withdrawn_quantity = 8;
+    string unit = 9;
+    string storage_location = 10;
+    string batch_number = 11;
+    google.protobuf.Timestamp requirement_date = 12;
+    ComponentBackflush backflush_indicator = 13;
+    bool is_phantom = 14;
+    string operation_id = 15;
+}
+
+enum ComponentBackflush {
+    COMPONENT_BACKFLUSH_UNSPECIFIED = 0;
+    COMPONENT_BACKFLUSH_MANUAL = 1;
+    COMPONENT_BACKFLUSH_OPERATION = 2;
+    COMPONENT_BACKFLUSH_FINAL = 3;
+}
+
+message ProductionOrderOperation {
+    string id = 1;
+    int32 operation_number = 2;
+    string description = 3;
+    string work_center_id = 4;
+    string work_center_name = 5;
+    string control_key = 6;
+    double setup_time = 7;
+    double machine_time = 8;
+    double labor_time = 9;
+    string time_unit = 10;
+    double confirmed_setup_time = 11;
+    double confirmed_machine_time = 12;
+    double confirmed_labor_time = 13;
+    common.v1.Quantity confirmed_yield = 14;
+    common.v1.Quantity confirmed_scrap = 15;
+    google.protobuf.Timestamp planned_start = 16;
+    google.protobuf.Timestamp planned_end = 17;
+    google.protobuf.Timestamp actual_start = 18;
+    google.protobuf.Timestamp actual_end = 19;
+    OperationStatus status = 20;
+    int32 sequence = 21;
+    string predecessor_operation = 22;
+    bool is_milestone = 23;
+    bool confirmation_required = 24;
+}
+
+enum ProductionOrderStatus {
+    PRODUCTION_ORDER_STATUS_UNSPECIFIED = 0;
+    PRODUCTION_ORDER_STATUS_CREATED = 1;
+    PRODUCTION_ORDER_STATUS_PLANNED = 2;
+    PRODUCTION_ORDER_STATUS_RELEASED = 3;
+    PRODUCTION_ORDER_STATUS_IN_PROGRESS = 4;
+    PRODUCTION_ORDER_STATUS_CONFIRMED = 5;
+    PRODUCTION_ORDER_STATUS_PARTIALLY_DELIVERED = 6;
+    PRODUCTION_ORDER_STATUS_DELIVERED = 7;
+    PRODUCTION_ORDER_STATUS_TECHNICALLY_COMPLETED = 8;
+    PRODUCTION_ORDER_STATUS_CLOSED = 9;
+    PRODUCTION_ORDER_STATUS_CANCELLED = 10;
+}
+
+enum ProductionOrderType {
+    PRODUCTION_ORDER_TYPE_UNSPECIFIED = 0;
+    PRODUCTION_ORDER_TYPE_STANDARD = 1;
+    PRODUCTION_ORDER_TYPE_REWORK = 2;
+    PRODUCTION_ORDER_TYPE_PROTOTYPE = 3;
+    PRODUCTION_ORDER_TYPE_SUBCONTRACTING = 4;
+}
+
+enum OperationStatus {
+    OPERATION_STATUS_UNSPECIFIED = 0;
+    OPERATION_STATUS_CREATED = 1;
+    OPERATION_STATUS_RELEASED = 2;
+    OPERATION_STATUS_IN_PROGRESS = 3;
+    OPERATION_STATUS_PARTIALLY_CONFIRMED = 4;
+    OPERATION_STATUS_CONFIRMED = 5;
+    OPERATION_STATUS_CANCELLED = 6;
+}
+
+message OperationConfirmation {
+    string id = 1;
+    string confirmation_number = 2;
+    string production_order_id = 3;
+    string operation_id = 4;
+    int32 operation_number = 5;
+    google.protobuf.Timestamp confirmation_date = 6;
+    google.protobuf.Timestamp posting_date = 7;
+    double setup_time = 8;
+    double machine_time = 9;
+    double labor_time = 10;
+    string time_unit = 11;
+    common.v1.Quantity yield_quantity = 12;
+    common.v1.Quantity scrap_quantity = 13;
+    common.v1.Quantity rework_quantity = 14;
+    string scrap_reason = 15;
+    string operator_id = 16;
+    string operator_name = 17;
+    string work_center_id = 18;
+    bool final_confirmation = 19;
+    string notes = 20;
+    common.v1.AuditInfo audit_info = 21;
+}
+
+message GoodsMovement {
+    string id = 1;
+    string document_number = 2;
+    string production_order_id = 3;
+    GoodsMovementType movement_type = 4;
+    google.protobuf.Timestamp movement_date = 5;
+    google.protobuf.Timestamp posting_date = 6;
+    repeated GoodsMovementItem items = 7;
+    bool reversed = 8;
+    string reversal_document = 9;
+    common.v1.AuditInfo audit_info = 10;
+}
+
+enum GoodsMovementType {
+    GOODS_MOVEMENT_TYPE_UNSPECIFIED = 0;
+    GOODS_MOVEMENT_TYPE_ISSUE = 1;
+    GOODS_MOVEMENT_TYPE_RECEIPT = 2;
+    GOODS_MOVEMENT_TYPE_RETURN = 3;
+    GOODS_MOVEMENT_TYPE_SCRAP = 4;
+    GOODS_MOVEMENT_TYPE_TRANSFER = 5;
+}
+
+message GoodsMovementItem {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    common.v1.Quantity quantity = 5;
+    string unit = 6;
+    string plant = 7;
+    string storage_location = 8;
+    string batch_number = 9;
+    string serial_number = 10;
+    string stock_type = 11;
+    string cost_center = 12;
+    string gl_account = 13;
+    common.v1.Money value = 14;
+}
+
+message ProductionOrderCosting {
+    string production_order_id = 1;
+    string order_number = 2;
+    common.v1.Money planned_cost = 3;
+    common.v1.Money actual_cost = 4;
+    common.v1.Money target_cost = 5;
+    common.v1.Money variance = 6;
+    repeated CostElement cost_elements = 7;
+    google.protobuf.Timestamp calculation_date = 8;
+}
+
+message CostElement {
+    string cost_element_id = 1;
+    string cost_element_name = 2;
+    string cost_type = 3;
+    common.v1.Money planned = 4;
+    common.v1.Money actual = 5;
+    common.v1.Money target = 6;
+    common.v1.Money variance = 7;
+}
+
+message VarianceAnalysis {
+    string production_order_id = 1;
+    common.v1.Money total_variance = 2;
+    common.v1.Money input_variance = 3;
+    common.v1.Money output_variance = 4;
+    common.v1.Money price_variance = 5;
+    common.v1.Money quantity_variance = 6;
+    common.v1.Money scrap_variance = 7;
+    common.v1.Money lot_size_variance = 8;
+    repeated VarianceDetail details = 9;
+}
+
+message VarianceDetail {
+    string category = 1;
+    string description = 2;
+    common.v1.Money planned = 3;
+    common.v1.Money actual = 4;
+    common.v1.Money variance = 5;
+    double variance_percentage = 6;
+}
+
+message OrderProgress {
+    string production_order_id = 1;
+    string order_number = 2;
+    double overall_progress = 3;
+    common.v1.Quantity planned_quantity = 4;
+    common.v1.Quantity completed_quantity = 5;
+    repeated OperationProgress operation_progress = 6;
+    repeated ComponentProgress component_progress = 7;
+    google.protobuf.Timestamp estimated_completion = 8;
+    bool on_schedule = 9;
+    int32 delay_hours = 10;
+}
+
+message OperationProgress {
+    string operation_id = 1;
+    int32 operation_number = 2;
+    string description = 3;
+    OperationStatus status = 4;
+    double progress_percentage = 5;
+    double planned_hours = 6;
+    double actual_hours = 7;
+    double remaining_hours = 8;
+}
+
+message ComponentProgress {
+    string component_id = 1;
+    string product_code = 2;
+    common.v1.Quantity required = 3;
+    common.v1.Quantity issued = 4;
+    double progress_percentage = 5;
+    bool shortage = 6;
+}
+
+message CreateProductionOrderRequest {
+    string company_code = 1;
+    string plant = 2;
+    string product_id = 3;
+    common.v1.Quantity quantity = 4;
+    google.protobuf.Timestamp planned_start = 5;
+    google.protobuf.Timestamp planned_end = 6;
+    string bom_id = 7;
+    string routing_id = 8;
+    string sales_order_id = 9;
+    string sales_order_line_id = 10;
+    ProductionOrderType order_type = 11;
+    int32 priority = 12;
+    string batch_number = 13;
+}
+
+message GetProductionOrderRequest {
+    string id = 1;
+}
+
+message UpdateProductionOrderRequest {
+    string id = 1;
+    common.v1.Quantity quantity = 2;
+    google.protobuf.Timestamp planned_start = 3;
+    google.protobuf.Timestamp planned_end = 4;
+    int32 priority = 5;
+}
+
+message DeleteProductionOrderRequest {
+    string id = 1;
+}
+
+message ListProductionOrdersRequest {
+    string company_code = 1;
+    string plant = 2;
+    string product_id = 3;
+    ProductionOrderStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    string mrp_controller = 6;
+    string work_center = 7;
+    common.v1.Pagination pagination = 8;
+}
+
+message ListProductionOrdersResponse {
+    repeated ProductionOrder orders = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ReleaseProductionOrderRequest {
+    string id = 1;
+}
+
+message StartProductionOrderRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_start = 2;
+}
+
+message CompleteProductionOrderRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_end = 2;
+}
+
+message CloseProductionOrderRequest {
+    string id = 1;
+}
+
+message CancelProductionOrderRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message ConfirmOperationRequest {
+    string production_order_id = 1;
+    string operation_id = 2;
+    google.protobuf.Timestamp confirmation_date = 3;
+    double setup_time = 4;
+    double machine_time = 5;
+    double labor_time = 6;
+    common.v1.Quantity yield_quantity = 7;
+    common.v1.Quantity scrap_quantity = 8;
+    common.v1.Quantity rework_quantity = 9;
+    string scrap_reason = 10;
+    string operator_id = 11;
+    bool final_confirmation = 12;
+    string notes = 13;
+}
+
+message GetOperationConfirmationsRequest {
+    string production_order_id = 1;
+    string operation_id = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetOperationConfirmationsResponse {
+    repeated OperationConfirmation confirmations = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ReverseConfirmationRequest {
+    string confirmation_id = 1;
+    string reason = 2;
+}
+
+message PostGoodsIssueRequest {
+    string production_order_id = 1;
+    google.protobuf.Timestamp movement_date = 2;
+    repeated GoodsIssueItem items = 3;
+}
+
+message GoodsIssueItem {
+    string component_id = 1;
+    common.v1.Quantity quantity = 2;
+    string storage_location = 3;
+    string batch_number = 4;
+}
+
+message PostGoodsReceiptRequest {
+    string production_order_id = 1;
+    google.protobuf.Timestamp movement_date = 2;
+    common.v1.Quantity quantity = 3;
+    string storage_location = 4;
+    string batch_number = 5;
+    string stock_type = 6;
+}
+
+message GetGoodsMovementsRequest {
+    string production_order_id = 1;
+    GoodsMovementType movement_type = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message GetGoodsMovementsResponse {
+    repeated GoodsMovement movements = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetProductionOrderCostingRequest {
+    string production_order_id = 1;
+}
+
+message CalculateVarianceRequest {
+    string production_order_id = 1;
+}
+
+message GetOrderProgressRequest {
+    string id = 1;
+}
+
+message GetProductionScheduleRequest {
+    string plant = 1;
+    string work_center = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetProductionScheduleResponse {
+    repeated ScheduledOrder scheduled_orders = 1;
+    repeated WorkCenterLoad work_center_loads = 2;
+}
+
+message ScheduledOrder {
+    string production_order_id = 1;
+    string order_number = 2;
+    string product_code = 3;
+    common.v1.Quantity quantity = 4;
+    google.protobuf.Timestamp scheduled_start = 5;
+    google.protobuf.Timestamp scheduled_end = 6;
+    string work_center = 7;
+    int32 priority = 8;
+    ProductionOrderStatus status = 9;
+}
+
+message WorkCenterLoad {
+    string work_center_id = 1;
+    string work_center_name = 2;
+    google.protobuf.Timestamp date = 3;
+    double available_capacity = 4;
+    double planned_load = 5;
+    double utilization_percentage = 6;
+    bool overloaded = 7;
+}
+
+// Auto-generated Response messages
+message CreateProductionOrderResponse {
+    ProductionOrder production_order = 1;
+}
+
+message GetProductionOrderResponse {
+    ProductionOrder production_order = 1;
+}
+
+message UpdateProductionOrderResponse {
+    ProductionOrder production_order = 1;
+}
+
+message ReleaseProductionOrderResponse {
+    ProductionOrder production_order = 1;
+}
+
+message StartProductionOrderResponse {
+    ProductionOrder production_order = 1;
+}
+
+message CompleteProductionOrderResponse {
+    ProductionOrder production_order = 1;
+}
+
+message CloseProductionOrderResponse {
+    ProductionOrder production_order = 1;
+}
+
+message CancelProductionOrderResponse {
+    ProductionOrder production_order = 1;
+}
+
+message ConfirmOperationResponse {
+    OperationConfirmation operation_confirmation = 1;
+}
+
+message PostGoodsIssueResponse {
+    GoodsMovement goods_movement = 1;
+}
+
+message PostGoodsReceiptResponse {
+    GoodsMovement goods_movement = 1;
+}
+
+message GetProductionOrderCostingResponse {
+    ProductionOrderCosting production_order_costing = 1;
+}
+
+message CalculateVarianceResponse {
+    VarianceAnalysis variance_analysis = 1;
+}
+
+message GetOrderProgressResponse {
+    OrderProgress order_progress = 1;
+}

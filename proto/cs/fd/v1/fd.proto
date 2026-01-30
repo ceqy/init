@@ -1,0 +1,758 @@
+syntax = "proto3";
+
+package cs.fd.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/base.proto";
+
+service FieldServiceService {
+    rpc CreateServiceOrder(CreateServiceOrderRequest) returns (CreateServiceOrderResponse);
+    rpc GetServiceOrder(GetServiceOrderRequest) returns (GetServiceOrderResponse);
+    rpc UpdateServiceOrder(UpdateServiceOrderRequest) returns (UpdateServiceOrderResponse);
+    rpc ListServiceOrders(ListServiceOrdersRequest) returns (ListServiceOrdersResponse);
+
+    rpc ScheduleServiceOrder(ScheduleServiceOrderRequest) returns (ScheduleServiceOrderResponse);
+    rpc DispatchServiceOrder(DispatchServiceOrderRequest) returns (DispatchServiceOrderResponse);
+    rpc StartServiceOrder(StartServiceOrderRequest) returns (StartServiceOrderResponse);
+    rpc CompleteServiceOrder(CompleteServiceOrderRequest) returns (CompleteServiceOrderResponse);
+    rpc CancelServiceOrder(CancelServiceOrderRequest) returns (CancelServiceOrderResponse);
+
+    rpc CreateServiceAppointment(CreateServiceAppointmentRequest) returns (CreateServiceAppointmentResponse);
+    rpc GetServiceAppointment(GetServiceAppointmentRequest) returns (GetServiceAppointmentResponse);
+    rpc UpdateServiceAppointment(UpdateServiceAppointmentRequest) returns (UpdateServiceAppointmentResponse);
+    rpc ListServiceAppointments(ListServiceAppointmentsRequest) returns (ListServiceAppointmentsResponse);
+
+    rpc CreateTechnician(CreateTechnicianRequest) returns (CreateTechnicianResponse);
+    rpc GetTechnician(GetTechnicianRequest) returns (GetTechnicianResponse);
+    rpc UpdateTechnician(UpdateTechnicianRequest) returns (UpdateTechnicianResponse);
+    rpc ListTechnicians(ListTechniciansRequest) returns (ListTechniciansResponse);
+    rpc GetTechnicianAvailability(GetTechnicianAvailabilityRequest) returns (GetTechnicianAvailabilityResponse);
+    rpc GetTechnicianSchedule(GetTechnicianScheduleRequest) returns (GetTechnicianScheduleResponse);
+
+    rpc CreateServiceTerritory(CreateServiceTerritoryRequest) returns (CreateServiceTerritoryResponse);
+    rpc GetServiceTerritory(GetServiceTerritoryRequest) returns (GetServiceTerritoryResponse);
+    rpc ListServiceTerritories(ListServiceTerritoriesRequest) returns (ListServiceTerritoriesResponse);
+
+    rpc RecordServiceActivity(RecordServiceActivityRequest) returns (RecordServiceActivityResponse);
+    rpc GetServiceActivities(GetServiceActivitiesRequest) returns (GetServiceActivitiesResponse);
+
+    rpc RecordPartsUsed(RecordPartsUsedRequest) returns (RecordPartsUsedResponse);
+    rpc GetPartsUsed(GetPartsUsedRequest) returns (GetPartsUsedResponse);
+
+    rpc CaptureSignature(CaptureSignatureRequest) returns (CaptureSignatureResponse);
+    rpc GetServiceReport(GetServiceReportRequest) returns (GetServiceReportResponse);
+
+    rpc GetFieldServiceDashboard(GetFieldServiceDashboardRequest) returns (GetFieldServiceDashboardResponse);
+    rpc GetServiceMetrics(GetServiceMetricsRequest) returns (GetServiceMetricsResponse);
+}
+
+message ServiceOrder {
+    string id = 1;
+    string order_number = 2;
+    string company_code = 3;
+    string customer_id = 4;
+    string customer_name = 5;
+    string contact_name = 6;
+    string contact_phone = 7;
+    string contact_email = 8;
+    ServiceOrderType type = 9;
+    ServiceOrderPriority priority = 10;
+    string subject = 11;
+    string description = 12;
+    string asset_id = 13;
+    string asset_number = 14;
+    string serial_number = 15;
+    string product_id = 16;
+    string product_name = 17;
+    common.v1.Address service_address = 18;
+    string service_territory_id = 19;
+    google.protobuf.Timestamp requested_date = 20;
+    google.protobuf.Timestamp scheduled_start = 21;
+    google.protobuf.Timestamp scheduled_end = 22;
+    google.protobuf.Timestamp actual_start = 23;
+    google.protobuf.Timestamp actual_end = 24;
+    double estimated_duration_hours = 25;
+    double actual_duration_hours = 26;
+    string assigned_technician_id = 27;
+    string assigned_technician_name = 28;
+    ServiceOrderStatus status = 29;
+    string case_id = 30;
+    string contract_id = 31;
+    string warranty_id = 32;
+    repeated ServiceOrderLine lines = 33;
+    common.v1.Money estimated_cost = 34;
+    common.v1.Money actual_cost = 35;
+    common.v1.Money labor_cost = 36;
+    common.v1.Money parts_cost = 37;
+    common.v1.Money travel_cost = 38;
+    string resolution = 39;
+    string customer_signature_id = 40;
+    double customer_rating = 41;
+    string customer_feedback = 42;
+    common.v1.AuditInfo audit_info = 43;
+}
+
+enum ServiceOrderType {
+    SERVICE_ORDER_TYPE_UNSPECIFIED = 0;
+    SERVICE_ORDER_TYPE_INSTALLATION = 1;
+    SERVICE_ORDER_TYPE_REPAIR = 2;
+    SERVICE_ORDER_TYPE_MAINTENANCE = 3;
+    SERVICE_ORDER_TYPE_INSPECTION = 4;
+    SERVICE_ORDER_TYPE_WARRANTY = 5;
+    SERVICE_ORDER_TYPE_UPGRADE = 6;
+    SERVICE_ORDER_TYPE_DECOMMISSION = 7;
+}
+
+enum ServiceOrderPriority {
+    SERVICE_ORDER_PRIORITY_UNSPECIFIED = 0;
+    SERVICE_ORDER_PRIORITY_LOW = 1;
+    SERVICE_ORDER_PRIORITY_MEDIUM = 2;
+    SERVICE_ORDER_PRIORITY_HIGH = 3;
+    SERVICE_ORDER_PRIORITY_EMERGENCY = 4;
+}
+
+enum ServiceOrderStatus {
+    SERVICE_ORDER_STATUS_UNSPECIFIED = 0;
+    SERVICE_ORDER_STATUS_DRAFT = 1;
+    SERVICE_ORDER_STATUS_SUBMITTED = 2;
+    SERVICE_ORDER_STATUS_SCHEDULED = 3;
+    SERVICE_ORDER_STATUS_DISPATCHED = 4;
+    SERVICE_ORDER_STATUS_EN_ROUTE = 5;
+    SERVICE_ORDER_STATUS_ON_SITE = 6;
+    SERVICE_ORDER_STATUS_IN_PROGRESS = 7;
+    SERVICE_ORDER_STATUS_ON_HOLD = 8;
+    SERVICE_ORDER_STATUS_COMPLETED = 9;
+    SERVICE_ORDER_STATUS_CANCELLED = 10;
+}
+
+message ServiceOrderLine {
+    string id = 1;
+    int32 line_number = 2;
+    ServiceLineType type = 3;
+    string product_id = 4;
+    string product_code = 5;
+    string description = 6;
+    common.v1.Quantity quantity = 7;
+    common.v1.Money unit_price = 8;
+    common.v1.Money total_price = 9;
+    bool billable = 10;
+    bool covered_by_warranty = 11;
+    bool covered_by_contract = 12;
+}
+
+enum ServiceLineType {
+    SERVICE_LINE_TYPE_UNSPECIFIED = 0;
+    SERVICE_LINE_TYPE_LABOR = 1;
+    SERVICE_LINE_TYPE_PART = 2;
+    SERVICE_LINE_TYPE_TRAVEL = 3;
+    SERVICE_LINE_TYPE_EXPENSE = 4;
+}
+
+message ServiceAppointment {
+    string id = 1;
+    string appointment_number = 2;
+    string service_order_id = 3;
+    string service_order_number = 4;
+    string customer_id = 5;
+    string customer_name = 6;
+    common.v1.Address address = 7;
+    string technician_id = 8;
+    string technician_name = 9;
+    google.protobuf.Timestamp scheduled_start = 10;
+    google.protobuf.Timestamp scheduled_end = 11;
+    google.protobuf.Timestamp actual_start = 12;
+    google.protobuf.Timestamp actual_end = 13;
+    ServiceAppointmentStatus status = 14;
+    string notes = 15;
+    common.v1.AuditInfo audit_info = 16;
+}
+
+enum ServiceAppointmentStatus {
+    SERVICE_APPOINTMENT_STATUS_UNSPECIFIED = 0;
+    SERVICE_APPOINTMENT_STATUS_SCHEDULED = 1;
+    SERVICE_APPOINTMENT_STATUS_DISPATCHED = 2;
+    SERVICE_APPOINTMENT_STATUS_EN_ROUTE = 3;
+    SERVICE_APPOINTMENT_STATUS_ARRIVED = 4;
+    SERVICE_APPOINTMENT_STATUS_IN_PROGRESS = 5;
+    SERVICE_APPOINTMENT_STATUS_COMPLETED = 6;
+    SERVICE_APPOINTMENT_STATUS_CANCELLED = 7;
+    SERVICE_APPOINTMENT_STATUS_NO_SHOW = 8;
+}
+
+message Technician {
+    string id = 1;
+    string employee_id = 2;
+    string name = 3;
+    string email = 4;
+    string phone = 5;
+    string mobile = 6;
+    repeated string skills = 7;
+    repeated string certifications = 8;
+    string service_territory_id = 9;
+    string service_territory_name = 10;
+    common.v1.Address home_address = 11;
+    double latitude = 12;
+    double longitude = 13;
+    TechnicianStatus status = 14;
+    double hourly_rate = 15;
+    double overtime_rate = 16;
+    int32 max_daily_appointments = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+enum TechnicianStatus {
+    TECHNICIAN_STATUS_UNSPECIFIED = 0;
+    TECHNICIAN_STATUS_AVAILABLE = 1;
+    TECHNICIAN_STATUS_BUSY = 2;
+    TECHNICIAN_STATUS_EN_ROUTE = 3;
+    TECHNICIAN_STATUS_ON_SITE = 4;
+    TECHNICIAN_STATUS_ON_BREAK = 5;
+    TECHNICIAN_STATUS_OFF_DUTY = 6;
+}
+
+message ServiceTerritory {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string region = 5;
+    repeated string postal_codes = 6;
+    repeated TerritoryBoundary boundaries = 7;
+    string manager_id = 8;
+    string manager_name = 9;
+    common.v1.Status status = 10;
+    common.v1.AuditInfo audit_info = 11;
+}
+
+message TerritoryBoundary {
+    double latitude = 1;
+    double longitude = 2;
+}
+
+message ServiceActivity {
+    string id = 1;
+    string service_order_id = 2;
+    string technician_id = 3;
+    string technician_name = 4;
+    google.protobuf.Timestamp activity_time = 5;
+    ServiceActivityType type = 6;
+    string description = 7;
+    double duration_minutes = 8;
+    double latitude = 9;
+    double longitude = 10;
+    repeated common.v1.Attachment attachments = 11;
+}
+
+enum ServiceActivityType {
+    SERVICE_ACTIVITY_TYPE_UNSPECIFIED = 0;
+    SERVICE_ACTIVITY_TYPE_TRAVEL_START = 1;
+    SERVICE_ACTIVITY_TYPE_ARRIVAL = 2;
+    SERVICE_ACTIVITY_TYPE_WORK_START = 3;
+    SERVICE_ACTIVITY_TYPE_WORK_PAUSE = 4;
+    SERVICE_ACTIVITY_TYPE_WORK_RESUME = 5;
+    SERVICE_ACTIVITY_TYPE_WORK_COMPLETE = 6;
+    SERVICE_ACTIVITY_TYPE_DEPARTURE = 7;
+    SERVICE_ACTIVITY_TYPE_NOTE = 8;
+    SERVICE_ACTIVITY_TYPE_PHOTO = 9;
+}
+
+message ServicePartUsage {
+    string id = 1;
+    string service_order_id = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    common.v1.Quantity quantity = 6;
+    string unit = 7;
+    common.v1.Money unit_cost = 8;
+    common.v1.Money total_cost = 9;
+    string serial_number = 10;
+    string batch_number = 11;
+    bool from_truck_stock = 12;
+    string warehouse_id = 13;
+    string technician_id = 14;
+    google.protobuf.Timestamp used_at = 15;
+}
+
+message ServiceSignature {
+    string id = 1;
+    string service_order_id = 2;
+    string signer_name = 3;
+    string signer_title = 4;
+    bytes signature_image = 5;
+    google.protobuf.Timestamp signed_at = 6;
+    double latitude = 7;
+    double longitude = 8;
+}
+
+message ServiceReport {
+    string id = 1;
+    string service_order_id = 2;
+    string order_number = 3;
+    string customer_name = 4;
+    common.v1.Address service_address = 5;
+    string technician_name = 6;
+    google.protobuf.Timestamp service_date = 7;
+    string work_performed = 8;
+    repeated ServicePartUsage parts_used = 9;
+    double labor_hours = 10;
+    common.v1.Money total_cost = 11;
+    string recommendations = 12;
+    ServiceSignature customer_signature = 13;
+    repeated common.v1.Attachment photos = 14;
+}
+
+message FieldServiceDashboard {
+    google.protobuf.Timestamp timestamp = 1;
+    ServiceOrderSummary orders = 2;
+    TechnicianSummary technicians = 3;
+    PerformanceSummary performance = 4;
+    repeated UpcomingAppointment upcoming = 5;
+    repeated Alert alerts = 6;
+}
+
+message ServiceOrderSummary {
+    int32 total_open = 1;
+    int32 scheduled_today = 2;
+    int32 in_progress = 3;
+    int32 completed_today = 4;
+    int32 overdue = 5;
+    int32 unassigned = 6;
+}
+
+message TechnicianSummary {
+    int32 total_technicians = 1;
+    int32 available = 2;
+    int32 busy = 3;
+    int32 en_route = 4;
+    int32 on_site = 5;
+    int32 off_duty = 6;
+}
+
+message PerformanceSummary {
+    double first_time_fix_rate = 1;
+    double on_time_arrival_rate = 2;
+    double average_response_hours = 3;
+    double customer_satisfaction = 4;
+}
+
+message UpcomingAppointment {
+    string appointment_id = 1;
+    string service_order_number = 2;
+    string customer_name = 3;
+    string technician_name = 4;
+    google.protobuf.Timestamp scheduled_start = 5;
+    ServiceOrderPriority priority = 6;
+}
+
+message Alert {
+    string id = 1;
+    string type = 2;
+    string severity = 3;
+    string message = 4;
+    string reference_id = 5;
+    google.protobuf.Timestamp timestamp = 6;
+}
+
+message CreateServiceOrderRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    string contact_name = 3;
+    string contact_phone = 4;
+    string contact_email = 5;
+    ServiceOrderType type = 6;
+    ServiceOrderPriority priority = 7;
+    string subject = 8;
+    string description = 9;
+    string asset_id = 10;
+    string serial_number = 11;
+    string product_id = 12;
+    common.v1.Address service_address = 13;
+    google.protobuf.Timestamp requested_date = 14;
+    double estimated_duration_hours = 15;
+    string case_id = 16;
+    string contract_id = 17;
+    repeated ServiceOrderLineInput lines = 18;
+}
+
+message ServiceOrderLineInput {
+    ServiceLineType type = 1;
+    string product_id = 2;
+    string description = 3;
+    common.v1.Quantity quantity = 4;
+    common.v1.Money unit_price = 5;
+    bool billable = 6;
+}
+
+message GetServiceOrderRequest {
+    string id = 1;
+}
+
+message UpdateServiceOrderRequest {
+    string id = 1;
+    string subject = 2;
+    string description = 3;
+    ServiceOrderPriority priority = 4;
+    common.v1.Address service_address = 5;
+    double estimated_duration_hours = 6;
+}
+
+message ListServiceOrdersRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    ServiceOrderType type = 3;
+    ServiceOrderStatus status = 4;
+    ServiceOrderPriority priority = 5;
+    string assigned_technician_id = 6;
+    string service_territory_id = 7;
+    common.v1.DateRange date_range = 8;
+    common.v1.Pagination pagination = 9;
+}
+
+message ListServiceOrdersResponse {
+    repeated ServiceOrder orders = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ScheduleServiceOrderRequest {
+    string id = 1;
+    string technician_id = 2;
+    google.protobuf.Timestamp scheduled_start = 3;
+    google.protobuf.Timestamp scheduled_end = 4;
+}
+
+message DispatchServiceOrderRequest {
+    string id = 1;
+    string notes = 2;
+}
+
+message StartServiceOrderRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_start = 2;
+    double latitude = 3;
+    double longitude = 4;
+}
+
+message CompleteServiceOrderRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_end = 2;
+    string resolution = 3;
+    repeated ServiceOrderLineInput additional_lines = 4;
+}
+
+message CancelServiceOrderRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message CreateServiceAppointmentRequest {
+    string service_order_id = 1;
+    string technician_id = 2;
+    google.protobuf.Timestamp scheduled_start = 3;
+    google.protobuf.Timestamp scheduled_end = 4;
+    string notes = 5;
+}
+
+message GetServiceAppointmentRequest {
+    string id = 1;
+}
+
+message UpdateServiceAppointmentRequest {
+    string id = 1;
+    string technician_id = 2;
+    google.protobuf.Timestamp scheduled_start = 3;
+    google.protobuf.Timestamp scheduled_end = 4;
+    ServiceAppointmentStatus status = 5;
+    string notes = 6;
+}
+
+message ListServiceAppointmentsRequest {
+    string service_order_id = 1;
+    string technician_id = 2;
+    ServiceAppointmentStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListServiceAppointmentsResponse {
+    repeated ServiceAppointment appointments = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateTechnicianRequest {
+    string employee_id = 1;
+    string name = 2;
+    string email = 3;
+    string phone = 4;
+    string mobile = 5;
+    repeated string skills = 6;
+    repeated string certifications = 7;
+    string service_territory_id = 8;
+    common.v1.Address home_address = 9;
+    double hourly_rate = 10;
+    double overtime_rate = 11;
+    int32 max_daily_appointments = 12;
+}
+
+message GetTechnicianRequest {
+    string id = 1;
+}
+
+message UpdateTechnicianRequest {
+    string id = 1;
+    string name = 2;
+    string email = 3;
+    string phone = 4;
+    string mobile = 5;
+    repeated string skills = 6;
+    repeated string certifications = 7;
+    string service_territory_id = 8;
+    TechnicianStatus status = 9;
+}
+
+message ListTechniciansRequest {
+    string service_territory_id = 1;
+    repeated string skills = 2;
+    TechnicianStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListTechniciansResponse {
+    repeated Technician technicians = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetTechnicianAvailabilityRequest {
+    string technician_id = 1;
+    google.protobuf.Timestamp date = 2;
+}
+
+message GetTechnicianAvailabilityResponse {
+    string technician_id = 1;
+    string technician_name = 2;
+    google.protobuf.Timestamp date = 3;
+    repeated TimeSlot available_slots = 4;
+    repeated TimeSlot booked_slots = 5;
+}
+
+message TimeSlot {
+    google.protobuf.Timestamp start = 1;
+    google.protobuf.Timestamp end = 2;
+    string appointment_id = 3;
+}
+
+message GetTechnicianScheduleRequest {
+    string technician_id = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetTechnicianScheduleResponse {
+    string technician_id = 1;
+    string technician_name = 2;
+    repeated ScheduleDay schedule = 3;
+}
+
+message ScheduleDay {
+    google.protobuf.Timestamp date = 1;
+    repeated ServiceAppointment appointments = 2;
+    double total_hours = 3;
+}
+
+message CreateServiceTerritoryRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string region = 4;
+    repeated string postal_codes = 5;
+    repeated TerritoryBoundary boundaries = 6;
+    string manager_id = 7;
+}
+
+message GetServiceTerritoryRequest {
+    string id = 1;
+}
+
+message ListServiceTerritoriesRequest {
+    string region = 1;
+    common.v1.Status status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListServiceTerritoriesResponse {
+    repeated ServiceTerritory territories = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message RecordServiceActivityRequest {
+    string service_order_id = 1;
+    string technician_id = 2;
+    ServiceActivityType type = 3;
+    string description = 4;
+    double latitude = 5;
+    double longitude = 6;
+}
+
+message GetServiceActivitiesRequest {
+    string service_order_id = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message GetServiceActivitiesResponse {
+    repeated ServiceActivity activities = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message RecordPartsUsedRequest {
+    string service_order_id = 1;
+    string product_id = 2;
+    common.v1.Quantity quantity = 3;
+    string serial_number = 4;
+    string batch_number = 5;
+    bool from_truck_stock = 6;
+    string warehouse_id = 7;
+}
+
+message GetPartsUsedRequest {
+    string service_order_id = 1;
+}
+
+message GetPartsUsedResponse {
+    repeated ServicePartUsage parts = 1;
+    common.v1.Money total_cost = 2;
+}
+
+message CaptureSignatureRequest {
+    string service_order_id = 1;
+    string signer_name = 2;
+    string signer_title = 3;
+    bytes signature_image = 4;
+    double latitude = 5;
+    double longitude = 6;
+}
+
+message GetServiceReportRequest {
+    string service_order_id = 1;
+}
+
+message GetFieldServiceDashboardRequest {
+    string company_code = 1;
+    string service_territory_id = 2;
+}
+
+message GetServiceMetricsRequest {
+    string company_code = 1;
+    string service_territory_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetServiceMetricsResponse {
+    ServiceMetrics metrics = 1;
+    repeated ServiceMetricsTrend trend = 2;
+}
+
+message ServiceMetrics {
+    int32 total_orders = 1;
+    int32 completed_orders = 2;
+    double first_time_fix_rate = 3;
+    double on_time_arrival_rate = 4;
+    double average_response_hours = 5;
+    double average_resolution_hours = 6;
+    double customer_satisfaction = 7;
+    common.v1.Money total_revenue = 8;
+    common.v1.Money average_order_value = 9;
+    double technician_utilization = 10;
+}
+
+message ServiceMetricsTrend {
+    string period = 1;
+    int32 orders = 2;
+    double first_time_fix_rate = 3;
+    double satisfaction = 4;
+    common.v1.Money revenue = 5;
+}
+
+// Auto-generated Response messages
+message CreateServiceOrderResponse {
+    ServiceOrder service_order = 1;
+}
+
+message GetServiceOrderResponse {
+    ServiceOrder service_order = 1;
+}
+
+message UpdateServiceOrderResponse {
+    ServiceOrder service_order = 1;
+}
+
+message ScheduleServiceOrderResponse {
+    ServiceOrder service_order = 1;
+}
+
+message DispatchServiceOrderResponse {
+    ServiceOrder service_order = 1;
+}
+
+message StartServiceOrderResponse {
+    ServiceOrder service_order = 1;
+}
+
+message CompleteServiceOrderResponse {
+    ServiceOrder service_order = 1;
+}
+
+message CancelServiceOrderResponse {
+    ServiceOrder service_order = 1;
+}
+
+message CreateServiceAppointmentResponse {
+    ServiceAppointment service_appointment = 1;
+}
+
+message GetServiceAppointmentResponse {
+    ServiceAppointment service_appointment = 1;
+}
+
+message UpdateServiceAppointmentResponse {
+    ServiceAppointment service_appointment = 1;
+}
+
+message CreateTechnicianResponse {
+    Technician technician = 1;
+}
+
+message GetTechnicianResponse {
+    Technician technician = 1;
+}
+
+message UpdateTechnicianResponse {
+    Technician technician = 1;
+}
+
+message CreateServiceTerritoryResponse {
+    ServiceTerritory service_territory = 1;
+}
+
+message GetServiceTerritoryResponse {
+    ServiceTerritory service_territory = 1;
+}
+
+message RecordServiceActivityResponse {
+    ServiceActivity service_activity = 1;
+}
+
+message RecordPartsUsedResponse {
+    ServicePartUsage service_part_usage = 1;
+}
+
+message CaptureSignatureResponse {
+    ServiceSignature service_signature = 1;
+}
+
+message GetServiceReportResponse {
+    ServiceReport service_report = 1;
+}
+
+message GetFieldServiceDashboardResponse {
+    FieldServiceDashboard field_service_dashboard = 1;
+}

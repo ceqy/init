@@ -1,0 +1,683 @@
+syntax = "proto3";
+
+package mdm.bp.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+// ============================================================================
+// 业务伙伴服务 (Business Partner - 客户+供应商统一管理)
+// ============================================================================
+service BusinessPartnerService {
+    // 业务伙伴基本操作
+    rpc CreateBusinessPartner(CreateBusinessPartnerRequest) returns (CreateBusinessPartnerResponse);
+    rpc GetBusinessPartner(GetBusinessPartnerRequest) returns (GetBusinessPartnerResponse);
+    rpc UpdateBusinessPartner(UpdateBusinessPartnerRequest) returns (UpdateBusinessPartnerResponse);
+    rpc DeleteBusinessPartner(DeleteBusinessPartnerRequest) returns (google.protobuf.Empty);
+    rpc ListBusinessPartners(ListBusinessPartnersRequest) returns (ListBusinessPartnersResponse);
+
+    // 业务伙伴角色扩展
+    rpc ExtendToCustomer(ExtendToCustomerRequest) returns (ExtendToCustomerResponse);
+    rpc ExtendToVendor(ExtendToVendorRequest) returns (ExtendToVendorResponse);
+    rpc UpdateCustomerData(UpdateCustomerDataRequest) returns (UpdateCustomerDataResponse);
+    rpc UpdateVendorData(UpdateVendorDataRequest) returns (UpdateVendorDataResponse);
+
+    // 联系人管理
+    rpc CreateContact(CreateContactRequest) returns (CreateContactResponse);
+    rpc GetContact(GetContactRequest) returns (GetContactResponse);
+    rpc UpdateContact(UpdateContactRequest) returns (UpdateContactResponse);
+    rpc DeleteContact(DeleteContactRequest) returns (google.protobuf.Empty);
+    rpc ListContacts(ListContactsRequest) returns (ListContactsResponse);
+
+    // 银行账户管理
+    rpc CreateBankAccount(CreateBankAccountRequest) returns (CreateBankAccountResponse);
+    rpc GetBankAccount(GetBankAccountRequest) returns (GetBankAccountResponse);
+    rpc UpdateBankAccount(UpdateBankAccountRequest) returns (UpdateBankAccountResponse);
+    rpc DeleteBankAccount(DeleteBankAccountRequest) returns (google.protobuf.Empty);
+    rpc ListBankAccounts(ListBankAccountsRequest) returns (ListBankAccountsResponse);
+
+    // 业务伙伴状态管理
+    rpc ActivateBusinessPartner(ActivateBusinessPartnerRequest) returns (google.protobuf.Empty);
+    rpc BlockBusinessPartner(BlockBusinessPartnerRequest) returns (google.protobuf.Empty);
+    rpc MarkForDeletion(MarkForDeletionRequest) returns (google.protobuf.Empty);
+
+    // 业务伙伴分组
+    rpc CreateBusinessPartnerGroup(CreateBusinessPartnerGroupRequest) returns (CreateBusinessPartnerGroupResponse);
+    rpc GetBusinessPartnerGroup(GetBusinessPartnerGroupRequest) returns (GetBusinessPartnerGroupResponse);
+    rpc UpdateBusinessPartnerGroup(UpdateBusinessPartnerGroupRequest) returns (UpdateBusinessPartnerGroupResponse);
+    rpc ListBusinessPartnerGroups(ListBusinessPartnerGroupsRequest) returns (ListBusinessPartnerGroupsResponse);
+
+    // 搜索
+    rpc SearchBusinessPartners(SearchBusinessPartnersRequest) returns (SearchBusinessPartnersResponse);
+
+    // 变更历史
+    rpc GetBusinessPartnerChangeHistory(GetBusinessPartnerChangeHistoryRequest) returns (GetBusinessPartnerChangeHistoryResponse);
+}
+
+// ============================================================================
+// 核心实体
+// ============================================================================
+
+// 业务伙伴 (统一客户和供应商)
+message BusinessPartner {
+    string id = 1;                              // 业务伙伴ID (UUID)
+    string bp_number = 2;                       // 业务伙伴编号 (业务主键)
+    string name = 3;                            // 名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+    string search_term = 5;                     // 搜索词
+
+    // 基本信息
+    BusinessPartnerType bp_type = 6;            // 业务伙伴类型
+    string bp_group_id = 7;                     // 业务伙伴组ID
+    string bp_group_code = 8;                   // 业务伙伴组编码
+
+    // 组织信息
+    OrganizationType organization_type = 9;     // 组织类型
+    string legal_form = 10;                     // 法律形式
+    string industry = 11;                       // 行业
+    string tax_number = 12;                     // 税号
+    string vat_registration_number = 13;        // 增值税登记号
+
+    // 地址
+    repeated Address addresses = 14;            // 地址列表
+
+    // 联系方式
+    string phone = 15;                          // 电话
+    string mobile = 16;                         // 手机
+    string fax = 17;                            // 传真
+    string email = 18;                          // 邮箱
+    string website = 19;                        // 网站
+
+    // 角色数据
+    repeated CustomerData customer_data = 20;   // 客户数据
+    repeated VendorData vendor_data = 21;       // 供应商数据
+
+    // 联系人
+    repeated Contact contacts = 22;             // 联系人列表
+
+    // 银行账户
+    repeated BankAccount bank_accounts = 23;    // 银行账户列表
+
+    // 状态
+    common.v1.DataStatus status = 24;      // 状态
+    bool deletion_flag = 25;                    // 删除标记
+
+    // 自定义属性
+    map<string, string> custom_attributes = 26;
+
+    // 附件
+    repeated common.v1.Attachment attachments = 27;
+
+    // 审计
+    common.v1.AuditInfo audit_info = 28;
+}
+
+// 地址
+message Address {
+    string id = 1;                              // 地址ID
+    AddressType address_type = 2;               // 地址类型
+    bool is_default = 3;                        // 是否默认地址
+
+    // 地址信息
+    string street = 4;                          // 街道
+    string street2 = 5;                         // 街道2
+    string city = 6;                            // 城市
+    string district = 7;                        // 区/县
+    string state = 8;                           // 省/州
+    string postal_code = 9;                     // 邮编
+    string country = 10;                        // 国家代码
+    string region = 11;                         // 地区
+
+    // 联系方式
+    string phone = 12;                          // 电话
+    string fax = 13;                            // 传真
+    string email = 14;                          // 邮箱
+
+    // 有效期
+    common.v1.ValidityPeriod validity = 15;
+}
+
+// 客户数据
+message CustomerData {
+    string sales_org = 1;                       // 销售组织
+    string distribution_channel = 2;            // 分销渠道
+    string division = 3;                        // 产品组
+
+    // 客户分类
+    string customer_group = 4;                  // 客户组
+    string customer_classification = 5;         // 客户分类
+    string account_assignment_group = 6;        // 科目分配组
+
+    // 定价
+    string price_group = 7;                     // 价格组
+    string price_list = 8;                      // 价格清单
+    string currency = 9;                        // 货币
+
+    // 付款条件
+    string payment_terms = 10;                  // 付款条件
+    string payment_method = 11;                 // 付款方式
+
+    // 信用管理
+    common.v1.Money credit_limit = 12;     // 信用额度
+    string credit_control_area = 13;            // 信用控制范围
+    string risk_category = 14;                  // 风险类别
+
+    // 交货
+    string shipping_condition = 15;             // 装运条件
+    string delivery_priority = 16;              // 交货优先级
+    int32 delivery_days = 17;                   // 交货天数
+
+    // 税务
+    string tax_classification = 18;             // 税务分类
+
+    // 对账
+    string reconciliation_account = 19;         // 统驭科目
+
+    // 状态
+    CustomerStatus status = 20;                 // 客户状态
+    bool deletion_flag = 21;                    // 删除标记
+}
+
+// 供应商数据
+message VendorData {
+    string purchase_org = 1;                    // 采购组织
+    string company_code = 2;                    // 公司代码 (可选)
+
+    // 供应商分类
+    string vendor_group = 3;                    // 供应商组
+    string vendor_classification = 4;           // 供应商分类
+    string account_assignment_group = 5;        // 科目分配组
+
+    // 采购
+    string purchasing_group = 6;                // 采购组
+    string currency = 7;                        // 货币
+    string incoterms = 8;                       // 国际贸易术语
+    string incoterms_location = 9;              // 贸易术语地点
+
+    // 付款条件
+    string payment_terms = 10;                  // 付款条件
+    string payment_method = 11;                 // 付款方式
+
+    // 发票校验
+    bool gr_based_iv = 12;                      // 基于收货的发票校验
+    double tolerance_percentage = 13;           // 容差百分比
+
+    // 对账
+    string reconciliation_account = 14;         // 统驭科目
+
+    // 评估
+    int32 vendor_rating = 15;                   // 供应商评级 (1-100)
+    google.protobuf.Timestamp last_evaluation_date = 16; // 最后评估日期
+
+    // 状态
+    VendorStatus status = 17;                   // 供应商状态
+    bool deletion_flag = 18;                    // 删除标记
+}
+
+// 联系人
+message Contact {
+    string id = 1;                              // 联系人ID
+    string bp_id = 2;                           // 业务伙伴ID
+
+    // 基本信息
+    string first_name = 3;                      // 名
+    string last_name = 4;                       // 姓
+    string title = 5;                           // 职位
+    string department = 6;                      // 部门
+    string function = 7;                        // 职能
+
+    // 联系方式
+    string phone = 8;                           // 电话
+    string mobile = 9;                          // 手机
+    string fax = 10;                            // 传真
+    string email = 11;                          // 邮箱
+
+    // 标记
+    bool is_primary = 12;                       // 是否主要联系人
+    bool is_vip = 13;                           // 是否VIP
+
+    // 有效期
+    common.v1.ValidityPeriod validity = 14;
+
+    // 审计
+    common.v1.AuditInfo audit_info = 15;
+}
+
+// 银行账户
+message BankAccount {
+    string id = 1;                              // 银行账户ID
+    string bp_id = 2;                           // 业务伙伴ID
+
+    // 银行信息
+    string bank_country = 3;                    // 银行国家
+    string bank_key = 4;                        // 银行代码
+    string bank_name = 5;                       // 银行名称
+    string bank_branch = 6;                     // 分行
+
+    // 账户信息
+    string account_number = 7;                  // 账号
+    string account_holder = 8;                  // 账户持有人
+    string iban = 9;                            // IBAN
+    string swift_code = 10;                     // SWIFT代码
+
+    // 标记
+    bool is_default = 11;                       // 是否默认账户
+
+    // 有效期
+    common.v1.ValidityPeriod validity = 12;
+
+    // 审计
+    common.v1.AuditInfo audit_info = 13;
+}
+
+// 业务伙伴组
+message BusinessPartnerGroup {
+    string id = 1;
+    string code = 2;                            // 业务伙伴组编码
+    string name = 3;                            // 业务伙伴组名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+    BusinessPartnerType bp_type = 5;            // 适用的业务伙伴类型
+    common.v1.AuditInfo audit_info = 6;
+}
+
+// ============================================================================
+// 枚举
+// ============================================================================
+
+enum BusinessPartnerType {
+    BUSINESS_PARTNER_TYPE_UNSPECIFIED = 0;
+    BUSINESS_PARTNER_TYPE_CUSTOMER = 1;         // 客户
+    BUSINESS_PARTNER_TYPE_VENDOR = 2;           // 供应商
+    BUSINESS_PARTNER_TYPE_BOTH = 3;             // 客户+供应商
+    BUSINESS_PARTNER_TYPE_EMPLOYEE = 4;         // 员工
+    BUSINESS_PARTNER_TYPE_CONTACT = 5;          // 联系人
+}
+
+enum OrganizationType {
+    ORGANIZATION_TYPE_UNSPECIFIED = 0;
+    ORGANIZATION_TYPE_COMPANY = 1;              // 公司
+    ORGANIZATION_TYPE_INDIVIDUAL = 2;           // 个人
+    ORGANIZATION_TYPE_GOVERNMENT = 3;           // 政府机构
+    ORGANIZATION_TYPE_NON_PROFIT = 4;           // 非营利组织
+}
+
+enum AddressType {
+    ADDRESS_TYPE_UNSPECIFIED = 0;
+    ADDRESS_TYPE_BILLING = 1;                   // 账单地址
+    ADDRESS_TYPE_SHIPPING = 2;                  // 送货地址
+    ADDRESS_TYPE_OFFICE = 3;                    // 办公地址
+    ADDRESS_TYPE_WAREHOUSE = 4;                 // 仓库地址
+}
+
+enum CustomerStatus {
+    CUSTOMER_STATUS_UNSPECIFIED = 0;
+    CUSTOMER_STATUS_ACTIVE = 1;                 // 活跃
+    CUSTOMER_STATUS_BLOCKED_ORDER = 2;          // 冻结订单
+    CUSTOMER_STATUS_BLOCKED_DELIVERY = 3;       // 冻结交货
+    CUSTOMER_STATUS_BLOCKED_BILLING = 4;        // 冻结开票
+    CUSTOMER_STATUS_BLOCKED_ALL = 5;            // 全部冻结
+}
+
+enum VendorStatus {
+    VENDOR_STATUS_UNSPECIFIED = 0;
+    VENDOR_STATUS_ACTIVE = 1;                   // 活跃
+    VENDOR_STATUS_BLOCKED_PURCHASE = 2;         // 冻结采购
+    VENDOR_STATUS_BLOCKED_PAYMENT = 3;          // 冻结付款
+    VENDOR_STATUS_BLOCKED_ALL = 4;              // 全部冻结
+}
+
+// ============================================================================
+// 请求/响应消息 - 业务伙伴基本操作
+// ============================================================================
+
+message CreateBusinessPartnerRequest {
+    string bp_number = 1;                       // 可选,不填则自动生成
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string search_term = 4;
+    BusinessPartnerType bp_type = 5;
+    string bp_group_id = 6;
+    OrganizationType organization_type = 7;
+    string legal_form = 8;
+    string industry = 9;
+    string tax_number = 10;
+    string vat_registration_number = 11;
+
+    // 地址
+    repeated Address addresses = 12;
+
+    // 联系方式
+    string phone = 13;
+    string mobile = 14;
+    string fax = 15;
+    string email = 16;
+    string website = 17;
+
+    // 可选的初始角色数据
+    CustomerData customer_data = 18;
+    VendorData vendor_data = 19;
+
+    map<string, string> custom_attributes = 20;
+}
+
+message CreateBusinessPartnerResponse {
+    BusinessPartner business_partner = 1;
+}
+
+message GetBusinessPartnerRequest {
+    oneof identifier {
+        string id = 1;
+        string bp_number = 2;
+    }
+    bool include_customer_data = 3;
+    bool include_vendor_data = 4;
+    bool include_contacts = 5;
+    bool include_bank_accounts = 6;
+}
+
+message GetBusinessPartnerResponse {
+    BusinessPartner business_partner = 1;
+}
+
+message UpdateBusinessPartnerRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string search_term = 4;
+    string legal_form = 5;
+    string industry = 6;
+    string tax_number = 7;
+    string vat_registration_number = 8;
+    string phone = 9;
+    string mobile = 10;
+    string fax = 11;
+    string email = 12;
+    string website = 13;
+    map<string, string> custom_attributes = 14;
+}
+
+message UpdateBusinessPartnerResponse {
+    BusinessPartner business_partner = 1;
+}
+
+message DeleteBusinessPartnerRequest {
+    string id = 1;
+}
+
+message ListBusinessPartnersRequest {
+    BusinessPartnerType bp_type = 1;
+    string bp_group_id = 2;
+    common.v1.DataStatus status = 3;
+    string search_term = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListBusinessPartnersResponse {
+    repeated BusinessPartner business_partners = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 业务伙伴角色扩展
+// ============================================================================
+
+message ExtendToCustomerRequest {
+    string bp_id = 1;
+    CustomerData customer_data = 2;
+}
+
+message ExtendToCustomerResponse {
+    BusinessPartner business_partner = 1;
+}
+
+message ExtendToVendorRequest {
+    string bp_id = 1;
+    VendorData vendor_data = 2;
+}
+
+message ExtendToVendorResponse {
+    BusinessPartner business_partner = 1;
+}
+
+message UpdateCustomerDataRequest {
+    string bp_id = 1;
+    string sales_org = 2;
+    string distribution_channel = 3;
+    CustomerData customer_data = 4;
+}
+
+message UpdateCustomerDataResponse {
+    BusinessPartner business_partner = 1;
+}
+
+message UpdateVendorDataRequest {
+    string bp_id = 1;
+    string purchase_org = 2;
+    VendorData vendor_data = 3;
+}
+
+message UpdateVendorDataResponse {
+    BusinessPartner business_partner = 1;
+}
+
+// ============================================================================
+// 请求/响应消息 - 联系人管理
+// ============================================================================
+
+message CreateContactRequest {
+    string bp_id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string title = 4;
+    string department = 5;
+    string function = 6;
+    string phone = 7;
+    string mobile = 8;
+    string fax = 9;
+    string email = 10;
+    bool is_primary = 11;
+    bool is_vip = 12;
+}
+
+message CreateContactResponse {
+    Contact contact = 1;
+}
+
+message GetContactRequest {
+    string id = 1;
+}
+
+message GetContactResponse {
+    Contact contact = 1;
+}
+
+message UpdateContactRequest {
+    string id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string title = 4;
+    string department = 5;
+    string function = 6;
+    string phone = 7;
+    string mobile = 8;
+    string fax = 9;
+    string email = 10;
+    bool is_primary = 11;
+    bool is_vip = 12;
+}
+
+message UpdateContactResponse {
+    Contact contact = 1;
+}
+
+message DeleteContactRequest {
+    string id = 1;
+}
+
+message ListContactsRequest {
+    string bp_id = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message ListContactsResponse {
+    repeated Contact contacts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 银行账户管理
+// ============================================================================
+
+message CreateBankAccountRequest {
+    string bp_id = 1;
+    string bank_country = 2;
+    string bank_key = 3;
+    string bank_name = 4;
+    string bank_branch = 5;
+    string account_number = 6;
+    string account_holder = 7;
+    string iban = 8;
+    string swift_code = 9;
+    bool is_default = 10;
+}
+
+message CreateBankAccountResponse {
+    BankAccount bank_account = 1;
+}
+
+message GetBankAccountRequest {
+    string id = 1;
+}
+
+message GetBankAccountResponse {
+    BankAccount bank_account = 1;
+}
+
+message UpdateBankAccountRequest {
+    string id = 1;
+    string bank_name = 2;
+    string bank_branch = 3;
+    string account_holder = 4;
+    bool is_default = 5;
+}
+
+message UpdateBankAccountResponse {
+    BankAccount bank_account = 1;
+}
+
+message DeleteBankAccountRequest {
+    string id = 1;
+}
+
+message ListBankAccountsRequest {
+    string bp_id = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message ListBankAccountsResponse {
+    repeated BankAccount bank_accounts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 业务伙伴状态管理
+// ============================================================================
+
+message ActivateBusinessPartnerRequest {
+    string id = 1;
+}
+
+message BlockBusinessPartnerRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message MarkForDeletionRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 业务伙伴分组
+// ============================================================================
+
+message CreateBusinessPartnerGroupRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    BusinessPartnerType bp_type = 4;
+}
+
+message CreateBusinessPartnerGroupResponse {
+    BusinessPartnerGroup bp_group = 1;
+}
+
+message GetBusinessPartnerGroupRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetBusinessPartnerGroupResponse {
+    BusinessPartnerGroup bp_group = 1;
+}
+
+message UpdateBusinessPartnerGroupRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+}
+
+message UpdateBusinessPartnerGroupResponse {
+    BusinessPartnerGroup bp_group = 1;
+}
+
+message ListBusinessPartnerGroupsRequest {
+    BusinessPartnerType bp_type = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message ListBusinessPartnerGroupsResponse {
+    repeated BusinessPartnerGroup bp_groups = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 搜索
+// ============================================================================
+
+message SearchBusinessPartnersRequest {
+    string query = 1;                           // 全文搜索
+    BusinessPartnerType bp_type = 2;
+    repeated string bp_groups = 3;
+    common.v1.DataStatus status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message SearchBusinessPartnersResponse {
+    repeated BusinessPartnerSearchResult results = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message BusinessPartnerSearchResult {
+    BusinessPartner business_partner = 1;
+    double score = 2;                           // 匹配分数
+    repeated string highlights = 3;             // 高亮片段
+}
+
+// ============================================================================
+// 请求/响应消息 - 变更历史
+// ============================================================================
+
+message GetBusinessPartnerChangeHistoryRequest {
+    string bp_id = 1;
+    common.v1.DateRange date_range = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetBusinessPartnerChangeHistoryResponse {
+    repeated common.v1.ChangeLogEntry records = 1;
+    common.v1.PaginationResponse pagination = 2;
+}

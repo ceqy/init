@@ -1,56 +1,196 @@
 syntax = "proto3";
 
-package cuba.common.v1;
-
-option go_package = "github.com/cuba-erp/api/common/v1";
+package common.v1;
 
 import "google/protobuf/timestamp.proto";
 
-// 分页请求
-message PaginationRequest {
-  int32 page = 1;
-  int32 page_size = 2;
+// 分页请求参数
+message Pagination {
+  int32 page = 1;              // 页码，从1开始
+  int32 page_size = 2;         // 每页大小
+  string sort_by = 3;          // 排序字段
+  bool descending = 4;         // 是否降序排列
 }
 
-// 分页响应
+// 分页响应信息
 message PaginationResponse {
-  int32 page = 1;
-  int32 page_size = 2;
-  int64 total = 3;
-  int32 total_pages = 4;
+  int32 total = 1;             // 总记录数
+  int32 page = 2;              // 当前页码
+  int32 page_size = 3;         // 每页大小
+  int32 total_pages = 4;       // 总页数
 }
 
-// 审计信息
-message AuditInfo {
-  google.protobuf.Timestamp created_at = 1;
-  string created_by = 2;
-  google.protobuf.Timestamp updated_at = 3;
-  string updated_by = 4;
-}
-
-// 空请求
-message Empty {}
-
-// 通用 ID 请求
-message IdRequest {
-  string id = 1;
-}
-
-// 通用成功响应
-message SuccessResponse {
-  bool success = 1;
-  string message = 2;
-}
-
-// 金额
+// 货币金额
 message Money {
-  int64 amount = 1;      // 金额（最小单位，如分）
-  string currency = 2;   // 货币代码
+  string currency = 1;         // 货币代码 (如: CNY, USD)
+  int64 amount = 2;            // 金额 (以最小货币单位表示)
+  int32 decimal_places = 3;    // 小数位数
 }
 
 // 数量
 message Quantity {
-  int64 value = 1;       // 数量值
-  int32 precision = 2;   // 精度因子
-  string unit = 3;       // 计量单位
+  double value = 1;            // 数值
+  string unit = 2;             // 单位 (如: kg, pcs, m)
+}
+
+// 日期范围
+message DateRange {
+  google.protobuf.Timestamp start = 1;  // 开始时间
+  google.protobuf.Timestamp end = 2;    // 结束时间
+}
+
+// 地址信息
+message Address {
+  string street1 = 1;          // 地址行1
+  string street2 = 2;          // 地址行2
+  string city = 3;             // 城市
+  string state = 4;            // 省/州
+  string postal_code = 5;      // 邮政编码
+  string country = 6;          // 国家
+}
+
+// 联系人信息
+message Contact {
+  string name = 1;             // 姓名
+  string email = 2;            // 邮箱
+  string phone = 3;            // 电话
+  string mobile = 4;           // 手机
+  string fax = 5;              // 传真
+}
+
+// 附件信息
+message Attachment {
+  string id = 1;               // 附件ID
+  string filename = 2;         // 文件名
+  string content_type = 3;     // 内容类型 (MIME类型)
+  int64 size = 4;              // 文件大小 (字节)
+  string url = 5;              // 访问URL
+  google.protobuf.Timestamp uploaded_at = 6;  // 上传时间
+}
+
+// 审计信息
+message AuditInfo {
+  string created_by = 1;       // 创建人
+  google.protobuf.Timestamp created_at = 2;   // 创建时间
+  string updated_by = 3;       // 更新人
+  google.protobuf.Timestamp updated_at = 4;   // 更新时间
+}
+
+// 通用状态枚举
+enum Status {
+  STATUS_UNSPECIFIED = 0;      // 未指定
+  STATUS_DRAFT = 1;            // 草稿
+  STATUS_PENDING = 2;          // 待处理
+  STATUS_APPROVED = 3;         // 已批准
+  STATUS_REJECTED = 4;         // 已拒绝
+  STATUS_ACTIVE = 5;           // 活跃
+  STATUS_INACTIVE = 6;         // 非活跃
+  STATUS_COMPLETED = 7;        // 已完成
+  STATUS_CANCELLED = 8;        // 已取消
+  STATUS_CLOSED = 9;           // 已关闭
+}
+
+// 错误详情
+message ErrorDetail {
+  string code = 1;             // 错误代码
+  string message = 2;          // 错误消息
+  string field = 3;            // 相关字段
+}
+
+// 操作结果
+message OperationResult {
+  bool success = 1;            // 是否成功
+  string message = 2;          // 结果消息
+  repeated ErrorDetail errors = 3;  // 错误详情列表
+}
+
+// ============================================================================
+// 扩展通用类型
+// ============================================================================
+
+// 多语言文本
+message LocalizedText {
+  string default_text = 1;                    // 默认文本
+  map<string, string> translations = 2;       // 翻译 (locale -> text, 如: zh_CN, en_US)
+}
+
+// 组织单元引用
+message OrganizationRef {
+  string company_code = 1;                    // 公司代码
+  string plant = 2;                           // 工厂
+  string storage_location = 3;                // 存储位置
+  string sales_org = 4;                       // 销售组织
+  string distribution_channel = 5;            // 分销渠道
+  string division = 6;                        // 产品组
+  string purchase_org = 7;                    // 采购组织
+  string purchase_group = 8;                  // 采购组
+}
+
+// 变更日志条目
+message ChangeLogEntry {
+  string id = 1;                              // 日志ID
+  string entity_type = 2;                     // 实体类型
+  string entity_id = 3;                       // 实体ID
+  string change_type = 4;                     // 变更类型 (CREATE/UPDATE/DELETE/STATUS_CHANGE)
+  string field_name = 5;                      // 字段名
+  string old_value = 6;                       // 旧值
+  string new_value = 7;                       // 新值
+  string changed_by = 8;                      // 变更人
+  google.protobuf.Timestamp changed_at = 9;   // 变更时间
+  string change_reason = 10;                  // 变更原因
+}
+
+// 有效期范围
+message ValidityPeriod {
+  google.protobuf.Timestamp valid_from = 1;   // 生效日期
+  google.protobuf.Timestamp valid_to = 2;     // 失效日期
+}
+
+// 批量操作结果
+message BatchOperationResult {
+  int32 index = 1;                            // 序号
+  bool success = 2;                           // 是否成功
+  string id = 3;                              // 成功时返回的ID
+  string error_code = 4;                      // 错误代码
+  string error_message = 5;                   // 错误消息
+}
+
+// 游标分页请求
+message CursorPagination {
+  string cursor = 1;                          // 游标 (首次请求为空)
+  int32 limit = 2;                            // 每页大小
+  bool forward = 3;                           // 是否向前翻页
+}
+
+// 游标分页响应
+message CursorPaginationResponse {
+  string next_cursor = 1;                     // 下一页游标
+  string prev_cursor = 2;                     // 上一页游标
+  bool has_next = 3;                          // 是否有下一页
+  bool has_prev = 4;                          // 是否有上一页
+  int32 total = 5;                            // 总记录数 (可选)
+}
+
+// 文档状态枚举
+enum DocumentStatus {
+  DOCUMENT_STATUS_UNSPECIFIED = 0;
+  DOCUMENT_STATUS_DRAFT = 1;                  // 草稿
+  DOCUMENT_STATUS_SUBMITTED = 2;              // 已提交
+  DOCUMENT_STATUS_IN_APPROVAL = 3;            // 审批中
+  DOCUMENT_STATUS_APPROVED = 4;               // 已批准
+  DOCUMENT_STATUS_REJECTED = 5;               // 已拒绝
+  DOCUMENT_STATUS_POSTED = 6;                 // 已过账
+  DOCUMENT_STATUS_REVERSED = 7;               // 已冲销
+  DOCUMENT_STATUS_CANCELLED = 8;              // 已取消
+  DOCUMENT_STATUS_CLOSED = 9;                 // 已关闭
+}
+
+// 数据状态枚举 (主数据)
+enum DataStatus {
+  DATA_STATUS_UNSPECIFIED = 0;
+  DATA_STATUS_DRAFT = 1;                      // 草稿
+  DATA_STATUS_ACTIVE = 2;                     // 活跃
+  DATA_STATUS_BLOCKED = 3;                    // 冻结
+  DATA_STATUS_INACTIVE = 4;                   // 停用
+  DATA_STATUS_MARKED_FOR_DELETION = 5;        // 标记删除
 }

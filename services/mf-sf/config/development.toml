@@ -1,0 +1,4 @@
+app_env = "development"
+
+[telemetry]
+log_level = "debug"

@@ -1,0 +1,455 @@
+syntax = "proto3";
+
+package sd.rr.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service ReturnService {
+    rpc CreateReturnOrder(CreateReturnOrderRequest) returns (CreateReturnOrderResponse);
+    rpc GetReturnOrder(GetReturnOrderRequest) returns (GetReturnOrderResponse);
+    rpc UpdateReturnOrder(UpdateReturnOrderRequest) returns (UpdateReturnOrderResponse);
+    rpc DeleteReturnOrder(DeleteReturnOrderRequest) returns (google.protobuf.Empty);
+    rpc ListReturnOrders(ListReturnOrdersRequest) returns (ListReturnOrdersResponse);
+
+    rpc ApproveReturnOrder(ApproveReturnOrderRequest) returns (ApproveReturnOrderResponse);
+    rpc RejectReturnOrder(RejectReturnOrderRequest) returns (RejectReturnOrderResponse);
+    rpc CancelReturnOrder(CancelReturnOrderRequest) returns (CancelReturnOrderResponse);
+
+    rpc CreateReturnDelivery(CreateReturnDeliveryRequest) returns (CreateReturnDeliveryResponse);
+    rpc GetReturnDelivery(GetReturnDeliveryRequest) returns (GetReturnDeliveryResponse);
+    rpc ReceiveReturnDelivery(ReceiveReturnDeliveryRequest) returns (ReceiveReturnDeliveryResponse);
+    rpc ListReturnDeliveries(ListReturnDeliveriesRequest) returns (ListReturnDeliveriesResponse);
+
+    rpc CreateInspection(CreateInspectionRequest) returns (CreateInspectionResponse);
+    rpc GetInspection(GetInspectionRequest) returns (GetInspectionResponse);
+    rpc CompleteInspection(CompleteInspectionRequest) returns (CompleteInspectionResponse);
+
+    rpc ProcessRefund(ProcessRefundRequest) returns (ProcessRefundResponse);
+    rpc GetRefund(GetRefundRequest) returns (GetRefundResponse);
+    rpc ListRefunds(ListRefundsRequest) returns (ListRefundsResponse);
+
+    rpc GetReturnAnalytics(GetReturnAnalyticsRequest) returns (GetReturnAnalyticsResponse);
+}
+
+message ReturnOrder {
+    string id = 1;
+    string return_number = 2;
+    string company_code = 3;
+    string customer_id = 4;
+    string customer_name = 5;
+    string original_order_id = 6;
+    string original_order_number = 7;
+    google.protobuf.Timestamp return_date = 8;
+    string return_reason = 9;
+    string return_type = 10;
+    repeated ReturnOrderLine lines = 11;
+    common.v1.Money total_value = 12;
+    ReturnOrderStatus status = 13;
+    string rma_number = 14;
+    string customer_comments = 15;
+    string internal_notes = 16;
+    common.v1.AuditInfo audit_info = 17;
+}
+
+message ReturnOrderLine {
+    string id = 1;
+    int32 line_number = 2;
+    string original_order_line_id = 3;
+    string product_id = 4;
+    string product_code = 5;
+    string description = 6;
+    common.v1.Quantity quantity = 7;
+    common.v1.Quantity received_quantity = 8;
+    common.v1.Money unit_price = 9;
+    common.v1.Money line_value = 10;
+    string return_reason = 11;
+    string condition = 12;
+    ReturnLineStatus status = 13;
+    string disposition = 14;
+}
+
+enum ReturnOrderStatus {
+    RETURN_ORDER_STATUS_UNSPECIFIED = 0;
+    RETURN_ORDER_STATUS_DRAFT = 1;
+    RETURN_ORDER_STATUS_SUBMITTED = 2;
+    RETURN_ORDER_STATUS_APPROVED = 3;
+    RETURN_ORDER_STATUS_REJECTED = 4;
+    RETURN_ORDER_STATUS_AWAITING_RECEIPT = 5;
+    RETURN_ORDER_STATUS_RECEIVED = 6;
+    RETURN_ORDER_STATUS_INSPECTING = 7;
+    RETURN_ORDER_STATUS_PROCESSING = 8;
+    RETURN_ORDER_STATUS_COMPLETED = 9;
+    RETURN_ORDER_STATUS_CANCELLED = 10;
+}
+
+enum ReturnLineStatus {
+    RETURN_LINE_STATUS_UNSPECIFIED = 0;
+    RETURN_LINE_STATUS_PENDING = 1;
+    RETURN_LINE_STATUS_RECEIVED = 2;
+    RETURN_LINE_STATUS_INSPECTED = 3;
+    RETURN_LINE_STATUS_ACCEPTED = 4;
+    RETURN_LINE_STATUS_REJECTED = 5;
+    RETURN_LINE_STATUS_RESTOCKED = 6;
+    RETURN_LINE_STATUS_DISPOSED = 7;
+}
+
+message ReturnDelivery {
+    string id = 1;
+    string delivery_number = 2;
+    string return_order_id = 3;
+    string return_order_number = 4;
+    google.protobuf.Timestamp expected_date = 5;
+    google.protobuf.Timestamp received_date = 6;
+    string carrier = 7;
+    string tracking_number = 8;
+    repeated ReturnDeliveryLine lines = 9;
+    ReturnDeliveryStatus status = 10;
+    string receiving_location = 11;
+    string received_by = 12;
+    common.v1.AuditInfo audit_info = 13;
+}
+
+message ReturnDeliveryLine {
+    string id = 1;
+    string return_order_line_id = 2;
+    string product_id = 3;
+    string product_code = 4;
+    common.v1.Quantity expected_quantity = 5;
+    common.v1.Quantity received_quantity = 6;
+    string condition_on_receipt = 7;
+    string storage_location = 8;
+    string batch_number = 9;
+}
+
+enum ReturnDeliveryStatus {
+    RETURN_DELIVERY_STATUS_UNSPECIFIED = 0;
+    RETURN_DELIVERY_STATUS_EXPECTED = 1;
+    RETURN_DELIVERY_STATUS_IN_TRANSIT = 2;
+    RETURN_DELIVERY_STATUS_RECEIVED = 3;
+    RETURN_DELIVERY_STATUS_PARTIALLY_RECEIVED = 4;
+}
+
+message Inspection {
+    string id = 1;
+    string inspection_number = 2;
+    string return_order_id = 3;
+    string return_delivery_id = 4;
+    google.protobuf.Timestamp inspection_date = 5;
+    string inspector_id = 6;
+    repeated InspectionLine lines = 7;
+    InspectionStatus status = 8;
+    string overall_result = 9;
+    string notes = 10;
+    repeated common.v1.Attachment attachments = 11;
+    common.v1.AuditInfo audit_info = 12;
+}
+
+message InspectionLine {
+    string id = 1;
+    string return_order_line_id = 2;
+    string product_id = 3;
+    string product_code = 4;
+    common.v1.Quantity quantity = 5;
+    string condition = 6;
+    InspectionResult result = 7;
+    string disposition = 8;
+    string defect_description = 9;
+    common.v1.Money assessed_value = 10;
+}
+
+enum InspectionStatus {
+    INSPECTION_STATUS_UNSPECIFIED = 0;
+    INSPECTION_STATUS_PENDING = 1;
+    INSPECTION_STATUS_IN_PROGRESS = 2;
+    INSPECTION_STATUS_COMPLETED = 3;
+}
+
+enum InspectionResult {
+    INSPECTION_RESULT_UNSPECIFIED = 0;
+    INSPECTION_RESULT_PASS = 1;
+    INSPECTION_RESULT_FAIL = 2;
+    INSPECTION_RESULT_PARTIAL = 3;
+}
+
+message Refund {
+    string id = 1;
+    string refund_number = 2;
+    string return_order_id = 3;
+    string customer_id = 4;
+    string customer_name = 5;
+    common.v1.Money refund_amount = 6;
+    RefundMethod refund_method = 7;
+    RefundStatus status = 8;
+    google.protobuf.Timestamp processed_date = 9;
+    string reference = 10;
+    string notes = 11;
+    common.v1.AuditInfo audit_info = 12;
+}
+
+enum RefundMethod {
+    REFUND_METHOD_UNSPECIFIED = 0;
+    REFUND_METHOD_ORIGINAL_PAYMENT = 1;
+    REFUND_METHOD_CREDIT_MEMO = 2;
+    REFUND_METHOD_BANK_TRANSFER = 3;
+    REFUND_METHOD_CHECK = 4;
+    REFUND_METHOD_STORE_CREDIT = 5;
+}
+
+enum RefundStatus {
+    REFUND_STATUS_UNSPECIFIED = 0;
+    REFUND_STATUS_PENDING = 1;
+    REFUND_STATUS_APPROVED = 2;
+    REFUND_STATUS_PROCESSED = 3;
+    REFUND_STATUS_FAILED = 4;
+    REFUND_STATUS_CANCELLED = 5;
+}
+
+message CreateReturnOrderRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    string original_order_id = 3;
+    string return_reason = 4;
+    string return_type = 5;
+    repeated ReturnOrderLineInput lines = 6;
+    string customer_comments = 7;
+}
+
+message ReturnOrderLineInput {
+    string original_order_line_id = 1;
+    string product_id = 2;
+    common.v1.Quantity quantity = 3;
+    string return_reason = 4;
+    string condition = 5;
+}
+
+message GetReturnOrderRequest {
+    string id = 1;
+}
+
+message UpdateReturnOrderRequest {
+    string id = 1;
+    string return_reason = 2;
+    repeated ReturnOrderLineInput lines = 3;
+    string internal_notes = 4;
+}
+
+message DeleteReturnOrderRequest {
+    string id = 1;
+}
+
+message ListReturnOrdersRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    ReturnOrderStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListReturnOrdersResponse {
+    repeated ReturnOrder returns = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ApproveReturnOrderRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message RejectReturnOrderRequest {
+    string id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message CancelReturnOrderRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message CreateReturnDeliveryRequest {
+    string return_order_id = 1;
+    google.protobuf.Timestamp expected_date = 2;
+    string carrier = 3;
+    string tracking_number = 4;
+    string receiving_location = 5;
+}
+
+message GetReturnDeliveryRequest {
+    string id = 1;
+}
+
+message ReceiveReturnDeliveryRequest {
+    string id = 1;
+    repeated ReturnDeliveryLineReceiptInput lines = 2;
+    string received_by = 3;
+}
+
+message ReturnDeliveryLineReceiptInput {
+    string line_id = 1;
+    common.v1.Quantity received_quantity = 2;
+    string condition_on_receipt = 3;
+    string storage_location = 4;
+}
+
+message ListReturnDeliveriesRequest {
+    string return_order_id = 1;
+    ReturnDeliveryStatus status = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListReturnDeliveriesResponse {
+    repeated ReturnDelivery deliveries = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateInspectionRequest {
+    string return_order_id = 1;
+    string return_delivery_id = 2;
+    string inspector_id = 3;
+}
+
+message GetInspectionRequest {
+    string id = 1;
+}
+
+message CompleteInspectionRequest {
+    string id = 1;
+    repeated InspectionLineInput lines = 2;
+    string overall_result = 3;
+    string notes = 4;
+}
+
+message InspectionLineInput {
+    string return_order_line_id = 1;
+    string condition = 2;
+    InspectionResult result = 3;
+    string disposition = 4;
+    string defect_description = 5;
+    common.v1.Money assessed_value = 6;
+}
+
+message ProcessRefundRequest {
+    string return_order_id = 1;
+    common.v1.Money refund_amount = 2;
+    RefundMethod refund_method = 3;
+    string notes = 4;
+}
+
+message GetRefundRequest {
+    string id = 1;
+}
+
+message ListRefundsRequest {
+    string return_order_id = 1;
+    string customer_id = 2;
+    RefundStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListRefundsResponse {
+    repeated Refund refunds = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetReturnAnalyticsRequest {
+    string company_code = 1;
+    common.v1.DateRange date_range = 2;
+    repeated string group_by = 3;
+}
+
+message GetReturnAnalyticsResponse {
+    int32 total_returns = 1;
+    common.v1.Money total_return_value = 2;
+    double return_rate = 3;
+    double average_processing_time = 4;
+    repeated ReturnReasonSummary by_reason = 5;
+    repeated ProductReturnSummary by_product = 6;
+    repeated CustomerReturnSummary by_customer = 7;
+}
+
+message ReturnReasonSummary {
+    string reason = 1;
+    int32 count = 2;
+    common.v1.Money value = 3;
+    double percentage = 4;
+}
+
+message ProductReturnSummary {
+    string product_id = 1;
+    string product_code = 2;
+    string product_name = 3;
+    int32 return_count = 4;
+    common.v1.Quantity return_quantity = 5;
+    double return_rate = 6;
+}
+
+message CustomerReturnSummary {
+    string customer_id = 1;
+    string customer_name = 2;
+    int32 return_count = 3;
+    common.v1.Money return_value = 4;
+    double return_rate = 5;
+}
+
+// Auto-generated Response messages
+message CreateReturnOrderResponse {
+    ReturnOrder return_order = 1;
+}
+
+message GetReturnOrderResponse {
+    ReturnOrder return_order = 1;
+}
+
+message UpdateReturnOrderResponse {
+    ReturnOrder return_order = 1;
+}
+
+message ApproveReturnOrderResponse {
+    ReturnOrder return_order = 1;
+}
+
+message RejectReturnOrderResponse {
+    ReturnOrder return_order = 1;
+}
+
+message CancelReturnOrderResponse {
+    ReturnOrder return_order = 1;
+}
+
+message CreateReturnDeliveryResponse {
+    ReturnDelivery return_delivery = 1;
+}
+
+message GetReturnDeliveryResponse {
+    ReturnDelivery return_delivery = 1;
+}
+
+message ReceiveReturnDeliveryResponse {
+    ReturnDelivery return_delivery = 1;
+}
+
+message CreateInspectionResponse {
+    Inspection inspection = 1;
+}
+
+message GetInspectionResponse {
+    Inspection inspection = 1;
+}
+
+message CompleteInspectionResponse {
+    Inspection inspection = 1;
+}
+
+message ProcessRefundResponse {
+    Refund refund = 1;
+}
+
+message GetRefundResponse {
+    Refund refund = 1;
+}

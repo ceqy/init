@@ -1,0 +1,1033 @@
+syntax = "proto3";
+
+package pm.iv.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+// Invoice Verification Service - 采购发票校验
+service InvoiceVerificationService {
+    // 发票管理
+    rpc CreateInvoice(CreateInvoiceRequest) returns (CreateInvoiceResponse);
+    rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+    rpc UpdateInvoice(UpdateInvoiceRequest) returns (UpdateInvoiceResponse);
+    rpc DeleteInvoice(DeleteInvoiceRequest) returns (google.protobuf.Empty);
+    rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+
+    // 发票状态流转
+    rpc SubmitInvoice(SubmitInvoiceRequest) returns (SubmitInvoiceResponse);
+    rpc VerifyInvoice(VerifyInvoiceRequest) returns (VerifyInvoiceResponse);
+    rpc ApproveInvoice(ApproveInvoiceRequest) returns (ApproveInvoiceResponse);
+    rpc RejectInvoice(RejectInvoiceRequest) returns (RejectInvoiceResponse);
+    rpc PostInvoice(PostInvoiceRequest) returns (PostInvoiceResponse);
+    rpc ReverseInvoice(ReverseInvoiceRequest) returns (ReverseInvoiceResponse);
+    rpc CancelInvoice(CancelInvoiceRequest) returns (CancelInvoiceResponse);
+
+    // 三单匹配
+    rpc PerformThreeWayMatch(PerformThreeWayMatchRequest) returns (PerformThreeWayMatchResponse);
+    rpc GetMatchDetails(GetMatchDetailsRequest) returns (GetMatchDetailsResponse);
+    rpc ApproveMatchException(ApproveMatchExceptionRequest) returns (ApproveMatchExceptionResponse);
+    rpc RejectMatchException(RejectMatchExceptionRequest) returns (RejectMatchExceptionResponse);
+    rpc ListMatchExceptions(ListMatchExceptionsRequest) returns (ListMatchExceptionsResponse);
+
+    // 发票行项目
+    rpc AddInvoiceLine(AddInvoiceLineRequest) returns (AddInvoiceLineResponse);
+    rpc UpdateInvoiceLine(UpdateInvoiceLineRequest) returns (UpdateInvoiceLineResponse);
+    rpc DeleteInvoiceLine(DeleteInvoiceLineRequest) returns (google.protobuf.Empty);
+
+    // 价格差异
+    rpc GetPriceVariances(GetPriceVariancesRequest) returns (GetPriceVariancesResponse);
+    rpc ApproveVariance(ApproveVarianceRequest) returns (ApproveVarianceResponse);
+
+    // 数量差异
+    rpc GetQuantityVariances(GetQuantityVariancesRequest) returns (GetQuantityVariancesResponse);
+    rpc ApproveQuantityVariance(ApproveQuantityVarianceRequest) returns (ApproveQuantityVarianceResponse);
+
+    // 预付款与扣款
+    rpc ApplyPrepayment(ApplyPrepaymentRequest) returns (ApplyPrepaymentResponse);
+    rpc ApplyDeduction(ApplyDeductionRequest) returns (ApplyDeductionResponse);
+    rpc GetDeductions(GetDeductionsRequest) returns (GetDeductionsResponse);
+
+    // 税务处理
+    rpc CalculateTax(CalculateTaxRequest) returns (CalculateTaxResponse);
+    rpc OverrideTax(OverrideTaxRequest) returns (OverrideTaxResponse);
+
+    // 付款安排
+    rpc CreatePaymentSchedule(CreatePaymentScheduleRequest) returns (CreatePaymentScheduleResponse);
+    rpc GetPaymentSchedule(GetPaymentScheduleRequest) returns (GetPaymentScheduleResponse);
+    rpc UpdatePaymentSchedule(UpdatePaymentScheduleRequest) returns (UpdatePaymentScheduleResponse);
+    rpc ReleaseForPayment(ReleaseForPaymentRequest) returns (ReleaseForPaymentResponse);
+    rpc HoldPayment(HoldPaymentRequest) returns (HoldPaymentResponse);
+
+    // 自动匹配
+    rpc AutoMatchInvoices(AutoMatchInvoicesRequest) returns (AutoMatchInvoicesResponse);
+    rpc GetUnmatchedInvoices(GetUnmatchedInvoicesRequest) returns (GetUnmatchedInvoicesResponse);
+
+    // 电子发票
+    rpc ImportEInvoice(ImportEInvoiceRequest) returns (ImportEInvoiceResponse);
+    rpc ValidateEInvoice(ValidateEInvoiceRequest) returns (ValidateEInvoiceResponse);
+
+    // 报表与分析
+    rpc GetInvoiceDashboard(GetInvoiceDashboardRequest) returns (GetInvoiceDashboardResponse);
+    rpc GetInvoiceAgingReport(GetInvoiceAgingReportRequest) returns (GetInvoiceAgingReportResponse);
+    rpc GetInvoiceMetrics(GetInvoiceMetricsRequest) returns (GetInvoiceMetricsResponse);
+    rpc GetProcessingTimeAnalysis(GetProcessingTimeAnalysisRequest) returns (GetProcessingTimeAnalysisResponse);
+}
+
+// ==================== 发票主数据 ====================
+
+message Invoice {
+    string id = 1;
+    string invoice_number = 2;
+    string vendor_invoice_number = 3;
+    string company_code = 4;
+    string purchasing_org = 5;
+    string vendor_id = 6;
+    string vendor_name = 7;
+    InvoiceType type = 8;
+    google.protobuf.Timestamp invoice_date = 9;
+    google.protobuf.Timestamp posting_date = 10;
+    google.protobuf.Timestamp due_date = 11;
+    google.protobuf.Timestamp baseline_date = 12;
+    string payment_terms = 13;
+    string currency = 14;
+    double exchange_rate = 15;
+    common.v1.Money gross_amount = 16;
+    common.v1.Money net_amount = 17;
+    common.v1.Money tax_amount = 18;
+    common.v1.Money discount_amount = 19;
+    common.v1.Money prepayment_applied = 20;
+    common.v1.Money deductions = 21;
+    common.v1.Money amount_to_pay = 22;
+    repeated InvoiceLine lines = 23;
+    repeated InvoiceTaxLine tax_lines = 24;
+    InvoiceStatus status = 25;
+    MatchStatus match_status = 26;
+    PaymentStatus payment_status = 27;
+    string payment_block = 28;
+    string payment_block_reason = 29;
+    string payment_method = 30;
+    string bank_account_id = 31;
+    string reference = 32;
+    string header_text = 33;
+    repeated MatchException exceptions = 34;
+    repeated string purchase_order_ids = 35;
+    repeated string goods_receipt_ids = 36;
+    string gl_account = 37;
+    string cost_center = 38;
+    string profit_center = 39;
+    string internal_order = 40;
+    string wbs_element = 41;
+    repeated common.v1.Attachment attachments = 42;
+    string notes = 43;
+    common.v1.AuditInfo audit_info = 44;
+}
+
+enum InvoiceType {
+    INVOICE_TYPE_UNSPECIFIED = 0;
+    INVOICE_TYPE_STANDARD = 1;
+    INVOICE_TYPE_CREDIT_MEMO = 2;
+    INVOICE_TYPE_DEBIT_MEMO = 3;
+    INVOICE_TYPE_PREPAYMENT = 4;
+    INVOICE_TYPE_DOWN_PAYMENT = 5;
+    INVOICE_TYPE_SUBSEQUENT_DEBIT = 6;
+    INVOICE_TYPE_SUBSEQUENT_CREDIT = 7;
+}
+
+enum InvoiceStatus {
+    INVOICE_STATUS_UNSPECIFIED = 0;
+    INVOICE_STATUS_DRAFT = 1;
+    INVOICE_STATUS_SUBMITTED = 2;
+    INVOICE_STATUS_PENDING_VERIFICATION = 3;
+    INVOICE_STATUS_VERIFIED = 4;
+    INVOICE_STATUS_PENDING_APPROVAL = 5;
+    INVOICE_STATUS_APPROVED = 6;
+    INVOICE_STATUS_REJECTED = 7;
+    INVOICE_STATUS_POSTED = 8;
+    INVOICE_STATUS_REVERSED = 9;
+    INVOICE_STATUS_CANCELLED = 10;
+}
+
+enum MatchStatus {
+    MATCH_STATUS_UNSPECIFIED = 0;
+    MATCH_STATUS_NOT_MATCHED = 1;
+    MATCH_STATUS_PARTIALLY_MATCHED = 2;
+    MATCH_STATUS_FULLY_MATCHED = 3;
+    MATCH_STATUS_EXCEPTION = 4;
+    MATCH_STATUS_FORCE_MATCHED = 5;
+}
+
+enum PaymentStatus {
+    PAYMENT_STATUS_UNSPECIFIED = 0;
+    PAYMENT_STATUS_NOT_PAID = 1;
+    PAYMENT_STATUS_PARTIALLY_PAID = 2;
+    PAYMENT_STATUS_FULLY_PAID = 3;
+    PAYMENT_STATUS_BLOCKED = 4;
+}
+
+message InvoiceLine {
+    string id = 1;
+    int32 line_number = 2;
+    string invoice_id = 3;
+    string purchase_order_id = 4;
+    string purchase_order_number = 5;
+    int32 po_line_number = 6;
+    string goods_receipt_id = 7;
+    string goods_receipt_number = 8;
+    int32 gr_line_number = 9;
+    string product_id = 10;
+    string product_code = 11;
+    string description = 12;
+    common.v1.Quantity invoiced_quantity = 13;
+    common.v1.Quantity po_quantity = 14;
+    common.v1.Quantity gr_quantity = 15;
+    string unit = 16;
+    common.v1.Money unit_price = 17;
+    common.v1.Money po_unit_price = 18;
+    common.v1.Money net_amount = 19;
+    common.v1.Money tax_amount = 20;
+    common.v1.Money total_amount = 21;
+    string tax_code = 22;
+    double tax_rate = 23;
+    string gl_account = 24;
+    string cost_center = 25;
+    string profit_center = 26;
+    string internal_order = 27;
+    string wbs_element = 28;
+    string asset_number = 29;
+    LineMatchStatus match_status = 30;
+    PriceVariance price_variance = 31;
+    QuantityVariance quantity_variance = 32;
+    string notes = 33;
+}
+
+enum LineMatchStatus {
+    LINE_MATCH_STATUS_UNSPECIFIED = 0;
+    LINE_MATCH_STATUS_MATCHED = 1;
+    LINE_MATCH_STATUS_PRICE_VARIANCE = 2;
+    LINE_MATCH_STATUS_QUANTITY_VARIANCE = 3;
+    LINE_MATCH_STATUS_BOTH_VARIANCE = 4;
+    LINE_MATCH_STATUS_NOT_MATCHED = 5;
+}
+
+message InvoiceTaxLine {
+    string id = 1;
+    string tax_code = 2;
+    string tax_description = 3;
+    double tax_rate = 4;
+    common.v1.Money tax_base = 5;
+    common.v1.Money tax_amount = 6;
+    bool is_deductible = 7;
+    common.v1.Money deductible_amount = 8;
+    common.v1.Money non_deductible_amount = 9;
+    string tax_jurisdiction = 10;
+}
+
+// ==================== 三单匹配 ====================
+
+message MatchResult {
+    string invoice_id = 1;
+    MatchStatus overall_status = 2;
+    repeated LineMatchResult line_results = 3;
+    common.v1.Money total_price_variance = 4;
+    common.v1.Money total_quantity_variance_amount = 5;
+    int32 matched_lines = 6;
+    int32 exception_lines = 7;
+    repeated MatchException exceptions = 8;
+    bool auto_approved = 9;
+    string message = 10;
+}
+
+message LineMatchResult {
+    int32 line_number = 1;
+    string product_code = 2;
+    LineMatchStatus status = 3;
+    common.v1.Quantity invoice_quantity = 4;
+    common.v1.Quantity po_quantity = 5;
+    common.v1.Quantity gr_quantity = 6;
+    common.v1.Money invoice_price = 7;
+    common.v1.Money po_price = 8;
+    common.v1.Money price_variance = 9;
+    double price_variance_percent = 10;
+    common.v1.Quantity quantity_variance = 11;
+    double quantity_variance_percent = 12;
+    string message = 13;
+}
+
+message MatchDetails {
+    string invoice_id = 1;
+    string invoice_number = 2;
+    repeated PurchaseOrderMatch po_matches = 3;
+    repeated GoodsReceiptMatch gr_matches = 4;
+    common.v1.Money total_po_amount = 5;
+    common.v1.Money total_gr_amount = 6;
+    common.v1.Money total_invoice_amount = 7;
+    common.v1.Money total_variance = 8;
+}
+
+message PurchaseOrderMatch {
+    string purchase_order_id = 1;
+    string purchase_order_number = 2;
+    google.protobuf.Timestamp po_date = 3;
+    common.v1.Money po_amount = 4;
+    common.v1.Money matched_amount = 5;
+    common.v1.Money remaining_amount = 6;
+    int32 matched_lines = 7;
+    int32 total_lines = 8;
+}
+
+message GoodsReceiptMatch {
+    string goods_receipt_id = 1;
+    string goods_receipt_number = 2;
+    google.protobuf.Timestamp gr_date = 3;
+    common.v1.Money gr_amount = 4;
+    common.v1.Money matched_amount = 5;
+    int32 matched_lines = 6;
+    int32 total_lines = 7;
+}
+
+message MatchException {
+    string id = 1;
+    string invoice_id = 2;
+    int32 line_number = 3;
+    MatchExceptionType type = 4;
+    string description = 5;
+    common.v1.Money variance_amount = 6;
+    double variance_percent = 7;
+    MatchExceptionStatus status = 8;
+    string resolution = 9;
+    string resolved_by = 10;
+    google.protobuf.Timestamp resolved_at = 11;
+    common.v1.AuditInfo audit_info = 12;
+}
+
+enum MatchExceptionType {
+    MATCH_EXCEPTION_TYPE_UNSPECIFIED = 0;
+    MATCH_EXCEPTION_TYPE_PRICE_OVER_TOLERANCE = 1;
+    MATCH_EXCEPTION_TYPE_QUANTITY_OVER_TOLERANCE = 2;
+    MATCH_EXCEPTION_TYPE_NO_PO_REFERENCE = 3;
+    MATCH_EXCEPTION_TYPE_NO_GR_REFERENCE = 4;
+    MATCH_EXCEPTION_TYPE_DUPLICATE_INVOICE = 5;
+    MATCH_EXCEPTION_TYPE_PO_CLOSED = 6;
+    MATCH_EXCEPTION_TYPE_VENDOR_MISMATCH = 7;
+    MATCH_EXCEPTION_TYPE_CURRENCY_MISMATCH = 8;
+}
+
+enum MatchExceptionStatus {
+    MATCH_EXCEPTION_STATUS_UNSPECIFIED = 0;
+    MATCH_EXCEPTION_STATUS_OPEN = 1;
+    MATCH_EXCEPTION_STATUS_UNDER_REVIEW = 2;
+    MATCH_EXCEPTION_STATUS_APPROVED = 3;
+    MATCH_EXCEPTION_STATUS_REJECTED = 4;
+    MATCH_EXCEPTION_STATUS_RESOLVED = 5;
+}
+
+// ==================== 差异管理 ====================
+
+message PriceVariance {
+    string id = 1;
+    string invoice_id = 2;
+    int32 line_number = 3;
+    string product_code = 4;
+    common.v1.Money invoice_price = 5;
+    common.v1.Money po_price = 6;
+    common.v1.Money variance_amount = 7;
+    double variance_percent = 8;
+    VarianceStatus status = 9;
+    string approved_by = 10;
+    google.protobuf.Timestamp approved_at = 11;
+    string reason = 12;
+}
+
+message QuantityVariance {
+    string id = 1;
+    string invoice_id = 2;
+    int32 line_number = 3;
+    string product_code = 4;
+    common.v1.Quantity invoice_quantity = 5;
+    common.v1.Quantity po_quantity = 6;
+    common.v1.Quantity gr_quantity = 7;
+    common.v1.Quantity variance_quantity = 8;
+    double variance_percent = 9;
+    VarianceStatus status = 10;
+    string approved_by = 11;
+    google.protobuf.Timestamp approved_at = 12;
+    string reason = 13;
+}
+
+enum VarianceStatus {
+    VARIANCE_STATUS_UNSPECIFIED = 0;
+    VARIANCE_STATUS_PENDING = 1;
+    VARIANCE_STATUS_APPROVED = 2;
+    VARIANCE_STATUS_REJECTED = 3;
+}
+
+// ==================== 付款安排 ====================
+
+message PaymentSchedule {
+    string id = 1;
+    string invoice_id = 2;
+    string invoice_number = 3;
+    string vendor_id = 4;
+    string vendor_name = 5;
+    repeated PaymentInstallment installments = 6;
+    common.v1.Money total_amount = 7;
+    common.v1.Money scheduled_amount = 8;
+    common.v1.Money paid_amount = 9;
+    common.v1.Money remaining_amount = 10;
+    common.v1.AuditInfo audit_info = 11;
+}
+
+message PaymentInstallment {
+    string id = 1;
+    int32 installment_number = 2;
+    google.protobuf.Timestamp due_date = 3;
+    common.v1.Money amount = 4;
+    double percentage = 5;
+    InstallmentStatus status = 6;
+    google.protobuf.Timestamp paid_date = 7;
+    string payment_reference = 8;
+}
+
+enum InstallmentStatus {
+    INSTALLMENT_STATUS_UNSPECIFIED = 0;
+    INSTALLMENT_STATUS_SCHEDULED = 1;
+    INSTALLMENT_STATUS_DUE = 2;
+    INSTALLMENT_STATUS_OVERDUE = 3;
+    INSTALLMENT_STATUS_PAID = 4;
+    INSTALLMENT_STATUS_CANCELLED = 5;
+}
+
+// ==================== 仪表板与报表 ====================
+
+message InvoiceDashboard {
+    google.protobuf.Timestamp timestamp = 1;
+    InvoiceSummary summary = 2;
+    MatchingSummary matching = 3;
+    PaymentSummary payments = 4;
+    repeated InvoiceByStatus by_status = 5;
+    repeated InvoiceAgingBucket aging = 6;
+    repeated PendingAction pending_actions = 7;
+}
+
+message InvoiceSummary {
+    int32 total_invoices = 1;
+    int32 pending_verification = 2;
+    int32 pending_approval = 3;
+    int32 ready_for_payment = 4;
+    common.v1.Money total_amount = 5;
+    common.v1.Money pending_amount = 6;
+}
+
+message MatchingSummary {
+    int32 fully_matched = 1;
+    int32 partially_matched = 2;
+    int32 with_exceptions = 3;
+    int32 unmatched = 4;
+    double match_rate = 5;
+    double auto_match_rate = 6;
+}
+
+message PaymentSummary {
+    common.v1.Money due_today = 1;
+    common.v1.Money due_this_week = 2;
+    common.v1.Money overdue = 3;
+    int32 blocked_count = 4;
+    common.v1.Money blocked_amount = 5;
+}
+
+message InvoiceByStatus {
+    InvoiceStatus status = 1;
+    int32 count = 2;
+    common.v1.Money amount = 3;
+}
+
+message InvoiceAgingBucket {
+    string bucket = 1;
+    int32 count = 2;
+    common.v1.Money amount = 3;
+    double percentage = 4;
+}
+
+message PendingAction {
+    string action_type = 1;
+    int32 count = 2;
+    string description = 3;
+    string priority = 4;
+}
+
+message InvoiceMetrics {
+    common.v1.DateRange period = 1;
+    int32 invoices_received = 2;
+    int32 invoices_processed = 3;
+    int32 invoices_posted = 4;
+    double average_processing_days = 5;
+    double match_rate = 6;
+    double exception_rate = 7;
+    double first_time_match_rate = 8;
+    common.v1.Money total_processed_amount = 9;
+    common.v1.Money total_variance_amount = 10;
+    int32 duplicate_invoices_caught = 11;
+}
+
+// ==================== Request/Response ====================
+
+message CreateInvoiceRequest {
+    string vendor_invoice_number = 1;
+    string company_code = 2;
+    string purchasing_org = 3;
+    string vendor_id = 4;
+    InvoiceType type = 5;
+    google.protobuf.Timestamp invoice_date = 6;
+    google.protobuf.Timestamp baseline_date = 7;
+    string payment_terms = 8;
+    string currency = 9;
+    common.v1.Money gross_amount = 10;
+    repeated InvoiceLineInput lines = 11;
+    string reference = 12;
+    string header_text = 13;
+    string gl_account = 14;
+    string cost_center = 15;
+    string notes = 16;
+}
+
+message InvoiceLineInput {
+    string purchase_order_id = 1;
+    int32 po_line_number = 2;
+    string goods_receipt_id = 3;
+    int32 gr_line_number = 4;
+    string product_id = 5;
+    string description = 6;
+    common.v1.Quantity quantity = 7;
+    string unit = 8;
+    common.v1.Money unit_price = 9;
+    string tax_code = 10;
+    string gl_account = 11;
+    string cost_center = 12;
+    string internal_order = 13;
+    string notes = 14;
+}
+
+message GetInvoiceRequest {
+    string id = 1;
+}
+
+message UpdateInvoiceRequest {
+    string id = 1;
+    string vendor_invoice_number = 2;
+    google.protobuf.Timestamp invoice_date = 3;
+    google.protobuf.Timestamp baseline_date = 4;
+    string payment_terms = 5;
+    string reference = 6;
+    string header_text = 7;
+    string notes = 8;
+}
+
+message DeleteInvoiceRequest {
+    string id = 1;
+}
+
+message ListInvoicesRequest {
+    string company_code = 1;
+    string purchasing_org = 2;
+    string vendor_id = 3;
+    InvoiceType type = 4;
+    InvoiceStatus status = 5;
+    MatchStatus match_status = 6;
+    PaymentStatus payment_status = 7;
+    common.v1.DateRange date_range = 8;
+    string purchase_order_id = 9;
+    string search = 10;
+    common.v1.Pagination pagination = 11;
+}
+
+message ListInvoicesResponse {
+    repeated Invoice invoices = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message SubmitInvoiceRequest {
+    string id = 1;
+}
+
+message VerifyInvoiceRequest {
+    string id = 1;
+    string verifier_id = 2;
+    string comments = 3;
+}
+
+message ApproveInvoiceRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message RejectInvoiceRequest {
+    string id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message PostInvoiceRequest {
+    string id = 1;
+    google.protobuf.Timestamp posting_date = 2;
+}
+
+message ReverseInvoiceRequest {
+    string id = 1;
+    google.protobuf.Timestamp reversal_date = 2;
+    string reason = 3;
+}
+
+message CancelInvoiceRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message PerformThreeWayMatchRequest {
+    string invoice_id = 1;
+    bool auto_approve_within_tolerance = 2;
+}
+
+message GetMatchDetailsRequest {
+    string invoice_id = 1;
+}
+
+message ApproveMatchExceptionRequest {
+    string exception_id = 1;
+    string approver_id = 2;
+    string resolution = 3;
+}
+
+message RejectMatchExceptionRequest {
+    string exception_id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message ListMatchExceptionsRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    MatchExceptionType type = 3;
+    MatchExceptionStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListMatchExceptionsResponse {
+    repeated MatchException exceptions = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message AddInvoiceLineRequest {
+    string invoice_id = 1;
+    InvoiceLineInput line = 2;
+}
+
+message UpdateInvoiceLineRequest {
+    string id = 1;
+    string description = 2;
+    common.v1.Quantity quantity = 3;
+    common.v1.Money unit_price = 4;
+    string tax_code = 5;
+    string gl_account = 6;
+    string cost_center = 7;
+    string notes = 8;
+}
+
+message DeleteInvoiceLineRequest {
+    string id = 1;
+}
+
+message GetPriceVariancesRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    VarianceStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetPriceVariancesResponse {
+    repeated PriceVariance variances = 1;
+    common.v1.PaginationResponse pagination = 2;
+    common.v1.Money total_variance = 3;
+}
+
+message ApproveVarianceRequest {
+    string variance_id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message GetQuantityVariancesRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    VarianceStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetQuantityVariancesResponse {
+    repeated QuantityVariance variances = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ApproveQuantityVarianceRequest {
+    string variance_id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message ApplyPrepaymentRequest {
+    string invoice_id = 1;
+    string prepayment_id = 2;
+    common.v1.Money amount = 3;
+}
+
+message ApplyDeductionRequest {
+    string invoice_id = 1;
+    string deduction_type = 2;
+    common.v1.Money amount = 3;
+    string reason = 4;
+}
+
+message GetDeductionsRequest {
+    string invoice_id = 1;
+}
+
+message GetDeductionsResponse {
+    repeated InvoiceDeduction deductions = 1;
+    common.v1.Money total_deductions = 2;
+}
+
+message InvoiceDeduction {
+    string id = 1;
+    string invoice_id = 2;
+    string deduction_type = 3;
+    common.v1.Money amount = 4;
+    string reason = 5;
+    string reference = 6;
+    google.protobuf.Timestamp applied_date = 7;
+    string applied_by = 8;
+}
+
+message CalculateTaxRequest {
+    string invoice_id = 1;
+}
+
+message CalculateTaxResponse {
+    string invoice_id = 1;
+    repeated InvoiceTaxLine tax_lines = 2;
+    common.v1.Money total_tax = 3;
+}
+
+message OverrideTaxRequest {
+    string invoice_id = 1;
+    repeated TaxOverride overrides = 2;
+    string reason = 3;
+}
+
+message TaxOverride {
+    string tax_code = 1;
+    common.v1.Money new_amount = 2;
+}
+
+message CreatePaymentScheduleRequest {
+    string invoice_id = 1;
+    repeated PaymentInstallmentInput installments = 2;
+}
+
+message PaymentInstallmentInput {
+    google.protobuf.Timestamp due_date = 1;
+    common.v1.Money amount = 2;
+    double percentage = 3;
+}
+
+message GetPaymentScheduleRequest {
+    string invoice_id = 1;
+}
+
+message UpdatePaymentScheduleRequest {
+    string id = 1;
+    repeated PaymentInstallmentInput installments = 2;
+}
+
+message ReleaseForPaymentRequest {
+    string invoice_id = 1;
+}
+
+message HoldPaymentRequest {
+    string invoice_id = 1;
+    string block_reason = 2;
+}
+
+message AutoMatchInvoicesRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message AutoMatchInvoicesResponse {
+    int32 total_processed = 1;
+    int32 successfully_matched = 2;
+    int32 partially_matched = 3;
+    int32 failed = 4;
+    repeated AutoMatchResult results = 5;
+}
+
+message AutoMatchResult {
+    string invoice_id = 1;
+    string invoice_number = 2;
+    MatchStatus status = 3;
+    string message = 4;
+}
+
+message GetUnmatchedInvoicesRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message GetUnmatchedInvoicesResponse {
+    repeated Invoice invoices = 1;
+    common.v1.PaginationResponse pagination = 2;
+    common.v1.Money total_unmatched_amount = 3;
+}
+
+message ImportEInvoiceRequest {
+    string company_code = 1;
+    string format = 2;
+    bytes content = 3;
+    string filename = 4;
+}
+
+message ValidateEInvoiceRequest {
+    string format = 1;
+    bytes content = 2;
+}
+
+message ValidateEInvoiceResponse {
+    bool valid = 1;
+    repeated ValidationError errors = 2;
+    repeated ValidationWarning warnings = 3;
+    EInvoicePreview preview = 4;
+}
+
+message ValidationError {
+    string field = 1;
+    string message = 2;
+    string code = 3;
+}
+
+message ValidationWarning {
+    string field = 1;
+    string message = 2;
+}
+
+message EInvoicePreview {
+    string vendor_invoice_number = 1;
+    string vendor_name = 2;
+    string vendor_tax_id = 3;
+    google.protobuf.Timestamp invoice_date = 4;
+    common.v1.Money gross_amount = 5;
+    common.v1.Money tax_amount = 6;
+    int32 line_count = 7;
+}
+
+message GetInvoiceDashboardRequest {
+    string company_code = 1;
+    string purchasing_org = 2;
+}
+
+message GetInvoiceAgingReportRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    google.protobuf.Timestamp as_of_date = 3;
+}
+
+message GetInvoiceAgingReportResponse {
+    google.protobuf.Timestamp as_of_date = 1;
+    repeated VendorAging vendors = 2;
+    AgingSummary summary = 3;
+}
+
+message VendorAging {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    common.v1.Money current = 3;
+    common.v1.Money days_1_30 = 4;
+    common.v1.Money days_31_60 = 5;
+    common.v1.Money days_61_90 = 6;
+    common.v1.Money over_90 = 7;
+    common.v1.Money total = 8;
+}
+
+message AgingSummary {
+    common.v1.Money current = 1;
+    common.v1.Money days_1_30 = 2;
+    common.v1.Money days_31_60 = 3;
+    common.v1.Money days_61_90 = 4;
+    common.v1.Money over_90 = 5;
+    common.v1.Money total = 6;
+}
+
+message GetInvoiceMetricsRequest {
+    string company_code = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetInvoiceMetricsResponse {
+    InvoiceMetrics metrics = 1;
+    repeated InvoiceMetricsTrend trend = 2;
+}
+
+message InvoiceMetricsTrend {
+    string period = 1;
+    int32 invoices_received = 2;
+    int32 invoices_processed = 3;
+    double average_processing_days = 4;
+    double match_rate = 5;
+}
+
+message GetProcessingTimeAnalysisRequest {
+    string company_code = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetProcessingTimeAnalysisResponse {
+    double average_total_days = 1;
+    double average_verification_days = 2;
+    double average_approval_days = 3;
+    double average_posting_days = 4;
+    repeated ProcessingTimeByVendor by_vendor = 5;
+    repeated ProcessingTimeTrend trend = 6;
+}
+
+message ProcessingTimeByVendor {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    double average_days = 3;
+    int32 invoice_count = 4;
+}
+
+message ProcessingTimeTrend {
+    string period = 1;
+    double average_days = 2;
+    int32 invoice_count = 3;
+}
+
+// Auto-generated Response messages
+message CreateInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message GetInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message UpdateInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message SubmitInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message VerifyInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message ApproveInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message RejectInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message PostInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message ReverseInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message CancelInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message PerformThreeWayMatchResponse {
+    MatchResult match_result = 1;
+}
+
+message GetMatchDetailsResponse {
+    MatchDetails match_details = 1;
+}
+
+message ApproveMatchExceptionResponse {
+    MatchException match_exception = 1;
+}
+
+message RejectMatchExceptionResponse {
+    MatchException match_exception = 1;
+}
+
+message AddInvoiceLineResponse {
+    InvoiceLine invoice_line = 1;
+}
+
+message UpdateInvoiceLineResponse {
+    InvoiceLine invoice_line = 1;
+}
+
+message ApproveVarianceResponse {
+    PriceVariance price_variance = 1;
+}
+
+message ApproveQuantityVarianceResponse {
+    QuantityVariance quantity_variance = 1;
+}
+
+message ApplyPrepaymentResponse {
+    Invoice invoice = 1;
+}
+
+message ApplyDeductionResponse {
+    Invoice invoice = 1;
+}
+
+message OverrideTaxResponse {
+    Invoice invoice = 1;
+}
+
+message CreatePaymentScheduleResponse {
+    PaymentSchedule payment_schedule = 1;
+}
+
+message GetPaymentScheduleResponse {
+    PaymentSchedule payment_schedule = 1;
+}
+
+message UpdatePaymentScheduleResponse {
+    PaymentSchedule payment_schedule = 1;
+}
+
+message ReleaseForPaymentResponse {
+    Invoice invoice = 1;
+}
+
+message HoldPaymentResponse {
+    Invoice invoice = 1;
+}
+
+message ImportEInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message GetInvoiceDashboardResponse {
+    InvoiceDashboard invoice_dashboard = 1;
+}

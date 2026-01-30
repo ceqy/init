@@ -1,0 +1,470 @@
+syntax = "proto3";
+
+package sd.pe.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service PricingEngineService {
+    rpc CreatePriceList(CreatePriceListRequest) returns (CreatePriceListResponse);
+    rpc GetPriceList(GetPriceListRequest) returns (GetPriceListResponse);
+    rpc UpdatePriceList(UpdatePriceListRequest) returns (UpdatePriceListResponse);
+    rpc DeletePriceList(DeletePriceListRequest) returns (google.protobuf.Empty);
+    rpc ListPriceLists(ListPriceListsRequest) returns (ListPriceListsResponse);
+
+    rpc CreatePriceListItem(CreatePriceListItemRequest) returns (CreatePriceListItemResponse);
+    rpc UpdatePriceListItem(UpdatePriceListItemRequest) returns (UpdatePriceListItemResponse);
+    rpc DeletePriceListItem(DeletePriceListItemRequest) returns (google.protobuf.Empty);
+    rpc BulkUpdatePriceListItems(BulkUpdatePriceListItemsRequest) returns (BulkUpdatePriceListItemsResponse);
+
+    rpc CreateDiscount(CreateDiscountRequest) returns (CreateDiscountResponse);
+    rpc GetDiscount(GetDiscountRequest) returns (GetDiscountResponse);
+    rpc UpdateDiscount(UpdateDiscountRequest) returns (UpdateDiscountResponse);
+    rpc DeleteDiscount(DeleteDiscountRequest) returns (google.protobuf.Empty);
+    rpc ListDiscounts(ListDiscountsRequest) returns (ListDiscountsResponse);
+
+    rpc CreatePricingCondition(CreatePricingConditionRequest) returns (CreatePricingConditionResponse);
+    rpc GetPricingCondition(GetPricingConditionRequest) returns (GetPricingConditionResponse);
+    rpc UpdatePricingCondition(UpdatePricingConditionRequest) returns (UpdatePricingConditionResponse);
+    rpc DeletePricingCondition(DeletePricingConditionRequest) returns (google.protobuf.Empty);
+    rpc ListPricingConditions(ListPricingConditionsRequest) returns (ListPricingConditionsResponse);
+
+    rpc CalculatePrice(CalculatePriceRequest) returns (CalculatePriceResponse);
+    rpc SimulatePricing(SimulatePricingRequest) returns (SimulatePricingResponse);
+
+    rpc GetProductPrice(GetProductPriceRequest) returns (GetProductPriceResponse);
+    rpc GetCustomerSpecificPrice(GetCustomerSpecificPriceRequest) returns (GetCustomerSpecificPriceResponse);
+}
+
+message PriceList {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    string sales_organization = 6;
+    string distribution_channel = 7;
+    string currency = 8;
+    google.protobuf.Timestamp valid_from = 9;
+    google.protobuf.Timestamp valid_to = 10;
+    int32 priority = 11;
+    PriceListType type = 12;
+    common.v1.Status status = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+enum PriceListType {
+    PRICE_LIST_TYPE_UNSPECIFIED = 0;
+    PRICE_LIST_TYPE_BASE = 1;
+    PRICE_LIST_TYPE_CUSTOMER = 2;
+    PRICE_LIST_TYPE_PROMOTION = 3;
+    PRICE_LIST_TYPE_CONTRACT = 4;
+}
+
+message PriceListItem {
+    string id = 1;
+    string price_list_id = 2;
+    string product_id = 3;
+    string product_code = 4;
+    common.v1.Money price = 5;
+    string price_unit = 6;
+    common.v1.Quantity min_quantity = 7;
+    common.v1.Quantity max_quantity = 8;
+    google.protobuf.Timestamp valid_from = 9;
+    google.protobuf.Timestamp valid_to = 10;
+    common.v1.AuditInfo audit_info = 11;
+}
+
+message Discount {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    DiscountType type = 6;
+    double value = 7;
+    common.v1.Money max_amount = 8;
+    common.v1.Money min_order_value = 9;
+    google.protobuf.Timestamp valid_from = 10;
+    google.protobuf.Timestamp valid_to = 11;
+    repeated DiscountCondition conditions = 12;
+    common.v1.Status status = 13;
+    bool combinable = 14;
+    int32 priority = 15;
+    common.v1.AuditInfo audit_info = 16;
+}
+
+enum DiscountType {
+    DISCOUNT_TYPE_UNSPECIFIED = 0;
+    DISCOUNT_TYPE_PERCENTAGE = 1;
+    DISCOUNT_TYPE_FIXED_AMOUNT = 2;
+    DISCOUNT_TYPE_QUANTITY_BREAK = 3;
+    DISCOUNT_TYPE_BUY_X_GET_Y = 4;
+}
+
+message DiscountCondition {
+    string field = 1;
+    string operator = 2;
+    string value = 3;
+}
+
+message PricingCondition {
+    string id = 1;
+    string condition_type = 2;
+    string table_name = 3;
+    string sales_organization = 4;
+    string distribution_channel = 5;
+    string customer_id = 6;
+    string customer_group = 7;
+    string product_id = 8;
+    string product_group = 9;
+    common.v1.Money amount = 10;
+    double percentage = 11;
+    string currency = 12;
+    string price_unit = 13;
+    google.protobuf.Timestamp valid_from = 14;
+    google.protobuf.Timestamp valid_to = 15;
+    int32 scale_basis = 16;
+    repeated PricingScale scales = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+message PricingScale {
+    common.v1.Quantity from_quantity = 1;
+    common.v1.Quantity to_quantity = 2;
+    common.v1.Money amount = 3;
+    double percentage = 4;
+}
+
+message PricingResult {
+    common.v1.Money base_price = 1;
+    common.v1.Money net_price = 2;
+    common.v1.Money gross_price = 3;
+    common.v1.Money total_discount = 4;
+    common.v1.Money tax_amount = 5;
+    repeated PricingConditionResult conditions = 6;
+    string currency = 7;
+    string price_list_used = 8;
+}
+
+message PricingConditionResult {
+    string condition_type = 1;
+    string condition_name = 2;
+    common.v1.Money amount = 3;
+    double percentage = 4;
+    string calculation_type = 5;
+    bool inactive = 6;
+    string inactive_reason = 7;
+}
+
+message CreatePriceListRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string company_code = 4;
+    string sales_organization = 5;
+    string distribution_channel = 6;
+    string currency = 7;
+    google.protobuf.Timestamp valid_from = 8;
+    google.protobuf.Timestamp valid_to = 9;
+    int32 priority = 10;
+    PriceListType type = 11;
+}
+
+message GetPriceListRequest {
+    string id = 1;
+}
+
+message UpdatePriceListRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    google.protobuf.Timestamp valid_to = 4;
+    int32 priority = 5;
+    common.v1.Status status = 6;
+}
+
+message DeletePriceListRequest {
+    string id = 1;
+}
+
+message ListPriceListsRequest {
+    string company_code = 1;
+    string sales_organization = 2;
+    PriceListType type = 3;
+    common.v1.Status status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListPriceListsResponse {
+    repeated PriceList price_lists = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreatePriceListItemRequest {
+    string price_list_id = 1;
+    string product_id = 2;
+    common.v1.Money price = 3;
+    string price_unit = 4;
+    common.v1.Quantity min_quantity = 5;
+    common.v1.Quantity max_quantity = 6;
+    google.protobuf.Timestamp valid_from = 7;
+    google.protobuf.Timestamp valid_to = 8;
+}
+
+message UpdatePriceListItemRequest {
+    string id = 1;
+    common.v1.Money price = 2;
+    common.v1.Quantity min_quantity = 3;
+    common.v1.Quantity max_quantity = 4;
+    google.protobuf.Timestamp valid_to = 5;
+}
+
+message DeletePriceListItemRequest {
+    string id = 1;
+}
+
+message BulkUpdatePriceListItemsRequest {
+    string price_list_id = 1;
+    repeated PriceListItemInput items = 2;
+    PriceUpdateType update_type = 3;
+    double adjustment_value = 4;
+}
+
+enum PriceUpdateType {
+    PRICE_UPDATE_TYPE_UNSPECIFIED = 0;
+    PRICE_UPDATE_TYPE_REPLACE = 1;
+    PRICE_UPDATE_TYPE_INCREASE_PERCENTAGE = 2;
+    PRICE_UPDATE_TYPE_DECREASE_PERCENTAGE = 3;
+    PRICE_UPDATE_TYPE_INCREASE_AMOUNT = 4;
+    PRICE_UPDATE_TYPE_DECREASE_AMOUNT = 5;
+}
+
+message PriceListItemInput {
+    string product_id = 1;
+    common.v1.Money price = 2;
+    string price_unit = 3;
+}
+
+message BulkUpdatePriceListItemsResponse {
+    int32 updated_count = 1;
+    int32 failed_count = 2;
+    repeated common.v1.ErrorDetail errors = 3;
+}
+
+message CreateDiscountRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string company_code = 4;
+    DiscountType type = 5;
+    double value = 6;
+    common.v1.Money max_amount = 7;
+    common.v1.Money min_order_value = 8;
+    google.protobuf.Timestamp valid_from = 9;
+    google.protobuf.Timestamp valid_to = 10;
+    repeated DiscountCondition conditions = 11;
+    bool combinable = 12;
+    int32 priority = 13;
+}
+
+message GetDiscountRequest {
+    string id = 1;
+}
+
+message UpdateDiscountRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    double value = 4;
+    google.protobuf.Timestamp valid_to = 5;
+    common.v1.Status status = 6;
+}
+
+message DeleteDiscountRequest {
+    string id = 1;
+}
+
+message ListDiscountsRequest {
+    string company_code = 1;
+    DiscountType type = 2;
+    common.v1.Status status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListDiscountsResponse {
+    repeated Discount discounts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreatePricingConditionRequest {
+    string condition_type = 1;
+    string table_name = 2;
+    string sales_organization = 3;
+    string distribution_channel = 4;
+    string customer_id = 5;
+    string customer_group = 6;
+    string product_id = 7;
+    string product_group = 8;
+    common.v1.Money amount = 9;
+    double percentage = 10;
+    string currency = 11;
+    google.protobuf.Timestamp valid_from = 12;
+    google.protobuf.Timestamp valid_to = 13;
+    repeated PricingScale scales = 14;
+}
+
+message GetPricingConditionRequest {
+    string id = 1;
+}
+
+message UpdatePricingConditionRequest {
+    string id = 1;
+    common.v1.Money amount = 2;
+    double percentage = 3;
+    google.protobuf.Timestamp valid_to = 4;
+    repeated PricingScale scales = 5;
+}
+
+message DeletePricingConditionRequest {
+    string id = 1;
+}
+
+message ListPricingConditionsRequest {
+    string condition_type = 1;
+    string sales_organization = 2;
+    string customer_id = 3;
+    string product_id = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListPricingConditionsResponse {
+    repeated PricingCondition conditions = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CalculatePriceRequest {
+    string company_code = 1;
+    string sales_organization = 2;
+    string distribution_channel = 3;
+    string customer_id = 4;
+    repeated PricingLineInput lines = 5;
+    google.protobuf.Timestamp pricing_date = 6;
+    string currency = 7;
+}
+
+message PricingLineInput {
+    string product_id = 1;
+    common.v1.Quantity quantity = 2;
+    string unit = 3;
+}
+
+message CalculatePriceResponse {
+    repeated PricingLineResult lines = 1;
+    common.v1.Money subtotal = 2;
+    common.v1.Money total_discount = 3;
+    common.v1.Money total_tax = 4;
+    common.v1.Money grand_total = 5;
+}
+
+message PricingLineResult {
+    string product_id = 1;
+    PricingResult pricing = 2;
+}
+
+message SimulatePricingRequest {
+    string company_code = 1;
+    string sales_organization = 2;
+    string distribution_channel = 3;
+    string customer_id = 4;
+    string product_id = 5;
+    common.v1.Quantity quantity = 6;
+    google.protobuf.Timestamp pricing_date = 7;
+    string currency = 8;
+    repeated string exclude_condition_types = 9;
+}
+
+message SimulatePricingResponse {
+    PricingResult result = 1;
+    repeated PricingCondition applicable_conditions = 2;
+}
+
+message GetProductPriceRequest {
+    string product_id = 1;
+    string sales_organization = 2;
+    string distribution_channel = 3;
+    string currency = 4;
+    google.protobuf.Timestamp date = 5;
+}
+
+message GetProductPriceResponse {
+    string product_id = 1;
+    common.v1.Money base_price = 2;
+    string price_list_id = 3;
+    string price_list_name = 4;
+    string currency = 5;
+    string price_unit = 6;
+}
+
+message GetCustomerSpecificPriceRequest {
+    string customer_id = 1;
+    string product_id = 2;
+    string sales_organization = 3;
+    string distribution_channel = 4;
+    common.v1.Quantity quantity = 5;
+    google.protobuf.Timestamp date = 6;
+}
+
+message GetCustomerSpecificPriceResponse {
+    string customer_id = 1;
+    string product_id = 2;
+    PricingResult pricing = 3;
+    string contract_reference = 4;
+}
+
+// Auto-generated Response messages
+message CreatePriceListResponse {
+    PriceList price_list = 1;
+}
+
+message GetPriceListResponse {
+    PriceList price_list = 1;
+}
+
+message UpdatePriceListResponse {
+    PriceList price_list = 1;
+}
+
+message CreatePriceListItemResponse {
+    PriceListItem price_list_item = 1;
+}
+
+message UpdatePriceListItemResponse {
+    PriceListItem price_list_item = 1;
+}
+
+message CreateDiscountResponse {
+    Discount discount = 1;
+}
+
+message GetDiscountResponse {
+    Discount discount = 1;
+}
+
+message UpdateDiscountResponse {
+    Discount discount = 1;
+}
+
+message CreatePricingConditionResponse {
+    PricingCondition pricing_condition = 1;
+}
+
+message GetPricingConditionResponse {
+    PricingCondition pricing_condition = 1;
+}
+
+message UpdatePricingConditionResponse {
+    PricingCondition pricing_condition = 1;
+}

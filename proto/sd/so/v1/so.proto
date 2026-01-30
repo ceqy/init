@@ -1,0 +1,556 @@
+syntax = "proto3";
+
+package sd.so.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service SalesOrderService {
+    rpc CreateSalesOrder(CreateSalesOrderRequest) returns (CreateSalesOrderResponse);
+    rpc GetSalesOrder(GetSalesOrderRequest) returns (GetSalesOrderResponse);
+    rpc UpdateSalesOrder(UpdateSalesOrderRequest) returns (UpdateSalesOrderResponse);
+    rpc DeleteSalesOrder(DeleteSalesOrderRequest) returns (google.protobuf.Empty);
+    rpc ListSalesOrders(ListSalesOrdersRequest) returns (ListSalesOrdersResponse);
+
+    rpc SubmitSalesOrder(SubmitSalesOrderRequest) returns (SubmitSalesOrderResponse);
+    rpc ApproveSalesOrder(ApproveSalesOrderRequest) returns (ApproveSalesOrderResponse);
+    rpc RejectSalesOrder(RejectSalesOrderRequest) returns (RejectSalesOrderResponse);
+    rpc CancelSalesOrder(CancelSalesOrderRequest) returns (CancelSalesOrderResponse);
+
+    rpc CreateQuotation(CreateQuotationRequest) returns (CreateQuotationResponse);
+    rpc GetQuotation(GetQuotationRequest) returns (GetQuotationResponse);
+    rpc UpdateQuotation(UpdateQuotationRequest) returns (UpdateQuotationResponse);
+    rpc ListQuotations(ListQuotationsRequest) returns (ListQuotationsResponse);
+    rpc ConvertQuotationToOrder(ConvertQuotationToOrderRequest) returns (ConvertQuotationToOrderResponse);
+
+    rpc CreateDelivery(CreateDeliveryRequest) returns (CreateDeliveryResponse);
+    rpc GetDelivery(GetDeliveryRequest) returns (GetDeliveryResponse);
+    rpc UpdateDelivery(UpdateDeliveryRequest) returns (UpdateDeliveryResponse);
+    rpc ListDeliveries(ListDeliveriesRequest) returns (ListDeliveriesResponse);
+    rpc ConfirmDelivery(ConfirmDeliveryRequest) returns (ConfirmDeliveryResponse);
+    rpc ShipDelivery(ShipDeliveryRequest) returns (ShipDeliveryResponse);
+
+    rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
+    rpc CheckCreditLimit(CheckCreditLimitRequest) returns (CheckCreditLimitResponse);
+
+    rpc GetOrderFulfillmentStatus(GetOrderFulfillmentStatusRequest) returns (GetOrderFulfillmentStatusResponse);
+}
+
+message SalesOrder {
+    string id = 1;
+    string order_number = 2;
+    string company_code = 3;
+    string sales_organization = 4;
+    string distribution_channel = 5;
+    string division = 6;
+    string customer_id = 7;
+    string customer_name = 8;
+    string ship_to_party = 9;
+    string bill_to_party = 10;
+    string payer = 11;
+    google.protobuf.Timestamp order_date = 12;
+    google.protobuf.Timestamp requested_delivery_date = 13;
+    string currency = 14;
+    string payment_terms = 15;
+    string incoterms = 16;
+    string incoterms_location = 17;
+    common.v1.Money net_value = 18;
+    common.v1.Money tax_amount = 19;
+    common.v1.Money gross_value = 20;
+    common.v1.Money discount_amount = 21;
+    repeated SalesOrderLine lines = 22;
+    SalesOrderStatus status = 23;
+    string sales_rep_id = 24;
+    string customer_po_number = 25;
+    string quotation_reference = 26;
+    common.v1.Address shipping_address = 27;
+    common.v1.Address billing_address = 28;
+    string notes = 29;
+    common.v1.AuditInfo audit_info = 30;
+}
+
+message SalesOrderLine {
+    string id = 1;
+    int32 line_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string description = 5;
+    common.v1.Quantity quantity = 6;
+    common.v1.Quantity delivered_quantity = 7;
+    common.v1.Money unit_price = 8;
+    common.v1.Money net_value = 9;
+    common.v1.Money discount = 10;
+    common.v1.Money tax_amount = 11;
+    string tax_code = 12;
+    google.protobuf.Timestamp requested_delivery_date = 13;
+    google.protobuf.Timestamp confirmed_delivery_date = 14;
+    string plant = 15;
+    string storage_location = 16;
+    string shipping_point = 17;
+    string profit_center = 18;
+    string cost_center = 19;
+    SalesOrderLineStatus status = 20;
+    string rejection_reason = 21;
+}
+
+enum SalesOrderStatus {
+    SALES_ORDER_STATUS_UNSPECIFIED = 0;
+    SALES_ORDER_STATUS_DRAFT = 1;
+    SALES_ORDER_STATUS_SUBMITTED = 2;
+    SALES_ORDER_STATUS_APPROVED = 3;
+    SALES_ORDER_STATUS_REJECTED = 4;
+    SALES_ORDER_STATUS_IN_PROCESS = 5;
+    SALES_ORDER_STATUS_PARTIALLY_DELIVERED = 6;
+    SALES_ORDER_STATUS_DELIVERED = 7;
+    SALES_ORDER_STATUS_INVOICED = 8;
+    SALES_ORDER_STATUS_COMPLETED = 9;
+    SALES_ORDER_STATUS_CANCELLED = 10;
+}
+
+enum SalesOrderLineStatus {
+    SALES_ORDER_LINE_STATUS_UNSPECIFIED = 0;
+    SALES_ORDER_LINE_STATUS_OPEN = 1;
+    SALES_ORDER_LINE_STATUS_PARTIALLY_DELIVERED = 2;
+    SALES_ORDER_LINE_STATUS_DELIVERED = 3;
+    SALES_ORDER_LINE_STATUS_INVOICED = 4;
+    SALES_ORDER_LINE_STATUS_REJECTED = 5;
+    SALES_ORDER_LINE_STATUS_CANCELLED = 6;
+}
+
+message Quotation {
+    string id = 1;
+    string quotation_number = 2;
+    string company_code = 3;
+    string customer_id = 4;
+    string customer_name = 5;
+    google.protobuf.Timestamp quotation_date = 6;
+    google.protobuf.Timestamp valid_from = 7;
+    google.protobuf.Timestamp valid_to = 8;
+    string currency = 9;
+    common.v1.Money net_value = 10;
+    common.v1.Money tax_amount = 11;
+    common.v1.Money gross_value = 12;
+    repeated QuotationLine lines = 13;
+    QuotationStatus status = 14;
+    string sales_rep_id = 15;
+    string notes = 16;
+    common.v1.AuditInfo audit_info = 17;
+}
+
+message QuotationLine {
+    string id = 1;
+    int32 line_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string description = 5;
+    common.v1.Quantity quantity = 6;
+    common.v1.Money unit_price = 7;
+    common.v1.Money net_value = 8;
+    common.v1.Money discount = 9;
+    string tax_code = 10;
+}
+
+enum QuotationStatus {
+    QUOTATION_STATUS_UNSPECIFIED = 0;
+    QUOTATION_STATUS_DRAFT = 1;
+    QUOTATION_STATUS_SENT = 2;
+    QUOTATION_STATUS_ACCEPTED = 3;
+    QUOTATION_STATUS_REJECTED = 4;
+    QUOTATION_STATUS_EXPIRED = 5;
+    QUOTATION_STATUS_CONVERTED = 6;
+}
+
+message Delivery {
+    string id = 1;
+    string delivery_number = 2;
+    string company_code = 3;
+    string sales_order_id = 4;
+    string sales_order_number = 5;
+    string customer_id = 6;
+    string customer_name = 7;
+    string ship_to_party = 8;
+    google.protobuf.Timestamp delivery_date = 9;
+    google.protobuf.Timestamp shipped_date = 10;
+    string shipping_point = 11;
+    string carrier = 12;
+    string tracking_number = 13;
+    common.v1.Address shipping_address = 14;
+    repeated DeliveryLine lines = 15;
+    DeliveryStatus status = 16;
+    common.v1.Quantity total_weight = 17;
+    common.v1.Quantity total_volume = 18;
+    string notes = 19;
+    common.v1.AuditInfo audit_info = 20;
+}
+
+message DeliveryLine {
+    string id = 1;
+    int32 line_number = 2;
+    string sales_order_line_id = 3;
+    string product_id = 4;
+    string product_code = 5;
+    string description = 6;
+    common.v1.Quantity quantity = 7;
+    common.v1.Quantity picked_quantity = 8;
+    string batch_number = 9;
+    string serial_number = 10;
+    string plant = 11;
+    string storage_location = 12;
+    DeliveryLineStatus status = 13;
+}
+
+enum DeliveryStatus {
+    DELIVERY_STATUS_UNSPECIFIED = 0;
+    DELIVERY_STATUS_CREATED = 1;
+    DELIVERY_STATUS_PICKING = 2;
+    DELIVERY_STATUS_PICKED = 3;
+    DELIVERY_STATUS_PACKED = 4;
+    DELIVERY_STATUS_SHIPPED = 5;
+    DELIVERY_STATUS_DELIVERED = 6;
+    DELIVERY_STATUS_CANCELLED = 7;
+}
+
+enum DeliveryLineStatus {
+    DELIVERY_LINE_STATUS_UNSPECIFIED = 0;
+    DELIVERY_LINE_STATUS_OPEN = 1;
+    DELIVERY_LINE_STATUS_PARTIALLY_PICKED = 2;
+    DELIVERY_LINE_STATUS_PICKED = 3;
+    DELIVERY_LINE_STATUS_SHIPPED = 4;
+}
+
+message CreateSalesOrderRequest {
+    string company_code = 1;
+    string sales_organization = 2;
+    string distribution_channel = 3;
+    string division = 4;
+    string customer_id = 5;
+    string ship_to_party = 6;
+    string bill_to_party = 7;
+    google.protobuf.Timestamp requested_delivery_date = 8;
+    string currency = 9;
+    string payment_terms = 10;
+    string incoterms = 11;
+    string incoterms_location = 12;
+    repeated SalesOrderLineInput lines = 13;
+    string customer_po_number = 14;
+    string quotation_reference = 15;
+    common.v1.Address shipping_address = 16;
+    common.v1.Address billing_address = 17;
+    string notes = 18;
+}
+
+message SalesOrderLineInput {
+    string product_id = 1;
+    string description = 2;
+    common.v1.Quantity quantity = 3;
+    common.v1.Money unit_price = 4;
+    common.v1.Money discount = 5;
+    string tax_code = 6;
+    google.protobuf.Timestamp requested_delivery_date = 7;
+    string plant = 8;
+    string storage_location = 9;
+}
+
+message GetSalesOrderRequest {
+    string id = 1;
+}
+
+message UpdateSalesOrderRequest {
+    string id = 1;
+    google.protobuf.Timestamp requested_delivery_date = 2;
+    string payment_terms = 3;
+    repeated SalesOrderLineInput lines = 4;
+    common.v1.Address shipping_address = 5;
+    string notes = 6;
+}
+
+message DeleteSalesOrderRequest {
+    string id = 1;
+}
+
+message ListSalesOrdersRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    string sales_organization = 3;
+    SalesOrderStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    string search = 6;
+    common.v1.Pagination pagination = 7;
+}
+
+message ListSalesOrdersResponse {
+    repeated SalesOrder orders = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message SubmitSalesOrderRequest {
+    string id = 1;
+}
+
+message ApproveSalesOrderRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message RejectSalesOrderRequest {
+    string id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message CancelSalesOrderRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message CreateQuotationRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    google.protobuf.Timestamp valid_from = 3;
+    google.protobuf.Timestamp valid_to = 4;
+    string currency = 5;
+    repeated QuotationLineInput lines = 6;
+    string notes = 7;
+}
+
+message QuotationLineInput {
+    string product_id = 1;
+    string description = 2;
+    common.v1.Quantity quantity = 3;
+    common.v1.Money unit_price = 4;
+    common.v1.Money discount = 5;
+    string tax_code = 6;
+}
+
+message GetQuotationRequest {
+    string id = 1;
+}
+
+message UpdateQuotationRequest {
+    string id = 1;
+    google.protobuf.Timestamp valid_to = 2;
+    repeated QuotationLineInput lines = 3;
+    string notes = 4;
+}
+
+message ListQuotationsRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    QuotationStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListQuotationsResponse {
+    repeated Quotation quotations = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ConvertQuotationToOrderRequest {
+    string quotation_id = 1;
+    google.protobuf.Timestamp requested_delivery_date = 2;
+    string customer_po_number = 3;
+}
+
+message CreateDeliveryRequest {
+    string sales_order_id = 1;
+    google.protobuf.Timestamp delivery_date = 2;
+    string shipping_point = 3;
+    repeated DeliveryLineInput lines = 4;
+}
+
+message DeliveryLineInput {
+    string sales_order_line_id = 1;
+    common.v1.Quantity quantity = 2;
+    string batch_number = 3;
+    string serial_number = 4;
+    string storage_location = 5;
+}
+
+message GetDeliveryRequest {
+    string id = 1;
+}
+
+message UpdateDeliveryRequest {
+    string id = 1;
+    google.protobuf.Timestamp delivery_date = 2;
+    string carrier = 3;
+    string tracking_number = 4;
+}
+
+message ListDeliveriesRequest {
+    string company_code = 1;
+    string sales_order_id = 2;
+    string customer_id = 3;
+    DeliveryStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListDeliveriesResponse {
+    repeated Delivery deliveries = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ConfirmDeliveryRequest {
+    string id = 1;
+    repeated DeliveryLineConfirmation confirmations = 2;
+}
+
+message DeliveryLineConfirmation {
+    string line_id = 1;
+    common.v1.Quantity picked_quantity = 2;
+}
+
+message ShipDeliveryRequest {
+    string id = 1;
+    string carrier = 2;
+    string tracking_number = 3;
+    google.protobuf.Timestamp shipped_date = 4;
+}
+
+message CheckAvailabilityRequest {
+    string product_id = 1;
+    string plant = 2;
+    string storage_location = 3;
+    common.v1.Quantity quantity = 4;
+    google.protobuf.Timestamp requested_date = 5;
+}
+
+message CheckAvailabilityResponse {
+    bool available = 1;
+    common.v1.Quantity available_quantity = 2;
+    google.protobuf.Timestamp earliest_date = 3;
+    repeated AvailabilityDetail details = 4;
+}
+
+message AvailabilityDetail {
+    string plant = 1;
+    string storage_location = 2;
+    common.v1.Quantity unrestricted = 3;
+    common.v1.Quantity reserved = 4;
+    common.v1.Quantity available = 5;
+}
+
+message CheckCreditLimitRequest {
+    string customer_id = 1;
+    string company_code = 2;
+    common.v1.Money order_value = 3;
+}
+
+message CheckCreditLimitResponse {
+    bool approved = 1;
+    common.v1.Money credit_limit = 2;
+    common.v1.Money credit_exposure = 3;
+    common.v1.Money available_credit = 4;
+    string credit_status = 5;
+    string message = 6;
+}
+
+message GetOrderFulfillmentStatusRequest {
+    string id = 1;
+}
+
+message GetOrderFulfillmentStatusResponse {
+    string order_id = 1;
+    string order_number = 2;
+    SalesOrderStatus order_status = 3;
+    repeated LineFulfillmentStatus lines = 4;
+    double overall_fulfillment_percentage = 5;
+}
+
+message LineFulfillmentStatus {
+    string line_id = 1;
+    int32 line_number = 2;
+    string product_code = 3;
+    common.v1.Quantity ordered_quantity = 4;
+    common.v1.Quantity delivered_quantity = 5;
+    common.v1.Quantity invoiced_quantity = 6;
+    double fulfillment_percentage = 7;
+    repeated DeliveryReference deliveries = 8;
+    repeated InvoiceReference invoices = 9;
+}
+
+message DeliveryReference {
+    string delivery_id = 1;
+    string delivery_number = 2;
+    common.v1.Quantity quantity = 3;
+    google.protobuf.Timestamp delivery_date = 4;
+    DeliveryStatus status = 5;
+}
+
+message InvoiceReference {
+    string invoice_id = 1;
+    string invoice_number = 2;
+    common.v1.Quantity quantity = 3;
+    common.v1.Money amount = 4;
+    google.protobuf.Timestamp invoice_date = 5;
+}
+
+// Auto-generated Response messages
+message CreateSalesOrderResponse {
+    SalesOrder sales_order = 1;
+}
+
+message GetSalesOrderResponse {
+    SalesOrder sales_order = 1;
+}
+
+message UpdateSalesOrderResponse {
+    SalesOrder sales_order = 1;
+}
+
+message SubmitSalesOrderResponse {
+    SalesOrder sales_order = 1;
+}
+
+message ApproveSalesOrderResponse {
+    SalesOrder sales_order = 1;
+}
+
+message RejectSalesOrderResponse {
+    SalesOrder sales_order = 1;
+}
+
+message CancelSalesOrderResponse {
+    SalesOrder sales_order = 1;
+}
+
+message CreateQuotationResponse {
+    Quotation quotation = 1;
+}
+
+message GetQuotationResponse {
+    Quotation quotation = 1;
+}
+
+message UpdateQuotationResponse {
+    Quotation quotation = 1;
+}
+
+message ConvertQuotationToOrderResponse {
+    SalesOrder sales_order = 1;
+}
+
+message CreateDeliveryResponse {
+    Delivery delivery = 1;
+}
+
+message GetDeliveryResponse {
+    Delivery delivery = 1;
+}
+
+message UpdateDeliveryResponse {
+    Delivery delivery = 1;
+}
+
+message ConfirmDeliveryResponse {
+    Delivery delivery = 1;
+}
+
+message ShipDeliveryResponse {
+    Delivery delivery = 1;
+}

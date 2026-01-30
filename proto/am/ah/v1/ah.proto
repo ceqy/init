@@ -1,0 +1,514 @@
+syntax = "proto3";
+
+package am.ah.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service AssetHierarchyService {
+    rpc CreateAsset(CreateAssetRequest) returns (CreateAssetResponse);
+    rpc GetAsset(GetAssetRequest) returns (GetAssetResponse);
+    rpc UpdateAsset(UpdateAssetRequest) returns (UpdateAssetResponse);
+    rpc DeleteAsset(DeleteAssetRequest) returns (google.protobuf.Empty);
+    rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse);
+
+    rpc GetAssetHierarchy(GetAssetHierarchyRequest) returns (GetAssetHierarchyResponse);
+    rpc MoveAsset(MoveAssetRequest) returns (MoveAssetResponse);
+
+    rpc CreateLocation(CreateLocationRequest) returns (CreateLocationResponse);
+    rpc GetLocation(GetLocationRequest) returns (GetLocationResponse);
+    rpc UpdateLocation(UpdateLocationRequest) returns (UpdateLocationResponse);
+    rpc ListLocations(ListLocationsRequest) returns (ListLocationsResponse);
+
+    rpc CreateAssetClass(CreateAssetClassRequest) returns (CreateAssetClassResponse);
+    rpc GetAssetClass(GetAssetClassRequest) returns (GetAssetClassResponse);
+    rpc UpdateAssetClass(UpdateAssetClassRequest) returns (UpdateAssetClassResponse);
+    rpc ListAssetClasses(ListAssetClassesRequest) returns (ListAssetClassesResponse);
+
+    rpc GetAssetHistory(GetAssetHistoryRequest) returns (GetAssetHistoryResponse);
+    rpc GetAssetDocuments(GetAssetDocumentsRequest) returns (GetAssetDocumentsResponse);
+    rpc AddAssetDocument(AddAssetDocumentRequest) returns (AddAssetDocumentResponse);
+
+    rpc TransferAsset(TransferAssetRequest) returns (TransferAssetResponse);
+    rpc RetireAsset(RetireAssetRequest) returns (RetireAssetResponse);
+    rpc DisposeAsset(DisposeAssetRequest) returns (DisposeAssetResponse);
+
+    rpc GetAssetValuation(GetAssetValuationRequest) returns (GetAssetValuationResponse);
+    rpc GetDepreciationSchedule(GetDepreciationScheduleRequest) returns (GetDepreciationScheduleResponse);
+}
+
+message Asset {
+    string id = 1;
+    string asset_number = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    string asset_class_id = 6;
+    string asset_class_name = 7;
+    string parent_asset_id = 8;
+    string location_id = 9;
+    string location_name = 10;
+    string cost_center = 11;
+    string responsible_person = 12;
+    AssetStatus status = 13;
+    google.protobuf.Timestamp acquisition_date = 14;
+    google.protobuf.Timestamp capitalization_date = 15;
+    google.protobuf.Timestamp decommission_date = 16;
+    common.v1.Money acquisition_cost = 17;
+    common.v1.Money current_value = 18;
+    common.v1.Money accumulated_depreciation = 19;
+    common.v1.Money salvage_value = 20;
+    int32 useful_life_months = 21;
+    string depreciation_method = 22;
+    string serial_number = 23;
+    string manufacturer = 24;
+    string model = 25;
+    google.protobuf.Timestamp warranty_expiry = 26;
+    repeated AssetAttribute attributes = 27;
+    repeated string tags = 28;
+    string notes = 29;
+    common.v1.AuditInfo audit_info = 30;
+}
+
+enum AssetStatus {
+    ASSET_STATUS_UNSPECIFIED = 0;
+    ASSET_STATUS_PLANNED = 1;
+    ASSET_STATUS_ACQUIRED = 2;
+    ASSET_STATUS_IN_SERVICE = 3;
+    ASSET_STATUS_UNDER_MAINTENANCE = 4;
+    ASSET_STATUS_OUT_OF_SERVICE = 5;
+    ASSET_STATUS_RETIRED = 6;
+    ASSET_STATUS_DISPOSED = 7;
+}
+
+message AssetAttribute {
+    string name = 1;
+    string value = 2;
+    string unit = 3;
+    string data_type = 4;
+}
+
+message AssetClass {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string parent_class_id = 5;
+    string depreciation_method = 6;
+    int32 default_useful_life_months = 7;
+    double default_salvage_percentage = 8;
+    string gl_account_acquisition = 9;
+    string gl_account_depreciation = 10;
+    string gl_account_accumulated_depreciation = 11;
+    string gl_account_disposal = 12;
+    repeated AssetAttributeDefinition attribute_definitions = 13;
+    common.v1.Status status = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+message AssetAttributeDefinition {
+    string name = 1;
+    string data_type = 2;
+    string unit = 3;
+    bool required = 4;
+    string default_value = 5;
+}
+
+message Location {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string parent_location_id = 5;
+    string location_type = 6;
+    common.v1.Address address = 7;
+    string building = 8;
+    string floor = 9;
+    string room = 10;
+    double latitude = 11;
+    double longitude = 12;
+    string responsible_person = 13;
+    common.v1.Status status = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+message AssetDocument {
+    string id = 1;
+    string asset_id = 2;
+    string document_type = 3;
+    string title = 4;
+    string description = 5;
+    common.v1.Attachment attachment = 6;
+    google.protobuf.Timestamp expiry_date = 7;
+    common.v1.AuditInfo audit_info = 8;
+}
+
+message AssetTransfer {
+    string id = 1;
+    string transfer_number = 2;
+    string asset_id = 3;
+    string asset_number = 4;
+    string from_location_id = 5;
+    string from_location_name = 6;
+    string to_location_id = 7;
+    string to_location_name = 8;
+    string from_cost_center = 9;
+    string to_cost_center = 10;
+    string from_responsible = 11;
+    string to_responsible = 12;
+    google.protobuf.Timestamp transfer_date = 13;
+    string reason = 14;
+    AssetTransferStatus status = 15;
+    string approved_by = 16;
+    google.protobuf.Timestamp approved_at = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+enum AssetTransferStatus {
+    ASSET_TRANSFER_STATUS_UNSPECIFIED = 0;
+    ASSET_TRANSFER_STATUS_PENDING = 1;
+    ASSET_TRANSFER_STATUS_APPROVED = 2;
+    ASSET_TRANSFER_STATUS_COMPLETED = 3;
+    ASSET_TRANSFER_STATUS_REJECTED = 4;
+    ASSET_TRANSFER_STATUS_CANCELLED = 5;
+}
+
+message AssetHistoryEntry {
+    string id = 1;
+    string asset_id = 2;
+    google.protobuf.Timestamp event_date = 3;
+    string event_type = 4;
+    string description = 5;
+    string old_value = 6;
+    string new_value = 7;
+    string reference_document = 8;
+    string user_id = 9;
+    string user_name = 10;
+}
+
+message AssetNode {
+    Asset asset = 1;
+    repeated AssetNode children = 2;
+}
+
+message DepreciationEntry {
+    string period = 1;
+    google.protobuf.Timestamp period_start = 2;
+    google.protobuf.Timestamp period_end = 3;
+    common.v1.Money opening_value = 4;
+    common.v1.Money depreciation_amount = 5;
+    common.v1.Money accumulated_depreciation = 6;
+    common.v1.Money closing_value = 7;
+    bool posted = 8;
+    string document_number = 9;
+}
+
+message CreateAssetRequest {
+    string name = 1;
+    string description = 2;
+    string company_code = 3;
+    string asset_class_id = 4;
+    string parent_asset_id = 5;
+    string location_id = 6;
+    string cost_center = 7;
+    string responsible_person = 8;
+    google.protobuf.Timestamp acquisition_date = 9;
+    common.v1.Money acquisition_cost = 10;
+    common.v1.Money salvage_value = 11;
+    int32 useful_life_months = 12;
+    string depreciation_method = 13;
+    string serial_number = 14;
+    string manufacturer = 15;
+    string model = 16;
+    google.protobuf.Timestamp warranty_expiry = 17;
+    repeated AssetAttribute attributes = 18;
+    repeated string tags = 19;
+    string notes = 20;
+}
+
+message GetAssetRequest {
+    string id = 1;
+}
+
+message UpdateAssetRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string location_id = 4;
+    string cost_center = 5;
+    string responsible_person = 6;
+    string serial_number = 7;
+    google.protobuf.Timestamp warranty_expiry = 8;
+    repeated AssetAttribute attributes = 9;
+    repeated string tags = 10;
+    string notes = 11;
+}
+
+message DeleteAssetRequest {
+    string id = 1;
+}
+
+message ListAssetsRequest {
+    string company_code = 1;
+    string asset_class_id = 2;
+    string location_id = 3;
+    string cost_center = 4;
+    AssetStatus status = 5;
+    string search = 6;
+    repeated string tags = 7;
+    common.v1.Pagination pagination = 8;
+}
+
+message ListAssetsResponse {
+    repeated Asset assets = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetAssetHierarchyRequest {
+    string root_asset_id = 1;
+    string company_code = 2;
+    int32 max_depth = 3;
+}
+
+message GetAssetHierarchyResponse {
+    repeated AssetNode nodes = 1;
+}
+
+message MoveAssetRequest {
+    string asset_id = 1;
+    string new_parent_id = 2;
+}
+
+message CreateLocationRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string parent_location_id = 4;
+    string location_type = 5;
+    common.v1.Address address = 6;
+    string building = 7;
+    string floor = 8;
+    string room = 9;
+    double latitude = 10;
+    double longitude = 11;
+    string responsible_person = 12;
+}
+
+message GetLocationRequest {
+    string id = 1;
+}
+
+message UpdateLocationRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    common.v1.Address address = 4;
+    string building = 5;
+    string floor = 6;
+    string room = 7;
+    string responsible_person = 8;
+    common.v1.Status status = 9;
+}
+
+message ListLocationsRequest {
+    string parent_location_id = 1;
+    string location_type = 2;
+    common.v1.Status status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListLocationsResponse {
+    repeated Location locations = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateAssetClassRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string parent_class_id = 4;
+    string depreciation_method = 5;
+    int32 default_useful_life_months = 6;
+    double default_salvage_percentage = 7;
+    string gl_account_acquisition = 8;
+    string gl_account_depreciation = 9;
+    string gl_account_accumulated_depreciation = 10;
+    string gl_account_disposal = 11;
+    repeated AssetAttributeDefinition attribute_definitions = 12;
+}
+
+message GetAssetClassRequest {
+    string id = 1;
+}
+
+message UpdateAssetClassRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string depreciation_method = 4;
+    int32 default_useful_life_months = 5;
+    double default_salvage_percentage = 6;
+    repeated AssetAttributeDefinition attribute_definitions = 7;
+    common.v1.Status status = 8;
+}
+
+message ListAssetClassesRequest {
+    string parent_class_id = 1;
+    common.v1.Status status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListAssetClassesResponse {
+    repeated AssetClass classes = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetAssetHistoryRequest {
+    string asset_id = 1;
+    common.v1.DateRange date_range = 2;
+    string event_type = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message GetAssetHistoryResponse {
+    repeated AssetHistoryEntry entries = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetAssetDocumentsRequest {
+    string asset_id = 1;
+    string document_type = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetAssetDocumentsResponse {
+    repeated AssetDocument documents = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message AddAssetDocumentRequest {
+    string asset_id = 1;
+    string document_type = 2;
+    string title = 3;
+    string description = 4;
+    bytes content = 5;
+    string filename = 6;
+    string content_type = 7;
+    google.protobuf.Timestamp expiry_date = 8;
+}
+
+message TransferAssetRequest {
+    string asset_id = 1;
+    string to_location_id = 2;
+    string to_cost_center = 3;
+    string to_responsible = 4;
+    google.protobuf.Timestamp transfer_date = 5;
+    string reason = 6;
+}
+
+message RetireAssetRequest {
+    string asset_id = 1;
+    google.protobuf.Timestamp retirement_date = 2;
+    string reason = 3;
+}
+
+message DisposeAssetRequest {
+    string asset_id = 1;
+    google.protobuf.Timestamp disposal_date = 2;
+    string disposal_type = 3;
+    common.v1.Money disposal_value = 4;
+    string buyer = 5;
+    string reason = 6;
+}
+
+message GetAssetValuationRequest {
+    string asset_id = 1;
+    google.protobuf.Timestamp as_of_date = 2;
+}
+
+message GetAssetValuationResponse {
+    string asset_id = 1;
+    string asset_number = 2;
+    string asset_name = 3;
+    google.protobuf.Timestamp valuation_date = 4;
+    common.v1.Money acquisition_cost = 5;
+    common.v1.Money accumulated_depreciation = 6;
+    common.v1.Money net_book_value = 7;
+    common.v1.Money fair_market_value = 8;
+    common.v1.Money replacement_cost = 9;
+    int32 remaining_useful_life_months = 10;
+}
+
+message GetDepreciationScheduleRequest {
+    string asset_id = 1;
+    string fiscal_year = 2;
+}
+
+message GetDepreciationScheduleResponse {
+    string asset_id = 1;
+    string asset_number = 2;
+    string depreciation_method = 3;
+    int32 useful_life_months = 4;
+    common.v1.Money acquisition_cost = 5;
+    common.v1.Money salvage_value = 6;
+    repeated DepreciationEntry schedule = 7;
+}
+
+// Auto-generated Response messages
+message CreateAssetResponse {
+    Asset asset = 1;
+}
+
+message GetAssetResponse {
+    Asset asset = 1;
+}
+
+message UpdateAssetResponse {
+    Asset asset = 1;
+}
+
+message MoveAssetResponse {
+    Asset asset = 1;
+}
+
+message CreateLocationResponse {
+    Location location = 1;
+}
+
+message GetLocationResponse {
+    Location location = 1;
+}
+
+message UpdateLocationResponse {
+    Location location = 1;
+}
+
+message CreateAssetClassResponse {
+    AssetClass asset_class = 1;
+}
+
+message GetAssetClassResponse {
+    AssetClass asset_class = 1;
+}
+
+message UpdateAssetClassResponse {
+    AssetClass asset_class = 1;
+}
+
+message AddAssetDocumentResponse {
+    AssetDocument asset_document = 1;
+}
+
+message TransferAssetResponse {
+    AssetTransfer asset_transfer = 1;
+}
+
+message RetireAssetResponse {
+    Asset asset = 1;
+}
+
+message DisposeAssetResponse {
+    Asset asset = 1;
+}

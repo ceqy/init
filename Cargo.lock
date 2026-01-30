@@ -30,6 +30,142 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
+name = "am-ah"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "am-eh"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "am-gs"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "am-pm"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -723,6 +859,108 @@ dependencies = [
 ]
 
 [[package]]
+name = "cs-cb"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cs-fd"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cs-wc"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "cuba-adapter-clickhouse"
 version = "0.1.0"
 dependencies = [
@@ -1154,6 +1392,210 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
+name = "fi-ap"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "fi-ar"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "fi-co"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "fi-coa"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "fi-gl"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "fi-tr"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "figment"
 version = "0.10.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1506,6 +1948,74 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d"
 dependencies = [
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "hr-ex"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "hr-ta"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -2143,6 +2653,74 @@ dependencies = [
 ]
 
 [[package]]
+name = "mdm-bp"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "mdm-material"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "memchr"
 version = "2.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2193,6 +2771,210 @@ dependencies = [
  "rand 0.9.2",
  "rand_xoshiro",
  "sketches-ddsketch",
+]
+
+[[package]]
+name = "mf-eng"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "mf-kb"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "mf-om"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "mf-pp"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "mf-qi"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "mf-sf"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -2451,6 +3233,40 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "org-enterprise"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -2735,6 +3551,210 @@ dependencies = [
 ]
 
 [[package]]
+name = "pm-ct"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "pm-iv"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "pm-po"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "pm-sa"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "pm-se"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "pm-vs"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "portable-atomic"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2998,6 +4018,74 @@ checksum = "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
+]
+
+[[package]]
+name = "rd-pl"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "rd-ps"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -3285,6 +4373,210 @@ dependencies = [
 ]
 
 [[package]]
+name = "sc-bt"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "sc-df"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "sc-im"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "sc-tp"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "sc-vs"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "sc-wm"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "schannel"
 version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3298,6 +4590,142 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "sd-an"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "sd-pe"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "sd-rr"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "sd-so"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
 
 [[package]]
 name = "sealed"
@@ -3886,6 +5314,75 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "sys-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "sys-notify"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "cuba-adapter-kafka",
+ "cuba-adapter-postgres",
+ "cuba-adapter-redis",
+ "cuba-bootstrap",
+ "cuba-common",
+ "cuba-config",
+ "cuba-cqrs-core",
+ "cuba-domain-core",
+ "cuba-errors",
+ "cuba-event-core",
+ "cuba-ports",
+ "cuba-telemetry",
+ "futures",
+ "metrics",
+ "prost",
+ "prost-types",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

@@ -1,0 +1,864 @@
+syntax = "proto3";
+
+package rd.ps.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service ProjectService {
+    rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
+    rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+    rpc UpdateProject(UpdateProjectRequest) returns (UpdateProjectResponse);
+    rpc DeleteProject(DeleteProjectRequest) returns (google.protobuf.Empty);
+    rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+
+    rpc StartProject(StartProjectRequest) returns (StartProjectResponse);
+    rpc SuspendProject(SuspendProjectRequest) returns (SuspendProjectResponse);
+    rpc ResumeProject(ResumeProjectRequest) returns (ResumeProjectResponse);
+    rpc CompleteProject(CompleteProjectRequest) returns (CompleteProjectResponse);
+    rpc CancelProject(CancelProjectRequest) returns (CancelProjectResponse);
+
+    rpc CreatePhase(CreatePhaseRequest) returns (CreatePhaseResponse);
+    rpc GetPhase(GetPhaseRequest) returns (GetPhaseResponse);
+    rpc UpdatePhase(UpdatePhaseRequest) returns (UpdatePhaseResponse);
+    rpc ListPhases(ListPhasesRequest) returns (ListPhasesResponse);
+    rpc CompletePhase(CompletePhaseRequest) returns (CompletePhaseResponse);
+
+    rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+    rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+    rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
+    rpc DeleteTask(DeleteTaskRequest) returns (google.protobuf.Empty);
+    rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+    rpc AssignTask(AssignTaskRequest) returns (AssignTaskResponse);
+    rpc StartTask(StartTaskRequest) returns (StartTaskResponse);
+    rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse);
+
+    rpc CreateMilestone(CreateMilestoneRequest) returns (CreateMilestoneResponse);
+    rpc GetMilestone(GetMilestoneRequest) returns (GetMilestoneResponse);
+    rpc UpdateMilestone(UpdateMilestoneRequest) returns (UpdateMilestoneResponse);
+    rpc ListMilestones(ListMilestonesRequest) returns (ListMilestonesResponse);
+    rpc CompleteMilestone(CompleteMilestoneRequest) returns (CompleteMilestoneResponse);
+
+    rpc AddTeamMember(AddTeamMemberRequest) returns (AddTeamMemberResponse);
+    rpc RemoveTeamMember(RemoveTeamMemberRequest) returns (google.protobuf.Empty);
+    rpc ListTeamMembers(ListTeamMembersRequest) returns (ListTeamMembersResponse);
+
+    rpc RecordTimeEntry(RecordTimeEntryRequest) returns (RecordTimeEntryResponse);
+    rpc GetTimeEntries(GetTimeEntriesRequest) returns (GetTimeEntriesResponse);
+
+    rpc RecordExpense(RecordExpenseRequest) returns (RecordExpenseResponse);
+    rpc GetExpenses(GetExpensesRequest) returns (GetExpensesResponse);
+
+    rpc GetProjectDashboard(GetProjectDashboardRequest) returns (GetProjectDashboardResponse);
+    rpc GetProjectMetrics(GetProjectMetricsRequest) returns (GetProjectMetricsResponse);
+    rpc GetResourceUtilization(GetResourceUtilizationRequest) returns (GetResourceUtilizationResponse);
+    rpc GetGanttChart(GetGanttChartRequest) returns (GetGanttChartResponse);
+}
+
+message Project {
+    string id = 1;
+    string project_number = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    ProjectType type = 6;
+    string category = 7;
+    ProjectPriority priority = 8;
+    ProjectStatus status = 9;
+    string product_id = 10;
+    string product_name = 11;
+    string customer_id = 12;
+    string customer_name = 13;
+    string project_manager_id = 14;
+    string project_manager_name = 15;
+    string sponsor_id = 16;
+    string sponsor_name = 17;
+    google.protobuf.Timestamp planned_start = 18;
+    google.protobuf.Timestamp planned_end = 19;
+    google.protobuf.Timestamp actual_start = 20;
+    google.protobuf.Timestamp actual_end = 21;
+    common.v1.Money budget = 22;
+    common.v1.Money actual_cost = 23;
+    common.v1.Money forecast_cost = 24;
+    double planned_hours = 25;
+    double actual_hours = 26;
+    double progress_percentage = 27;
+    repeated ProjectPhase phases = 28;
+    repeated Milestone milestones = 29;
+    repeated string tags = 30;
+    string notes = 31;
+    common.v1.AuditInfo audit_info = 32;
+}
+
+enum ProjectType {
+    PROJECT_TYPE_UNSPECIFIED = 0;
+    PROJECT_TYPE_NEW_PRODUCT = 1;
+    PROJECT_TYPE_PRODUCT_ENHANCEMENT = 2;
+    PROJECT_TYPE_RESEARCH = 3;
+    PROJECT_TYPE_PROCESS_IMPROVEMENT = 4;
+    PROJECT_TYPE_CUSTOMER = 5;
+    PROJECT_TYPE_INTERNAL = 6;
+}
+
+enum ProjectPriority {
+    PROJECT_PRIORITY_UNSPECIFIED = 0;
+    PROJECT_PRIORITY_LOW = 1;
+    PROJECT_PRIORITY_MEDIUM = 2;
+    PROJECT_PRIORITY_HIGH = 3;
+    PROJECT_PRIORITY_CRITICAL = 4;
+}
+
+enum ProjectStatus {
+    PROJECT_STATUS_UNSPECIFIED = 0;
+    PROJECT_STATUS_DRAFT = 1;
+    PROJECT_STATUS_PLANNED = 2;
+    PROJECT_STATUS_IN_PROGRESS = 3;
+    PROJECT_STATUS_ON_HOLD = 4;
+    PROJECT_STATUS_COMPLETED = 5;
+    PROJECT_STATUS_CANCELLED = 6;
+}
+
+message ProjectPhase {
+    string id = 1;
+    string project_id = 2;
+    int32 sequence = 3;
+    string name = 4;
+    string description = 5;
+    google.protobuf.Timestamp planned_start = 6;
+    google.protobuf.Timestamp planned_end = 7;
+    google.protobuf.Timestamp actual_start = 8;
+    google.protobuf.Timestamp actual_end = 9;
+    double progress_percentage = 10;
+    PhaseStatus status = 11;
+    repeated string deliverables = 12;
+    string gate_criteria = 13;
+    bool gate_passed = 14;
+    google.protobuf.Timestamp gate_review_date = 15;
+    string gate_review_notes = 16;
+    common.v1.AuditInfo audit_info = 17;
+}
+
+enum PhaseStatus {
+    PHASE_STATUS_UNSPECIFIED = 0;
+    PHASE_STATUS_NOT_STARTED = 1;
+    PHASE_STATUS_IN_PROGRESS = 2;
+    PHASE_STATUS_PENDING_GATE = 3;
+    PHASE_STATUS_COMPLETED = 4;
+    PHASE_STATUS_SKIPPED = 5;
+}
+
+message ProjectTask {
+    string id = 1;
+    string project_id = 2;
+    string phase_id = 3;
+    string task_number = 4;
+    string name = 5;
+    string description = 6;
+    TaskType type = 7;
+    TaskPriority priority = 8;
+    TaskStatus status = 9;
+    string assigned_to = 10;
+    string assigned_to_name = 11;
+    google.protobuf.Timestamp planned_start = 12;
+    google.protobuf.Timestamp planned_end = 13;
+    google.protobuf.Timestamp actual_start = 14;
+    google.protobuf.Timestamp actual_end = 15;
+    double planned_hours = 16;
+    double actual_hours = 17;
+    double remaining_hours = 18;
+    double progress_percentage = 19;
+    repeated string predecessor_ids = 20;
+    repeated string successor_ids = 21;
+    string parent_task_id = 22;
+    repeated string tags = 23;
+    string notes = 24;
+    common.v1.AuditInfo audit_info = 25;
+}
+
+enum TaskType {
+    TASK_TYPE_UNSPECIFIED = 0;
+    TASK_TYPE_TASK = 1;
+    TASK_TYPE_MILESTONE = 2;
+    TASK_TYPE_SUMMARY = 3;
+}
+
+enum TaskPriority {
+    TASK_PRIORITY_UNSPECIFIED = 0;
+    TASK_PRIORITY_LOW = 1;
+    TASK_PRIORITY_MEDIUM = 2;
+    TASK_PRIORITY_HIGH = 3;
+    TASK_PRIORITY_CRITICAL = 4;
+}
+
+enum TaskStatus {
+    TASK_STATUS_UNSPECIFIED = 0;
+    TASK_STATUS_NOT_STARTED = 1;
+    TASK_STATUS_IN_PROGRESS = 2;
+    TASK_STATUS_ON_HOLD = 3;
+    TASK_STATUS_COMPLETED = 4;
+    TASK_STATUS_CANCELLED = 5;
+}
+
+message Milestone {
+    string id = 1;
+    string project_id = 2;
+    string phase_id = 3;
+    string name = 4;
+    string description = 5;
+    google.protobuf.Timestamp planned_date = 6;
+    google.protobuf.Timestamp actual_date = 7;
+    MilestoneStatus status = 8;
+    repeated string deliverables = 9;
+    string owner_id = 10;
+    string owner_name = 11;
+    string notes = 12;
+    common.v1.AuditInfo audit_info = 13;
+}
+
+enum MilestoneStatus {
+    MILESTONE_STATUS_UNSPECIFIED = 0;
+    MILESTONE_STATUS_PENDING = 1;
+    MILESTONE_STATUS_AT_RISK = 2;
+    MILESTONE_STATUS_COMPLETED = 3;
+    MILESTONE_STATUS_MISSED = 4;
+}
+
+message TeamMember {
+    string id = 1;
+    string project_id = 2;
+    string employee_id = 3;
+    string employee_name = 4;
+    string role = 5;
+    double allocation_percentage = 6;
+    google.protobuf.Timestamp start_date = 7;
+    google.protobuf.Timestamp end_date = 8;
+    double planned_hours = 9;
+    double actual_hours = 10;
+    common.v1.Money hourly_rate = 11;
+    common.v1.AuditInfo audit_info = 12;
+}
+
+message ProjectTimeEntry {
+    string id = 1;
+    string project_id = 2;
+    string task_id = 3;
+    string employee_id = 4;
+    string employee_name = 5;
+    google.protobuf.Timestamp date = 6;
+    double hours = 7;
+    string description = 8;
+    bool billable = 9;
+    TimeEntryStatus status = 10;
+    common.v1.AuditInfo audit_info = 11;
+}
+
+enum TimeEntryStatus {
+    TIME_ENTRY_STATUS_UNSPECIFIED = 0;
+    TIME_ENTRY_STATUS_DRAFT = 1;
+    TIME_ENTRY_STATUS_SUBMITTED = 2;
+    TIME_ENTRY_STATUS_APPROVED = 3;
+    TIME_ENTRY_STATUS_REJECTED = 4;
+}
+
+message ProjectExpense {
+    string id = 1;
+    string project_id = 2;
+    string task_id = 3;
+    string employee_id = 4;
+    string employee_name = 5;
+    google.protobuf.Timestamp date = 6;
+    string category = 7;
+    string description = 8;
+    common.v1.Money amount = 9;
+    bool billable = 10;
+    bool reimbursable = 11;
+    ExpenseStatus status = 12;
+    common.v1.Attachment receipt = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+enum ExpenseStatus {
+    EXPENSE_STATUS_UNSPECIFIED = 0;
+    EXPENSE_STATUS_DRAFT = 1;
+    EXPENSE_STATUS_SUBMITTED = 2;
+    EXPENSE_STATUS_APPROVED = 3;
+    EXPENSE_STATUS_REJECTED = 4;
+    EXPENSE_STATUS_REIMBURSED = 5;
+}
+
+message ProjectDashboard {
+    string project_id = 1;
+    string project_name = 2;
+    ProjectStatus status = 3;
+    double progress_percentage = 4;
+    ScheduleHealth schedule_health = 5;
+    BudgetHealth budget_health = 6;
+    ResourceHealth resource_health = 7;
+    repeated UpcomingMilestone upcoming_milestones = 8;
+    repeated OverdueTask overdue_tasks = 9;
+    repeated Risk risks = 10;
+    repeated Issue issues = 11;
+}
+
+message ScheduleHealth {
+    string status = 1;
+    int32 days_variance = 2;
+    double spi = 3;
+    google.protobuf.Timestamp baseline_end = 4;
+    google.protobuf.Timestamp forecast_end = 5;
+}
+
+message BudgetHealth {
+    string status = 1;
+    common.v1.Money budget = 2;
+    common.v1.Money actual = 3;
+    common.v1.Money forecast = 4;
+    common.v1.Money variance = 5;
+    double cpi = 6;
+}
+
+message ResourceHealth {
+    string status = 1;
+    double planned_hours = 2;
+    double actual_hours = 3;
+    double utilization = 4;
+    int32 team_size = 5;
+}
+
+message UpcomingMilestone {
+    string milestone_id = 1;
+    string name = 2;
+    google.protobuf.Timestamp due_date = 3;
+    int32 days_remaining = 4;
+    string status = 5;
+}
+
+message OverdueTask {
+    string task_id = 1;
+    string name = 2;
+    string assigned_to = 3;
+    google.protobuf.Timestamp due_date = 4;
+    int32 days_overdue = 5;
+}
+
+message Risk {
+    string id = 1;
+    string description = 2;
+    string probability = 3;
+    string impact = 4;
+    string mitigation = 5;
+    string owner = 6;
+    string status = 7;
+}
+
+message Issue {
+    string id = 1;
+    string description = 2;
+    string priority = 3;
+    string assigned_to = 4;
+    google.protobuf.Timestamp due_date = 5;
+    string status = 6;
+}
+
+message GanttItem {
+    string id = 1;
+    string name = 2;
+    string type = 3;
+    google.protobuf.Timestamp start = 4;
+    google.protobuf.Timestamp end = 5;
+    double progress = 6;
+    repeated string dependencies = 7;
+    string assigned_to = 8;
+    string parent_id = 9;
+    bool is_milestone = 10;
+    string color = 11;
+}
+
+message CreateProjectRequest {
+    string name = 1;
+    string description = 2;
+    string company_code = 3;
+    ProjectType type = 4;
+    string category = 5;
+    ProjectPriority priority = 6;
+    string product_id = 7;
+    string customer_id = 8;
+    string project_manager_id = 9;
+    string sponsor_id = 10;
+    google.protobuf.Timestamp planned_start = 11;
+    google.protobuf.Timestamp planned_end = 12;
+    common.v1.Money budget = 13;
+    double planned_hours = 14;
+    repeated string tags = 15;
+    string notes = 16;
+}
+
+message GetProjectRequest {
+    string id = 1;
+}
+
+message UpdateProjectRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    ProjectPriority priority = 4;
+    string project_manager_id = 5;
+    google.protobuf.Timestamp planned_start = 6;
+    google.protobuf.Timestamp planned_end = 7;
+    common.v1.Money budget = 8;
+    double planned_hours = 9;
+    repeated string tags = 10;
+    string notes = 11;
+}
+
+message DeleteProjectRequest {
+    string id = 1;
+}
+
+message ListProjectsRequest {
+    string company_code = 1;
+    ProjectType type = 2;
+    string category = 3;
+    ProjectStatus status = 4;
+    string project_manager_id = 5;
+    string customer_id = 6;
+    common.v1.DateRange date_range = 7;
+    string search = 8;
+    common.v1.Pagination pagination = 9;
+}
+
+message ListProjectsResponse {
+    repeated Project projects = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message StartProjectRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_start = 2;
+}
+
+message SuspendProjectRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message ResumeProjectRequest {
+    string id = 1;
+}
+
+message CompleteProjectRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_end = 2;
+    string notes = 3;
+}
+
+message CancelProjectRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message CreatePhaseRequest {
+    string project_id = 1;
+    int32 sequence = 2;
+    string name = 3;
+    string description = 4;
+    google.protobuf.Timestamp planned_start = 5;
+    google.protobuf.Timestamp planned_end = 6;
+    repeated string deliverables = 7;
+    string gate_criteria = 8;
+}
+
+message GetPhaseRequest {
+    string id = 1;
+}
+
+message UpdatePhaseRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    google.protobuf.Timestamp planned_start = 4;
+    google.protobuf.Timestamp planned_end = 5;
+    repeated string deliverables = 6;
+    string gate_criteria = 7;
+}
+
+message ListPhasesRequest {
+    string project_id = 1;
+    PhaseStatus status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListPhasesResponse {
+    repeated ProjectPhase phases = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CompletePhaseRequest {
+    string id = 1;
+    bool gate_passed = 2;
+    string gate_review_notes = 3;
+}
+
+message CreateTaskRequest {
+    string project_id = 1;
+    string phase_id = 2;
+    string name = 3;
+    string description = 4;
+    TaskType type = 5;
+    TaskPriority priority = 6;
+    string assigned_to = 7;
+    google.protobuf.Timestamp planned_start = 8;
+    google.protobuf.Timestamp planned_end = 9;
+    double planned_hours = 10;
+    repeated string predecessor_ids = 11;
+    string parent_task_id = 12;
+    repeated string tags = 13;
+}
+
+message GetTaskRequest {
+    string id = 1;
+}
+
+message UpdateTaskRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    TaskPriority priority = 4;
+    google.protobuf.Timestamp planned_start = 5;
+    google.protobuf.Timestamp planned_end = 6;
+    double planned_hours = 7;
+    double remaining_hours = 8;
+    double progress_percentage = 9;
+    string notes = 10;
+}
+
+message DeleteTaskRequest {
+    string id = 1;
+}
+
+message ListTasksRequest {
+    string project_id = 1;
+    string phase_id = 2;
+    string assigned_to = 3;
+    TaskStatus status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListTasksResponse {
+    repeated ProjectTask tasks = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message AssignTaskRequest {
+    string id = 1;
+    string assigned_to = 2;
+}
+
+message StartTaskRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_start = 2;
+}
+
+message CompleteTaskRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_end = 2;
+    double actual_hours = 3;
+    string notes = 4;
+}
+
+message CreateMilestoneRequest {
+    string project_id = 1;
+    string phase_id = 2;
+    string name = 3;
+    string description = 4;
+    google.protobuf.Timestamp planned_date = 5;
+    repeated string deliverables = 6;
+    string owner_id = 7;
+}
+
+message GetMilestoneRequest {
+    string id = 1;
+}
+
+message UpdateMilestoneRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    google.protobuf.Timestamp planned_date = 4;
+    repeated string deliverables = 5;
+    string owner_id = 6;
+}
+
+message ListMilestonesRequest {
+    string project_id = 1;
+    string phase_id = 2;
+    MilestoneStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListMilestonesResponse {
+    repeated Milestone milestones = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CompleteMilestoneRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_date = 2;
+    string notes = 3;
+}
+
+message AddTeamMemberRequest {
+    string project_id = 1;
+    string employee_id = 2;
+    string role = 3;
+    double allocation_percentage = 4;
+    google.protobuf.Timestamp start_date = 5;
+    google.protobuf.Timestamp end_date = 6;
+    double planned_hours = 7;
+    common.v1.Money hourly_rate = 8;
+}
+
+message RemoveTeamMemberRequest {
+    string id = 1;
+}
+
+message ListTeamMembersRequest {
+    string project_id = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message ListTeamMembersResponse {
+    repeated TeamMember members = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message RecordTimeEntryRequest {
+    string project_id = 1;
+    string task_id = 2;
+    string employee_id = 3;
+    google.protobuf.Timestamp date = 4;
+    double hours = 5;
+    string description = 6;
+    bool billable = 7;
+}
+
+message GetTimeEntriesRequest {
+    string project_id = 1;
+    string task_id = 2;
+    string employee_id = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetTimeEntriesResponse {
+    repeated ProjectTimeEntry entries = 1;
+    common.v1.PaginationResponse pagination = 2;
+    double total_hours = 3;
+}
+
+message RecordExpenseRequest {
+    string project_id = 1;
+    string task_id = 2;
+    string employee_id = 3;
+    google.protobuf.Timestamp date = 4;
+    string category = 5;
+    string description = 6;
+    common.v1.Money amount = 7;
+    bool billable = 8;
+    bool reimbursable = 9;
+}
+
+message GetExpensesRequest {
+    string project_id = 1;
+    string task_id = 2;
+    string employee_id = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetExpensesResponse {
+    repeated ProjectExpense expenses = 1;
+    common.v1.PaginationResponse pagination = 2;
+    common.v1.Money total_amount = 3;
+}
+
+message GetProjectDashboardRequest {
+    string project_id = 1;
+}
+
+message GetProjectMetricsRequest {
+    string company_code = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetProjectMetricsResponse {
+    ProjectMetrics metrics = 1;
+    repeated ProjectMetricsTrend trend = 2;
+}
+
+message ProjectMetrics {
+    int32 total_projects = 1;
+    int32 active_projects = 2;
+    int32 completed_projects = 3;
+    int32 on_schedule = 4;
+    int32 behind_schedule = 5;
+    int32 on_budget = 6;
+    int32 over_budget = 7;
+    common.v1.Money total_budget = 8;
+    common.v1.Money total_actual_cost = 9;
+    double average_progress = 10;
+    double on_time_completion_rate = 11;
+}
+
+message ProjectMetricsTrend {
+    string period = 1;
+    int32 new_projects = 2;
+    int32 completed_projects = 3;
+    common.v1.Money budget = 4;
+    common.v1.Money actual_cost = 5;
+}
+
+message GetResourceUtilizationRequest {
+    string company_code = 1;
+    string project_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetResourceUtilizationResponse {
+    repeated ResourceUtilization resources = 1;
+    double average_utilization = 2;
+}
+
+message ResourceUtilization {
+    string employee_id = 1;
+    string employee_name = 2;
+    double available_hours = 3;
+    double allocated_hours = 4;
+    double actual_hours = 5;
+    double utilization_percentage = 6;
+    repeated ProjectAllocation allocations = 7;
+}
+
+message ProjectAllocation {
+    string project_id = 1;
+    string project_name = 2;
+    double allocated_hours = 3;
+    double actual_hours = 4;
+}
+
+message GetGanttChartRequest {
+    string project_id = 1;
+}
+
+message GetGanttChartResponse {
+    repeated GanttItem items = 1;
+    google.protobuf.Timestamp project_start = 2;
+    google.protobuf.Timestamp project_end = 3;
+}
+
+// Auto-generated Response messages
+message CreateProjectResponse {
+    Project project = 1;
+}
+
+message GetProjectResponse {
+    Project project = 1;
+}
+
+message UpdateProjectResponse {
+    Project project = 1;
+}
+
+message StartProjectResponse {
+    Project project = 1;
+}
+
+message SuspendProjectResponse {
+    Project project = 1;
+}
+
+message ResumeProjectResponse {
+    Project project = 1;
+}
+
+message CompleteProjectResponse {
+    Project project = 1;
+}
+
+message CancelProjectResponse {
+    Project project = 1;
+}
+
+message CreatePhaseResponse {
+    ProjectPhase project_phase = 1;
+}
+
+message GetPhaseResponse {
+    ProjectPhase project_phase = 1;
+}
+
+message UpdatePhaseResponse {
+    ProjectPhase project_phase = 1;
+}
+
+message CompletePhaseResponse {
+    ProjectPhase project_phase = 1;
+}
+
+message CreateTaskResponse {
+    ProjectTask project_task = 1;
+}
+
+message GetTaskResponse {
+    ProjectTask project_task = 1;
+}
+
+message UpdateTaskResponse {
+    ProjectTask project_task = 1;
+}
+
+message AssignTaskResponse {
+    ProjectTask project_task = 1;
+}
+
+message StartTaskResponse {
+    ProjectTask project_task = 1;
+}
+
+message CompleteTaskResponse {
+    ProjectTask project_task = 1;
+}
+
+message CreateMilestoneResponse {
+    Milestone milestone = 1;
+}
+
+message GetMilestoneResponse {
+    Milestone milestone = 1;
+}
+
+message UpdateMilestoneResponse {
+    Milestone milestone = 1;
+}
+
+message CompleteMilestoneResponse {
+    Milestone milestone = 1;
+}
+
+message AddTeamMemberResponse {
+    TeamMember team_member = 1;
+}
+
+message RecordTimeEntryResponse {
+    ProjectTimeEntry project_time_entry = 1;
+}
+
+message RecordExpenseResponse {
+    ProjectExpense project_expense = 1;
+}
+
+message GetProjectDashboardResponse {
+    ProjectDashboard project_dashboard = 1;
+}

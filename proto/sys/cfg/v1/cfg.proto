@@ -1,0 +1,330 @@
+syntax = "proto3";
+
+package sys.cfg.v1;
+
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+// ============================================================================
+// 系统配置服务
+// ============================================================================
+service ConfigService {
+    // 配置项管理
+    rpc CreateConfig(CreateConfigRequest) returns (CreateConfigResponse);
+    rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+    rpc UpdateConfig(UpdateConfigRequest) returns (UpdateConfigResponse);
+    rpc DeleteConfig(DeleteConfigRequest) returns (google.protobuf.Empty);
+    rpc ListConfigs(ListConfigsRequest) returns (ListConfigsResponse);
+
+    // 批量操作
+    rpc BatchGetConfigs(BatchGetConfigsRequest) returns (BatchGetConfigsResponse);
+    rpc BatchUpdateConfigs(BatchUpdateConfigsRequest) returns (BatchUpdateConfigsResponse);
+
+    // 配置分组
+    rpc CreateConfigGroup(CreateConfigGroupRequest) returns (CreateConfigGroupResponse);
+    rpc GetConfigGroup(GetConfigGroupRequest) returns (GetConfigGroupResponse);
+    rpc UpdateConfigGroup(UpdateConfigGroupRequest) returns (UpdateConfigGroupResponse);
+    rpc ListConfigGroups(ListConfigGroupsRequest) returns (ListConfigGroupsResponse);
+
+    // 配置变更历史
+    rpc GetConfigChangeHistory(GetConfigChangeHistoryRequest) returns (GetConfigChangeHistoryResponse);
+
+    // 配置导入导出
+    rpc ExportConfigs(ExportConfigsRequest) returns (ExportConfigsResponse);
+    rpc ImportConfigs(ImportConfigsRequest) returns (ImportConfigsResponse);
+
+    // 配置缓存刷新
+    rpc RefreshConfigCache(RefreshConfigCacheRequest) returns (google.protobuf.Empty);
+}
+
+// ============================================================================
+// 核心实体
+// ============================================================================
+
+// 配置项
+message Config {
+    string id = 1;                              // 配置ID (UUID)
+    string key = 2;                             // 配置键 (唯一, 如: system.timezone)
+    string name = 3;                            // 配置名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+    string description = 5;                     // 描述
+
+    // 分组
+    string group_id = 6;                        // 配置组ID
+    string group_code = 7;                      // 配置组编码
+
+    // 值
+    ConfigValueType value_type = 8;             // 值类型
+    string value = 9;                           // 值 (字符串表示)
+    string default_value = 10;                  // 默认值
+
+    // 约束
+    bool is_required = 11;                      // 是否必填
+    bool is_encrypted = 12;                     // 是否加密
+    string validation_rule = 13;                // 验证规则 (正则表达式)
+    repeated string allowed_values = 14;        // 允许的值列表 (枚举类型)
+    double min_value = 15;                      // 最小值 (数值类型)
+    double max_value = 16;                      // 最大值 (数值类型)
+
+    // 作用域
+    ConfigScope scope = 17;                     // 作用域
+    string scope_value = 18;                    // 作用域值 (如: 公司代码, 工厂)
+
+    // 状态
+    bool is_active = 19;                        // 是否启用
+    bool is_readonly = 20;                      // 是否只读
+
+    // 审计
+    common.v1.AuditInfo audit_info = 21;
+}
+
+// 配置组
+message ConfigGroup {
+    string id = 1;                              // 配置组ID
+    string code = 2;                            // 配置组编码 (如: system, finance, sales)
+    string name = 3;                            // 配置组名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+    string description = 5;                     // 描述
+    string parent_id = 6;                       // 父级ID
+    int32 sort_order = 7;                       // 排序
+    common.v1.AuditInfo audit_info = 8;
+}
+
+// ============================================================================
+// 枚举
+// ============================================================================
+
+enum ConfigValueType {
+    CONFIG_VALUE_TYPE_UNSPECIFIED = 0;
+    CONFIG_VALUE_TYPE_STRING = 1;               // 字符串
+    CONFIG_VALUE_TYPE_INTEGER = 2;              // 整数
+    CONFIG_VALUE_TYPE_DECIMAL = 3;              // 小数
+    CONFIG_VALUE_TYPE_BOOLEAN = 4;              // 布尔
+    CONFIG_VALUE_TYPE_DATE = 5;                 // 日期
+    CONFIG_VALUE_TYPE_DATETIME = 6;             // 日期时间
+    CONFIG_VALUE_TYPE_JSON = 7;                 // JSON对象
+    CONFIG_VALUE_TYPE_ENUM = 8;                 // 枚举
+}
+
+enum ConfigScope {
+    CONFIG_SCOPE_UNSPECIFIED = 0;
+    CONFIG_SCOPE_GLOBAL = 1;                    // 全局
+    CONFIG_SCOPE_COMPANY = 2;                   // 公司
+    CONFIG_SCOPE_PLANT = 3;                     // 工厂
+    CONFIG_SCOPE_USER = 4;                      // 用户
+    CONFIG_SCOPE_ROLE = 5;                      // 角色
+}
+
+// ============================================================================
+// 请求/响应消息 - 配置项管理
+// ============================================================================
+
+message CreateConfigRequest {
+    string key = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string description = 4;
+    string group_id = 5;
+    ConfigValueType value_type = 6;
+    string value = 7;
+    string default_value = 8;
+    bool is_required = 9;
+    bool is_encrypted = 10;
+    string validation_rule = 11;
+    repeated string allowed_values = 12;
+    double min_value = 13;
+    double max_value = 14;
+    ConfigScope scope = 15;
+    string scope_value = 16;
+}
+
+message CreateConfigResponse {
+    Config config = 1;
+}
+
+message GetConfigRequest {
+    oneof identifier {
+        string id = 1;
+        ConfigKey key = 2;
+    }
+}
+
+message ConfigKey {
+    string key = 1;
+    ConfigScope scope = 2;
+    string scope_value = 3;
+}
+
+message GetConfigResponse {
+    Config config = 1;
+}
+
+message UpdateConfigRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string description = 4;
+    string value = 5;
+    bool is_active = 6;
+}
+
+message UpdateConfigResponse {
+    Config config = 1;
+}
+
+message DeleteConfigRequest {
+    string id = 1;
+}
+
+message ListConfigsRequest {
+    string group_id = 1;
+    ConfigScope scope = 2;
+    string scope_value = 3;
+    bool is_active = 4;
+    string search_term = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListConfigsResponse {
+    repeated Config configs = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 批量操作
+// ============================================================================
+
+message BatchGetConfigsRequest {
+    repeated string keys = 1;
+    ConfigScope scope = 2;
+    string scope_value = 3;
+}
+
+message BatchGetConfigsResponse {
+    map<string, Config> configs = 1;            // key -> Config
+}
+
+message BatchUpdateConfigsRequest {
+    repeated ConfigUpdate updates = 1;
+}
+
+message ConfigUpdate {
+    string id = 1;
+    string value = 2;
+}
+
+message BatchUpdateConfigsResponse {
+    repeated common.v1.BatchOperationResult results = 1;
+    int32 success_count = 2;
+    int32 error_count = 3;
+}
+
+// ============================================================================
+// 请求/响应消息 - 配置分组
+// ============================================================================
+
+message CreateConfigGroupRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string description = 4;
+    string parent_id = 5;
+    int32 sort_order = 6;
+}
+
+message CreateConfigGroupResponse {
+    ConfigGroup config_group = 1;
+}
+
+message GetConfigGroupRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetConfigGroupResponse {
+    ConfigGroup config_group = 1;
+    repeated ConfigGroup children = 2;
+}
+
+message UpdateConfigGroupRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string description = 4;
+    int32 sort_order = 5;
+}
+
+message UpdateConfigGroupResponse {
+    ConfigGroup config_group = 1;
+}
+
+message ListConfigGroupsRequest {
+    string parent_id = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message ListConfigGroupsResponse {
+    repeated ConfigGroup config_groups = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 配置变更历史
+// ============================================================================
+
+message GetConfigChangeHistoryRequest {
+    string config_id = 1;
+    common.v1.DateRange date_range = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetConfigChangeHistoryResponse {
+    repeated common.v1.ChangeLogEntry records = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 配置导入导出
+// ============================================================================
+
+message ExportConfigsRequest {
+    string group_id = 1;
+    ConfigScope scope = 2;
+    string scope_value = 3;
+    ExportFormat format = 4;
+}
+
+enum ExportFormat {
+    EXPORT_FORMAT_UNSPECIFIED = 0;
+    EXPORT_FORMAT_JSON = 1;
+    EXPORT_FORMAT_YAML = 2;
+    EXPORT_FORMAT_XML = 3;
+}
+
+message ExportConfigsResponse {
+    bytes data = 1;                             // 导出的数据
+    string filename = 2;                        // 建议的文件名
+}
+
+message ImportConfigsRequest {
+    bytes data = 1;                             // 导入的数据
+    ExportFormat format = 2;
+    bool overwrite_existing = 3;                // 是否覆盖已存在的配置
+}
+
+message ImportConfigsResponse {
+    int32 imported_count = 1;
+    int32 skipped_count = 2;
+    int32 error_count = 3;
+    repeated string errors = 4;
+}
+
+// ============================================================================
+// 请求/响应消息 - 配置缓存刷新
+// ============================================================================
+
+message RefreshConfigCacheRequest {
+    string key = 1;                             // 可选,指定刷新某个配置
+}

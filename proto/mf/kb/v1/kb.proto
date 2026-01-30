@@ -1,0 +1,441 @@
+syntax = "proto3";
+
+package mf.kb.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service KanbanService {
+    rpc CreateKanbanBoard(CreateKanbanBoardRequest) returns (CreateKanbanBoardResponse);
+    rpc GetKanbanBoard(GetKanbanBoardRequest) returns (GetKanbanBoardResponse);
+    rpc UpdateKanbanBoard(UpdateKanbanBoardRequest) returns (UpdateKanbanBoardResponse);
+    rpc DeleteKanbanBoard(DeleteKanbanBoardRequest) returns (google.protobuf.Empty);
+    rpc ListKanbanBoards(ListKanbanBoardsRequest) returns (ListKanbanBoardsResponse);
+
+    rpc CreateKanbanCard(CreateKanbanCardRequest) returns (CreateKanbanCardResponse);
+    rpc GetKanbanCard(GetKanbanCardRequest) returns (GetKanbanCardResponse);
+    rpc UpdateKanbanCard(UpdateKanbanCardRequest) returns (UpdateKanbanCardResponse);
+    rpc MoveKanbanCard(MoveKanbanCardRequest) returns (MoveKanbanCardResponse);
+    rpc ListKanbanCards(ListKanbanCardsRequest) returns (ListKanbanCardsResponse);
+
+    rpc TriggerKanban(TriggerKanbanRequest) returns (TriggerKanbanResponse);
+    rpc GetKanbanSignals(GetKanbanSignalsRequest) returns (GetKanbanSignalsResponse);
+    rpc ProcessKanbanSignal(ProcessKanbanSignalRequest) returns (ProcessKanbanSignalResponse);
+
+    rpc CreateKanbanLoop(CreateKanbanLoopRequest) returns (CreateKanbanLoopResponse);
+    rpc GetKanbanLoop(GetKanbanLoopRequest) returns (GetKanbanLoopResponse);
+    rpc UpdateKanbanLoop(UpdateKanbanLoopRequest) returns (UpdateKanbanLoopResponse);
+    rpc ListKanbanLoops(ListKanbanLoopsRequest) returns (ListKanbanLoopsResponse);
+
+    rpc CalculateKanbanQuantity(CalculateKanbanQuantityRequest) returns (CalculateKanbanQuantityResponse);
+    rpc GetKanbanMetrics(GetKanbanMetricsRequest) returns (GetKanbanMetricsResponse);
+}
+
+message KanbanBoard {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string plant = 4;
+    string production_line = 5;
+    repeated KanbanColumn columns = 6;
+    KanbanBoardType type = 7;
+    common.v1.Status status = 8;
+    common.v1.AuditInfo audit_info = 9;
+}
+
+enum KanbanBoardType {
+    KANBAN_BOARD_TYPE_UNSPECIFIED = 0;
+    KANBAN_BOARD_TYPE_PRODUCTION = 1;
+    KANBAN_BOARD_TYPE_WITHDRAWAL = 2;
+    KANBAN_BOARD_TYPE_SUPPLIER = 3;
+    KANBAN_BOARD_TYPE_SIGNAL = 4;
+}
+
+message KanbanColumn {
+    string id = 1;
+    string name = 2;
+    int32 sequence = 3;
+    int32 wip_limit = 4;
+    string color = 5;
+}
+
+message KanbanCard {
+    string id = 1;
+    string card_number = 2;
+    string board_id = 3;
+    string column_id = 4;
+    string loop_id = 5;
+    string product_id = 6;
+    string product_code = 7;
+    string product_name = 8;
+    common.v1.Quantity quantity = 9;
+    string container_type = 10;
+    string source_location = 11;
+    string destination_location = 12;
+    KanbanCardStatus status = 13;
+    KanbanCardType type = 14;
+    int32 priority = 15;
+    google.protobuf.Timestamp triggered_at = 16;
+    google.protobuf.Timestamp completed_at = 17;
+    int32 cycle_count = 18;
+    string current_holder = 19;
+    string notes = 20;
+    common.v1.AuditInfo audit_info = 21;
+}
+
+enum KanbanCardStatus {
+    KANBAN_CARD_STATUS_UNSPECIFIED = 0;
+    KANBAN_CARD_STATUS_EMPTY = 1;
+    KANBAN_CARD_STATUS_TRIGGERED = 2;
+    KANBAN_CARD_STATUS_IN_PROGRESS = 3;
+    KANBAN_CARD_STATUS_FULL = 4;
+    KANBAN_CARD_STATUS_IN_TRANSIT = 5;
+    KANBAN_CARD_STATUS_BLOCKED = 6;
+}
+
+enum KanbanCardType {
+    KANBAN_CARD_TYPE_UNSPECIFIED = 0;
+    KANBAN_CARD_TYPE_PRODUCTION = 1;
+    KANBAN_CARD_TYPE_WITHDRAWAL = 2;
+    KANBAN_CARD_TYPE_SUPPLIER = 3;
+    KANBAN_CARD_TYPE_EXPRESS = 4;
+}
+
+message KanbanSignal {
+    string id = 1;
+    string signal_number = 2;
+    string card_id = 3;
+    string loop_id = 4;
+    string product_id = 5;
+    string product_code = 6;
+    common.v1.Quantity quantity = 7;
+    string source_location = 8;
+    string destination_location = 9;
+    KanbanSignalType type = 10;
+    KanbanSignalStatus status = 11;
+    google.protobuf.Timestamp triggered_at = 12;
+    google.protobuf.Timestamp processed_at = 13;
+    string triggered_by = 14;
+    string processed_by = 15;
+    string production_order_id = 16;
+    string notes = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+enum KanbanSignalType {
+    KANBAN_SIGNAL_TYPE_UNSPECIFIED = 0;
+    KANBAN_SIGNAL_TYPE_REPLENISHMENT = 1;
+    KANBAN_SIGNAL_TYPE_PRODUCTION = 2;
+    KANBAN_SIGNAL_TYPE_PURCHASE = 3;
+    KANBAN_SIGNAL_TYPE_TRANSFER = 4;
+}
+
+enum KanbanSignalStatus {
+    KANBAN_SIGNAL_STATUS_UNSPECIFIED = 0;
+    KANBAN_SIGNAL_STATUS_PENDING = 1;
+    KANBAN_SIGNAL_STATUS_PROCESSING = 2;
+    KANBAN_SIGNAL_STATUS_COMPLETED = 3;
+    KANBAN_SIGNAL_STATUS_CANCELLED = 4;
+}
+
+message KanbanLoop {
+    string id = 1;
+    string loop_number = 2;
+    string name = 3;
+    string description = 4;
+    string plant = 5;
+    string product_id = 6;
+    string product_code = 7;
+    string source_location = 8;
+    string destination_location = 9;
+    string source_work_center = 10;
+    string destination_work_center = 11;
+    KanbanLoopType type = 12;
+    int32 number_of_cards = 13;
+    common.v1.Quantity quantity_per_card = 14;
+    string container_type = 15;
+    double lead_time_hours = 16;
+    double safety_factor = 17;
+    double daily_demand = 18;
+    ReplenishmentStrategy replenishment_strategy = 19;
+    common.v1.Status status = 20;
+    common.v1.AuditInfo audit_info = 21;
+}
+
+enum KanbanLoopType {
+    KANBAN_LOOP_TYPE_UNSPECIFIED = 0;
+    KANBAN_LOOP_TYPE_INTERNAL = 1;
+    KANBAN_LOOP_TYPE_EXTERNAL = 2;
+    KANBAN_LOOP_TYPE_SUPPLIER = 3;
+}
+
+enum ReplenishmentStrategy {
+    REPLENISHMENT_STRATEGY_UNSPECIFIED = 0;
+    REPLENISHMENT_STRATEGY_SINGLE_CARD = 1;
+    REPLENISHMENT_STRATEGY_DUAL_CARD = 2;
+    REPLENISHMENT_STRATEGY_SIGNAL = 3;
+    REPLENISHMENT_STRATEGY_CONWIP = 4;
+}
+
+message KanbanMetrics {
+    string loop_id = 1;
+    string product_code = 2;
+    common.v1.DateRange period = 3;
+    int32 total_cycles = 4;
+    double average_cycle_time_hours = 5;
+    double min_cycle_time_hours = 6;
+    double max_cycle_time_hours = 7;
+    int32 stockout_count = 8;
+    double stockout_percentage = 9;
+    double average_wip = 10;
+    double card_utilization = 11;
+    int32 express_kanban_count = 12;
+    repeated KanbanCycleTrend cycle_trend = 13;
+}
+
+message KanbanCycleTrend {
+    google.protobuf.Timestamp date = 1;
+    int32 cycles = 2;
+    double average_cycle_time = 3;
+    int32 stockouts = 4;
+}
+
+message CreateKanbanBoardRequest {
+    string name = 1;
+    string description = 2;
+    string plant = 3;
+    string production_line = 4;
+    repeated KanbanColumnInput columns = 5;
+    KanbanBoardType type = 6;
+}
+
+message KanbanColumnInput {
+    string name = 1;
+    int32 sequence = 2;
+    int32 wip_limit = 3;
+    string color = 4;
+}
+
+message GetKanbanBoardRequest {
+    string id = 1;
+}
+
+message UpdateKanbanBoardRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated KanbanColumnInput columns = 4;
+    common.v1.Status status = 5;
+}
+
+message DeleteKanbanBoardRequest {
+    string id = 1;
+}
+
+message ListKanbanBoardsRequest {
+    string plant = 1;
+    KanbanBoardType type = 2;
+    common.v1.Status status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListKanbanBoardsResponse {
+    repeated KanbanBoard boards = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateKanbanCardRequest {
+    string board_id = 1;
+    string loop_id = 2;
+    string product_id = 3;
+    common.v1.Quantity quantity = 4;
+    string container_type = 5;
+    KanbanCardType type = 6;
+    int32 priority = 7;
+}
+
+message GetKanbanCardRequest {
+    string id = 1;
+}
+
+message UpdateKanbanCardRequest {
+    string id = 1;
+    common.v1.Quantity quantity = 2;
+    int32 priority = 3;
+    string notes = 4;
+}
+
+message MoveKanbanCardRequest {
+    string id = 1;
+    string target_column_id = 2;
+    KanbanCardStatus new_status = 3;
+}
+
+message ListKanbanCardsRequest {
+    string board_id = 1;
+    string loop_id = 2;
+    string product_id = 3;
+    KanbanCardStatus status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListKanbanCardsResponse {
+    repeated KanbanCard cards = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message TriggerKanbanRequest {
+    string card_id = 1;
+    string triggered_by = 2;
+    string notes = 3;
+}
+
+message GetKanbanSignalsRequest {
+    string loop_id = 1;
+    string product_id = 2;
+    KanbanSignalStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetKanbanSignalsResponse {
+    repeated KanbanSignal signals = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ProcessKanbanSignalRequest {
+    string id = 1;
+    string processed_by = 2;
+    string production_order_id = 3;
+    string notes = 4;
+}
+
+message CreateKanbanLoopRequest {
+    string name = 1;
+    string description = 2;
+    string plant = 3;
+    string product_id = 4;
+    string source_location = 5;
+    string destination_location = 6;
+    string source_work_center = 7;
+    string destination_work_center = 8;
+    KanbanLoopType type = 9;
+    int32 number_of_cards = 10;
+    common.v1.Quantity quantity_per_card = 11;
+    string container_type = 12;
+    double lead_time_hours = 13;
+    double safety_factor = 14;
+    ReplenishmentStrategy replenishment_strategy = 15;
+}
+
+message GetKanbanLoopRequest {
+    string id = 1;
+}
+
+message UpdateKanbanLoopRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    int32 number_of_cards = 4;
+    common.v1.Quantity quantity_per_card = 5;
+    double lead_time_hours = 6;
+    double safety_factor = 7;
+    common.v1.Status status = 8;
+}
+
+message ListKanbanLoopsRequest {
+    string plant = 1;
+    string product_id = 2;
+    KanbanLoopType type = 3;
+    common.v1.Status status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListKanbanLoopsResponse {
+    repeated KanbanLoop loops = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CalculateKanbanQuantityRequest {
+    string product_id = 1;
+    double daily_demand = 2;
+    double lead_time_hours = 3;
+    double safety_factor = 4;
+    double container_capacity = 5;
+}
+
+message CalculateKanbanQuantityResponse {
+    int32 recommended_cards = 1;
+    common.v1.Quantity quantity_per_card = 2;
+    common.v1.Quantity total_inventory = 3;
+    double coverage_days = 4;
+    KanbanCalculationDetails details = 5;
+}
+
+message KanbanCalculationDetails {
+    double demand_during_lead_time = 1;
+    double safety_stock = 2;
+    double total_required = 3;
+    string formula_used = 4;
+}
+
+message GetKanbanMetricsRequest {
+    string loop_id = 1;
+    string product_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+// Auto-generated Response messages
+message CreateKanbanBoardResponse {
+    KanbanBoard kanban_board = 1;
+}
+
+message GetKanbanBoardResponse {
+    KanbanBoard kanban_board = 1;
+}
+
+message UpdateKanbanBoardResponse {
+    KanbanBoard kanban_board = 1;
+}
+
+message CreateKanbanCardResponse {
+    KanbanCard kanban_card = 1;
+}
+
+message GetKanbanCardResponse {
+    KanbanCard kanban_card = 1;
+}
+
+message UpdateKanbanCardResponse {
+    KanbanCard kanban_card = 1;
+}
+
+message MoveKanbanCardResponse {
+    KanbanCard kanban_card = 1;
+}
+
+message TriggerKanbanResponse {
+    KanbanSignal kanban_signal = 1;
+}
+
+message ProcessKanbanSignalResponse {
+    KanbanSignal kanban_signal = 1;
+}
+
+message CreateKanbanLoopResponse {
+    KanbanLoop kanban_loop = 1;
+}
+
+message GetKanbanLoopResponse {
+    KanbanLoop kanban_loop = 1;
+}
+
+message UpdateKanbanLoopResponse {
+    KanbanLoop kanban_loop = 1;
+}
+
+message GetKanbanMetricsResponse {
+    KanbanMetrics kanban_metrics = 1;
+}

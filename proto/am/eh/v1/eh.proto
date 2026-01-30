@@ -1,0 +1,470 @@
+syntax = "proto3";
+
+package am.eh.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/base.proto";
+
+service EquipmentHistoryService {
+    rpc RecordMeterReading(RecordMeterReadingRequest) returns (RecordMeterReadingResponse);
+    rpc GetMeterReadings(GetMeterReadingsRequest) returns (GetMeterReadingsResponse);
+    rpc GetLatestMeterReading(GetLatestMeterReadingRequest) returns (GetLatestMeterReadingResponse);
+
+    rpc CreateMeter(CreateMeterRequest) returns (CreateMeterResponse);
+    rpc GetMeter(GetMeterRequest) returns (GetMeterResponse);
+    rpc UpdateMeter(UpdateMeterRequest) returns (UpdateMeterResponse);
+    rpc ListMeters(ListMetersRequest) returns (ListMetersResponse);
+
+    rpc RecordDowntime(RecordDowntimeRequest) returns (RecordDowntimeResponse);
+    rpc GetDowntimeRecords(GetDowntimeRecordsRequest) returns (GetDowntimeRecordsResponse);
+    rpc GetDowntimeAnalysis(GetDowntimeAnalysisRequest) returns (GetDowntimeAnalysisResponse);
+
+    rpc RecordFailure(RecordFailureRequest) returns (RecordFailureResponse);
+    rpc GetFailureRecords(GetFailureRecordsRequest) returns (GetFailureRecordsResponse);
+    rpc GetFailureAnalysis(GetFailureAnalysisRequest) returns (GetFailureAnalysisResponse);
+
+    rpc GetEquipmentPerformance(GetEquipmentPerformanceRequest) returns (GetEquipmentPerformanceResponse);
+    rpc GetReliabilityMetrics(GetReliabilityMetricsRequest) returns (GetReliabilityMetricsResponse);
+    rpc GetEquipmentTimeline(GetEquipmentTimelineRequest) returns (GetEquipmentTimelineResponse);
+}
+
+message Meter {
+    string id = 1;
+    string meter_code = 2;
+    string name = 3;
+    string description = 4;
+    string asset_id = 5;
+    string asset_number = 6;
+    MeterType type = 7;
+    string unit = 8;
+    double current_reading = 9;
+    google.protobuf.Timestamp last_reading_date = 10;
+    double rollover_value = 11;
+    double average_daily_usage = 12;
+    bool is_primary = 13;
+    common.v1.Status status = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+enum MeterType {
+    METER_TYPE_UNSPECIFIED = 0;
+    METER_TYPE_RUNTIME_HOURS = 1;
+    METER_TYPE_ODOMETER = 2;
+    METER_TYPE_CYCLES = 3;
+    METER_TYPE_PRODUCTION_COUNT = 4;
+    METER_TYPE_ENERGY = 5;
+    METER_TYPE_FUEL = 6;
+    METER_TYPE_CUSTOM = 7;
+}
+
+message MeterReading {
+    string id = 1;
+    string meter_id = 2;
+    string meter_code = 3;
+    string asset_id = 4;
+    string asset_number = 5;
+    google.protobuf.Timestamp reading_date = 6;
+    double reading_value = 7;
+    double delta = 8;
+    string unit = 9;
+    string source = 10;
+    string recorded_by = 11;
+    string notes = 12;
+    bool is_rollover = 13;
+    bool is_reset = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+message DowntimeRecord {
+    string id = 1;
+    string asset_id = 2;
+    string asset_number = 3;
+    string asset_name = 4;
+    google.protobuf.Timestamp start_time = 5;
+    google.protobuf.Timestamp end_time = 6;
+    double duration_hours = 7;
+    DowntimeType type = 8;
+    DowntimeCategory category = 9;
+    string reason_code = 10;
+    string reason_description = 11;
+    string work_order_id = 12;
+    string failure_id = 13;
+    string reported_by = 14;
+    string resolution = 15;
+    common.v1.Money cost_impact = 16;
+    int32 production_loss_units = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+enum DowntimeType {
+    DOWNTIME_TYPE_UNSPECIFIED = 0;
+    DOWNTIME_TYPE_PLANNED = 1;
+    DOWNTIME_TYPE_UNPLANNED = 2;
+}
+
+enum DowntimeCategory {
+    DOWNTIME_CATEGORY_UNSPECIFIED = 0;
+    DOWNTIME_CATEGORY_BREAKDOWN = 1;
+    DOWNTIME_CATEGORY_PREVENTIVE_MAINTENANCE = 2;
+    DOWNTIME_CATEGORY_CORRECTIVE_MAINTENANCE = 3;
+    DOWNTIME_CATEGORY_SETUP_CHANGEOVER = 4;
+    DOWNTIME_CATEGORY_MATERIAL_SHORTAGE = 5;
+    DOWNTIME_CATEGORY_OPERATOR_UNAVAILABLE = 6;
+    DOWNTIME_CATEGORY_QUALITY_ISSUE = 7;
+    DOWNTIME_CATEGORY_EXTERNAL = 8;
+    DOWNTIME_CATEGORY_OTHER = 9;
+}
+
+message FailureRecord {
+    string id = 1;
+    string failure_number = 2;
+    string asset_id = 3;
+    string asset_number = 4;
+    string asset_name = 5;
+    google.protobuf.Timestamp failure_date = 6;
+    google.protobuf.Timestamp detected_date = 7;
+    string failure_code = 8;
+    string failure_mode = 9;
+    string failure_effect = 10;
+    FailureSeverity severity = 11;
+    string description = 12;
+    string root_cause = 13;
+    string corrective_action = 14;
+    string preventive_action = 15;
+    string work_order_id = 16;
+    string reported_by = 17;
+    string analyzed_by = 18;
+    FailureStatus status = 19;
+    common.v1.Money repair_cost = 20;
+    double downtime_hours = 21;
+    repeated common.v1.Attachment attachments = 22;
+    common.v1.AuditInfo audit_info = 23;
+}
+
+enum FailureSeverity {
+    FAILURE_SEVERITY_UNSPECIFIED = 0;
+    FAILURE_SEVERITY_CRITICAL = 1;
+    FAILURE_SEVERITY_MAJOR = 2;
+    FAILURE_SEVERITY_MINOR = 3;
+    FAILURE_SEVERITY_NEGLIGIBLE = 4;
+}
+
+enum FailureStatus {
+    FAILURE_STATUS_UNSPECIFIED = 0;
+    FAILURE_STATUS_REPORTED = 1;
+    FAILURE_STATUS_UNDER_INVESTIGATION = 2;
+    FAILURE_STATUS_ROOT_CAUSE_IDENTIFIED = 3;
+    FAILURE_STATUS_CORRECTIVE_ACTION_TAKEN = 4;
+    FAILURE_STATUS_CLOSED = 5;
+}
+
+message EquipmentPerformance {
+    string asset_id = 1;
+    string asset_number = 2;
+    string asset_name = 3;
+    common.v1.DateRange period = 4;
+    double availability = 5;
+    double performance_rate = 6;
+    double quality_rate = 7;
+    double oee = 8;
+    double mtbf_hours = 9;
+    double mttr_hours = 10;
+    double uptime_hours = 11;
+    double downtime_hours = 12;
+    int32 failure_count = 13;
+    common.v1.Money maintenance_cost = 14;
+    double utilization_rate = 15;
+}
+
+message ReliabilityMetrics {
+    string asset_id = 1;
+    string asset_number = 2;
+    common.v1.DateRange period = 3;
+    double mtbf = 4;
+    double mttr = 5;
+    double mttf = 6;
+    double failure_rate = 7;
+    double availability = 8;
+    double reliability = 9;
+    int32 total_failures = 10;
+    double total_downtime_hours = 11;
+    double total_operating_hours = 12;
+    repeated FailureModeAnalysis failure_modes = 13;
+}
+
+message FailureModeAnalysis {
+    string failure_mode = 1;
+    int32 occurrence_count = 2;
+    double percentage = 3;
+    double average_downtime = 4;
+    common.v1.Money total_cost = 5;
+}
+
+message TimelineEvent {
+    string id = 1;
+    google.protobuf.Timestamp event_date = 2;
+    string event_type = 3;
+    string title = 4;
+    string description = 5;
+    string reference_id = 6;
+    string reference_type = 7;
+    string icon = 8;
+    string color = 9;
+}
+
+message RecordMeterReadingRequest {
+    string meter_id = 1;
+    google.protobuf.Timestamp reading_date = 2;
+    double reading_value = 3;
+    string source = 4;
+    string notes = 5;
+}
+
+message GetMeterReadingsRequest {
+    string meter_id = 1;
+    string asset_id = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message GetMeterReadingsResponse {
+    repeated MeterReading readings = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetLatestMeterReadingRequest {
+    string meter_id = 1;
+    string asset_id = 2;
+}
+
+message CreateMeterRequest {
+    string meter_code = 1;
+    string name = 2;
+    string description = 3;
+    string asset_id = 4;
+    MeterType type = 5;
+    string unit = 6;
+    double initial_reading = 7;
+    double rollover_value = 8;
+    bool is_primary = 9;
+}
+
+message GetMeterRequest {
+    string id = 1;
+}
+
+message UpdateMeterRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    double rollover_value = 4;
+    bool is_primary = 5;
+    common.v1.Status status = 6;
+}
+
+message ListMetersRequest {
+    string asset_id = 1;
+    MeterType type = 2;
+    common.v1.Status status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListMetersResponse {
+    repeated Meter meters = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message RecordDowntimeRequest {
+    string asset_id = 1;
+    google.protobuf.Timestamp start_time = 2;
+    google.protobuf.Timestamp end_time = 3;
+    DowntimeType type = 4;
+    DowntimeCategory category = 5;
+    string reason_code = 6;
+    string reason_description = 7;
+    string work_order_id = 8;
+    string failure_id = 9;
+    string resolution = 10;
+    int32 production_loss_units = 11;
+}
+
+message GetDowntimeRecordsRequest {
+    string asset_id = 1;
+    DowntimeType type = 2;
+    DowntimeCategory category = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetDowntimeRecordsResponse {
+    repeated DowntimeRecord records = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetDowntimeAnalysisRequest {
+    string asset_id = 1;
+    string location_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetDowntimeAnalysisResponse {
+    double total_downtime_hours = 1;
+    double planned_downtime_hours = 2;
+    double unplanned_downtime_hours = 3;
+    double availability_rate = 4;
+    repeated DowntimeByCategory by_category = 5;
+    repeated DowntimeByReason by_reason = 6;
+    repeated DowntimeTrend trend = 7;
+}
+
+message DowntimeByCategory {
+    DowntimeCategory category = 1;
+    string category_name = 2;
+    double hours = 3;
+    int32 occurrences = 4;
+    double percentage = 5;
+}
+
+message DowntimeByReason {
+    string reason_code = 1;
+    string reason_description = 2;
+    double hours = 3;
+    int32 occurrences = 4;
+    double percentage = 5;
+}
+
+message DowntimeTrend {
+    google.protobuf.Timestamp date = 1;
+    double planned_hours = 2;
+    double unplanned_hours = 3;
+    double total_hours = 4;
+}
+
+message RecordFailureRequest {
+    string asset_id = 1;
+    google.protobuf.Timestamp failure_date = 2;
+    string failure_code = 3;
+    string failure_mode = 4;
+    string failure_effect = 5;
+    FailureSeverity severity = 6;
+    string description = 7;
+    string work_order_id = 8;
+}
+
+message GetFailureRecordsRequest {
+    string asset_id = 1;
+    FailureSeverity severity = 2;
+    FailureStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetFailureRecordsResponse {
+    repeated FailureRecord records = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetFailureAnalysisRequest {
+    string asset_id = 1;
+    string asset_class_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetFailureAnalysisResponse {
+    int32 total_failures = 1;
+    double mtbf = 2;
+    common.v1.Money total_repair_cost = 3;
+    double total_downtime_hours = 4;
+    repeated FailureModeAnalysis by_failure_mode = 5;
+    repeated FailureBySeverity by_severity = 6;
+    repeated FailureTrend trend = 7;
+}
+
+message FailureBySeverity {
+    FailureSeverity severity = 1;
+    string severity_name = 2;
+    int32 count = 3;
+    double percentage = 4;
+}
+
+message FailureTrend {
+    google.protobuf.Timestamp date = 1;
+    int32 failure_count = 2;
+    double downtime_hours = 3;
+}
+
+message GetEquipmentPerformanceRequest {
+    string asset_id = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetEquipmentPerformanceResponse {
+    EquipmentPerformance performance = 1;
+    repeated PerformanceTrend trend = 2;
+}
+
+message PerformanceTrend {
+    google.protobuf.Timestamp date = 1;
+    double availability = 2;
+    double performance_rate = 3;
+    double quality_rate = 4;
+    double oee = 5;
+}
+
+message GetReliabilityMetricsRequest {
+    string asset_id = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetReliabilityMetricsResponse {
+    ReliabilityMetrics metrics = 1;
+    repeated ReliabilityTrend trend = 2;
+}
+
+message ReliabilityTrend {
+    string period = 1;
+    double mtbf = 2;
+    double mttr = 3;
+    double availability = 4;
+    int32 failures = 5;
+}
+
+message GetEquipmentTimelineRequest {
+    string asset_id = 1;
+    common.v1.DateRange date_range = 2;
+    repeated string event_types = 3;
+}
+
+message GetEquipmentTimelineResponse {
+    repeated TimelineEvent events = 1;
+}
+
+// Auto-generated Response messages
+message RecordMeterReadingResponse {
+    MeterReading meter_reading = 1;
+}
+
+message GetLatestMeterReadingResponse {
+    MeterReading meter_reading = 1;
+}
+
+message CreateMeterResponse {
+    Meter meter = 1;
+}
+
+message GetMeterResponse {
+    Meter meter = 1;
+}
+
+message UpdateMeterResponse {
+    Meter meter = 1;
+}
+
+message RecordDowntimeResponse {
+    DowntimeRecord downtime_record = 1;
+}
+
+message RecordFailureResponse {
+    FailureRecord failure_record = 1;
+}

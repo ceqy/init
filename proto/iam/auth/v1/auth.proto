@@ -1,0 +1,371 @@
+syntax = "proto3";
+
+package iam.auth.v1;
+
+option go_package = "github.com/cuba-erp/api/iam/auth/v1";
+
+import "google/protobuf/timestamp.proto";
+
+// ============ 认证服务 ============
+
+service AuthService {
+  // 用户登录
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // 用户登出
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+
+  // 刷新令牌
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+
+  // 验证令牌
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // 修改密码
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+
+  // 请求重置密码
+  rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
+
+  // 重置密码
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+
+  // 启用 2FA
+  rpc Enable2FA(Enable2FARequest) returns (Enable2FAResponse);
+
+  // 禁用 2FA
+  rpc Disable2FA(Disable2FARequest) returns (Disable2FAResponse);
+
+  // 验证 2FA
+  rpc Verify2FA(Verify2FARequest) returns (Verify2FAResponse);
+
+  // 获取活跃会话
+  rpc GetActiveSessions(GetActiveSessionsRequest) returns (GetActiveSessionsResponse);
+
+  // 撤销会话
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+
+  // ========== WebAuthn 无密码登录 ==========
+
+  // 开始 WebAuthn 注册
+  rpc StartWebAuthnRegistration(StartWebAuthnRegistrationRequest) returns (StartWebAuthnRegistrationResponse);
+
+  // 完成 WebAuthn 注册
+  rpc FinishWebAuthnRegistration(FinishWebAuthnRegistrationRequest) returns (FinishWebAuthnRegistrationResponse);
+
+  // 开始 WebAuthn 认证
+  rpc StartWebAuthnAuthentication(StartWebAuthnAuthenticationRequest) returns (StartWebAuthnAuthenticationResponse);
+
+  // 完成 WebAuthn 认证
+  rpc FinishWebAuthnAuthentication(FinishWebAuthnAuthenticationRequest) returns (FinishWebAuthnAuthenticationResponse);
+
+  // 列出用户的 WebAuthn 凭证
+  rpc ListWebAuthnCredentials(ListWebAuthnCredentialsRequest) returns (ListWebAuthnCredentialsResponse);
+
+  // 删除 WebAuthn 凭证
+  rpc DeleteWebAuthnCredential(DeleteWebAuthnCredentialRequest) returns (DeleteWebAuthnCredentialResponse);
+}
+
+// ============ 消息定义 ============
+
+// 登录请求
+message LoginRequest {
+  string username = 1;          // 用户名或邮箱
+  string password = 2;          // 密码
+  string tenant_id = 3;         // 租户 ID
+  string device_info = 4;       // 设备信息
+  string ip_address = 5;        // IP 地址
+}
+
+// 登录响应
+message LoginResponse {
+  string access_token = 1;      // 访问令牌
+  string refresh_token = 2;     // 刷新令牌
+  int64 expires_in = 3;         // 过期时间（秒）
+  string token_type = 4;        // 令牌类型
+  User user = 5;                // 用户信息
+  bool require_2fa = 6;         // 是否需要 2FA
+  string session_id = 7;        // 会话 ID（用于 2FA）
+}
+
+// 登出请求
+message LogoutRequest {
+  string access_token = 1;      // 访问令牌
+  bool logout_all_devices = 2;  // 是否登出所有设备
+}
+
+// 登出响应
+message LogoutResponse {
+  bool success = 1;
+}
+
+// 刷新令牌请求
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// 刷新令牌响应
+message RefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 expires_in = 3;
+}
+
+// 验证令牌请求
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+// 验证令牌响应
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string tenant_id = 3;
+  repeated string permissions = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+// 修改密码请求
+message ChangePasswordRequest {
+  string user_id = 1;
+  string old_password = 2;
+  string new_password = 3;
+}
+
+// 修改密码响应
+message ChangePasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// 请求重置密码请求
+message RequestPasswordResetRequest {
+  string email = 1;
+  string tenant_id = 2;
+}
+
+// 请求重置密码响应
+message RequestPasswordResetResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// 重置密码请求
+message ResetPasswordRequest {
+  string email = 1;
+  string reset_token = 2;
+  string new_password = 3;
+  string tenant_id = 4;
+}
+
+// 重置密码响应
+message ResetPasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// 启用 2FA 请求
+message Enable2FARequest {
+  string user_id = 1;
+  string method = 2;  // TOTP, SMS, EMAIL
+  string verification_code = 3;  // 验证码（可选，用于确认启用）
+}
+
+// 启用 2FA 响应
+message Enable2FAResponse {
+  string secret = 1;              // TOTP secret（Base32 编码）
+  string qr_code_url = 2;         // QR 码 URL
+  repeated string backup_codes = 3; // 备份码（仅首次返回）
+  bool enabled = 4;               // 是否已启用（需要验证码确认）
+}
+
+// 禁用 2FA 请求
+message Disable2FARequest {
+  string user_id = 1;
+  string password = 2;  // 密码验证
+}
+
+// 禁用 2FA 响应
+message Disable2FAResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// 验证 2FA 请求
+message Verify2FARequest {
+  string user_id = 1;
+  string code = 2;
+  string session_id = 3;
+  string tenant_id = 4;
+}
+
+// 验证 2FA 响应
+message Verify2FAResponse {
+  bool success = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  int64 expires_in = 4;           // 过期时间（秒）
+}
+
+// 获取活跃会话请求
+message GetActiveSessionsRequest {
+  string user_id = 1;
+}
+
+// 获取活跃会话响应
+message GetActiveSessionsResponse {
+  repeated Session sessions = 1;
+}
+
+// 撤销会话请求
+message RevokeSessionRequest {
+  string user_id = 1;
+  string session_id = 2;
+}
+
+// 撤销会话响应
+message RevokeSessionResponse {
+  bool success = 1;
+}
+
+// ========== WebAuthn 消息定义 ==========
+
+// 开始 WebAuthn 注册请求
+message StartWebAuthnRegistrationRequest {
+  string user_id = 1;           // 用户 ID
+  string credential_name = 2;   // 凭证名称（如 "YubiKey 5"）
+}
+
+// 开始 WebAuthn 注册响应
+message StartWebAuthnRegistrationResponse {
+  string challenge = 1;         // 挑战（Base64 编码）
+  string rp_id = 2;             // Relying Party ID
+  string rp_name = 3;           // Relying Party 名称
+  string user_id = 4;           // 用户 ID（Base64 编码）
+  string user_name = 5;         // 用户名
+  string user_display_name = 6; // 用户显示名称
+  repeated string exclude_credentials = 7; // 排除的凭证 ID（Base64 编码）
+  string registration_state = 8; // 注册状态（用于完成注册）
+}
+
+// 完成 WebAuthn 注册请求
+message FinishWebAuthnRegistrationRequest {
+  string user_id = 1;           // 用户 ID
+  string credential_name = 2;   // 凭证名称
+  string registration_state = 3; // 注册状态
+  string credential_response = 4; // 凭证响应（JSON 格式）
+}
+
+// 完成 WebAuthn 注册响应
+message FinishWebAuthnRegistrationResponse {
+  bool success = 1;
+  string credential_id = 2;     // 凭证 ID
+  string message = 3;
+}
+
+// 开始 WebAuthn 认证请求
+message StartWebAuthnAuthenticationRequest {
+  string username = 1;          // 用户名或邮箱
+  string tenant_id = 2;         // 租户 ID
+}
+
+// 开始 WebAuthn 认证响应
+message StartWebAuthnAuthenticationResponse {
+  string challenge = 1;         // 挑战（Base64 编码）
+  string rp_id = 2;             // Relying Party ID
+  repeated string allow_credentials = 3; // 允许的凭证 ID（Base64 编码）
+  string authentication_state = 4; // 认证状态（用于完成认证）
+  string user_id = 5;           // 用户 ID（用于客户端）
+}
+
+// 完成 WebAuthn 认证请求
+message FinishWebAuthnAuthenticationRequest {
+  string authentication_state = 1; // 认证状态
+  string credential_response = 2;  // 凭证响应（JSON 格式）
+  string device_info = 3;       // 设备信息
+  string ip_address = 4;        // IP 地址
+  string tenant_id = 5;         // 租户 ID
+}
+
+// 完成 WebAuthn 认证响应
+message FinishWebAuthnAuthenticationResponse {
+  string access_token = 1;      // 访问令牌
+  string refresh_token = 2;     // 刷新令牌
+  int64 expires_in = 3;         // 过期时间（秒）
+  string token_type = 4;        // 令牌类型
+  User user = 5;                // 用户信息
+}
+
+// 列出 WebAuthn 凭证请求
+message ListWebAuthnCredentialsRequest {
+  string user_id = 1;           // 用户 ID
+}
+
+// 列出 WebAuthn 凭证响应
+message ListWebAuthnCredentialsResponse {
+  repeated WebAuthnCredential credentials = 1;
+}
+
+// 删除 WebAuthn 凭证请求
+message DeleteWebAuthnCredentialRequest {
+  string user_id = 1;           // 用户 ID
+  string credential_id = 2;     // 凭证 ID
+}
+
+// 删除 WebAuthn 凭证响应
+message DeleteWebAuthnCredentialResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// WebAuthn 凭证
+message WebAuthnCredential {
+  string id = 1;                // 凭证 ID
+  string name = 2;              // 凭证名称
+  repeated string transports = 3; // 传输方式（usb, nfc, ble, internal）
+  bool backup_eligible = 4;     // 是否可备份
+  bool backup_state = 5;        // 是否已备份
+  google.protobuf.Timestamp created_at = 6;     // 创建时间
+  google.protobuf.Timestamp last_used_at = 7;   // 最后使用时间
+}
+
+// ============ 实体定义 ============
+
+// 用户
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string display_name = 4;
+  string phone = 5;
+  string avatar_url = 6;
+  string tenant_id = 7;
+  repeated string role_ids = 8;
+  string status = 9;
+  string language = 10;
+  string timezone = 11;
+  bool two_factor_enabled = 12;
+  google.protobuf.Timestamp last_login_at = 13;
+  AuditInfo audit_info = 14;
+}
+
+// 会话
+message Session {
+  string id = 1;
+  string user_id = 2;
+  string device_info = 3;
+  string ip_address = 4;
+  string user_agent = 5;
+  bool is_current = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  google.protobuf.Timestamp last_activity_at = 9;
+}
+
+// 审计信息
+message AuditInfo {
+  google.protobuf.Timestamp created_at = 1;
+  string created_by = 2;
+  google.protobuf.Timestamp updated_at = 3;
+  string updated_by = 4;
+}

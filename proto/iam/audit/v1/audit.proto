@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package iam.audit.v1;
+
+option go_package = "github.com/cuba-erp/api/iam/audit/v1";
+
+import "google/protobuf/timestamp.proto";
+
+// ============ 审计服务 ============
+
+service AuditService {
+  // 查询审计事件
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+
+  // 获取用户审计历史
+  rpc GetUserAuditHistory(GetUserAuditHistoryRequest) returns (GetUserAuditHistoryResponse);
+}
+
+// ============ 消息定义 ============
+
+// 查询审计事件请求
+message ListEventsRequest {
+  string tenant_id = 1;         // 租户 ID
+  string event_type = 2;        // 事件类型筛选 (可选)
+  string aggregate_type = 3;    // 聚合类型筛选 (可选)
+  string aggregate_id = 4;      // 聚合 ID 筛选 (可选)
+  google.protobuf.Timestamp start_time = 5;  // 开始时间 (可选)
+  google.protobuf.Timestamp end_time = 6;    // 结束时间 (可选)
+  int32 page_size = 7;          // 分页大小
+  string page_token = 8;        // 分页令牌
+}
+
+// 查询审计事件响应
+message ListEventsResponse {
+  repeated AuditEvent events = 1;
+  string next_page_token = 2;   // 下一页令牌
+  int32 total_count = 3;        // 总数
+}
+
+// 获取用户审计历史请求
+message GetUserAuditHistoryRequest {
+  string user_id = 1;           // 用户 ID
+  string tenant_id = 2;         // 租户 ID
+  int32 page_size = 3;          // 分页大小
+  string page_token = 4;        // 分页令牌
+}
+
+// 获取用户审计历史响应
+message GetUserAuditHistoryResponse {
+  repeated AuditEvent events = 1;
+  string next_page_token = 2;   // 下一页令牌
+}
+
+// 审计事件
+message AuditEvent {
+  string id = 1;                // 事件 ID
+  string event_type = 2;        // 事件类型
+  string aggregate_type = 3;    // 聚合类型
+  string aggregate_id = 4;      // 聚合 ID
+  string tenant_id = 5;         // 租户 ID
+  string payload = 6;           // 事件数据 (JSON)
+  google.protobuf.Timestamp created_at = 7;  // 创建时间
+}

@@ -1,0 +1,647 @@
+syntax = "proto3";
+
+package cs.wc.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/base.proto";
+
+service WarrantyContractService {
+    rpc CreateWarranty(CreateWarrantyRequest) returns (CreateWarrantyResponse);
+    rpc GetWarranty(GetWarrantyRequest) returns (GetWarrantyResponse);
+    rpc UpdateWarranty(UpdateWarrantyRequest) returns (UpdateWarrantyResponse);
+    rpc ListWarranties(ListWarrantiesRequest) returns (ListWarrantiesResponse);
+
+    rpc ActivateWarranty(ActivateWarrantyRequest) returns (ActivateWarrantyResponse);
+    rpc ExtendWarranty(ExtendWarrantyRequest) returns (ExtendWarrantyResponse);
+    rpc TransferWarranty(TransferWarrantyRequest) returns (TransferWarrantyResponse);
+    rpc VoidWarranty(VoidWarrantyRequest) returns (VoidWarrantyResponse);
+
+    rpc CheckWarrantyCoverage(CheckWarrantyCoverageRequest) returns (CheckWarrantyCoverageResponse);
+    rpc CreateWarrantyClaim(CreateWarrantyClaimRequest) returns (CreateWarrantyClaimResponse);
+    rpc GetWarrantyClaim(GetWarrantyClaimRequest) returns (GetWarrantyClaimResponse);
+    rpc UpdateWarrantyClaim(UpdateWarrantyClaimRequest) returns (UpdateWarrantyClaimResponse);
+    rpc ApproveWarrantyClaim(ApproveWarrantyClaimRequest) returns (ApproveWarrantyClaimResponse);
+    rpc RejectWarrantyClaim(RejectWarrantyClaimRequest) returns (RejectWarrantyClaimResponse);
+    rpc ListWarrantyClaims(ListWarrantyClaimsRequest) returns (ListWarrantyClaimsResponse);
+
+    rpc CreateServiceContract(CreateServiceContractRequest) returns (CreateServiceContractResponse);
+    rpc GetServiceContract(GetServiceContractRequest) returns (GetServiceContractResponse);
+    rpc UpdateServiceContract(UpdateServiceContractRequest) returns (UpdateServiceContractResponse);
+    rpc ListServiceContracts(ListServiceContractsRequest) returns (ListServiceContractsResponse);
+
+    rpc ActivateServiceContract(ActivateServiceContractRequest) returns (ActivateServiceContractResponse);
+    rpc RenewServiceContract(RenewServiceContractRequest) returns (RenewServiceContractResponse);
+    rpc TerminateServiceContract(TerminateServiceContractRequest) returns (TerminateServiceContractResponse);
+
+    rpc CheckContractCoverage(CheckContractCoverageRequest) returns (CheckContractCoverageResponse);
+    rpc RecordContractUsage(RecordContractUsageRequest) returns (RecordContractUsageResponse);
+    rpc GetContractUsage(GetContractUsageRequest) returns (GetContractUsageResponse);
+
+    rpc GetExpiringWarranties(GetExpiringWarrantiesRequest) returns (GetExpiringWarrantiesResponse);
+    rpc GetExpiringContracts(GetExpiringContractsRequest) returns (GetExpiringContractsResponse);
+    rpc GetWarrantyMetrics(GetWarrantyMetricsRequest) returns (GetWarrantyMetricsResponse);
+}
+
+message Warranty {
+    string id = 1;
+    string warranty_number = 2;
+    string company_code = 3;
+    string customer_id = 4;
+    string customer_name = 5;
+    string product_id = 6;
+    string product_code = 7;
+    string product_name = 8;
+    string serial_number = 9;
+    string asset_id = 10;
+    WarrantyType type = 11;
+    google.protobuf.Timestamp purchase_date = 12;
+    google.protobuf.Timestamp start_date = 13;
+    google.protobuf.Timestamp end_date = 14;
+    int32 duration_months = 15;
+    repeated WarrantyCoverage coverages = 16;
+    repeated WarrantyExclusion exclusions = 17;
+    WarrantyStatus status = 18;
+    string sales_order_id = 19;
+    string registration_code = 20;
+    google.protobuf.Timestamp registered_at = 21;
+    string notes = 22;
+    common.v1.AuditInfo audit_info = 23;
+}
+
+enum WarrantyType {
+    WARRANTY_TYPE_UNSPECIFIED = 0;
+    WARRANTY_TYPE_STANDARD = 1;
+    WARRANTY_TYPE_EXTENDED = 2;
+    WARRANTY_TYPE_LIMITED = 3;
+    WARRANTY_TYPE_LIFETIME = 4;
+}
+
+enum WarrantyStatus {
+    WARRANTY_STATUS_UNSPECIFIED = 0;
+    WARRANTY_STATUS_PENDING = 1;
+    WARRANTY_STATUS_ACTIVE = 2;
+    WARRANTY_STATUS_EXPIRED = 3;
+    WARRANTY_STATUS_VOIDED = 4;
+    WARRANTY_STATUS_TRANSFERRED = 5;
+}
+
+message WarrantyCoverage {
+    string id = 1;
+    string coverage_type = 2;
+    string description = 3;
+    bool parts_covered = 4;
+    bool labor_covered = 5;
+    double coverage_percentage = 6;
+    common.v1.Money max_claim_amount = 7;
+    int32 max_claims = 8;
+    int32 claims_used = 9;
+}
+
+message WarrantyExclusion {
+    string id = 1;
+    string exclusion_type = 2;
+    string description = 3;
+}
+
+message WarrantyClaim {
+    string id = 1;
+    string claim_number = 2;
+    string warranty_id = 3;
+    string warranty_number = 4;
+    string customer_id = 5;
+    string customer_name = 6;
+    string product_id = 7;
+    string serial_number = 8;
+    google.protobuf.Timestamp claim_date = 9;
+    string issue_description = 10;
+    string failure_code = 11;
+    string failure_description = 12;
+    WarrantyClaimStatus status = 13;
+    common.v1.Money claimed_amount = 14;
+    common.v1.Money approved_amount = 15;
+    string coverage_type = 16;
+    string service_order_id = 17;
+    string case_id = 18;
+    string approved_by = 19;
+    google.protobuf.Timestamp approved_at = 20;
+    string rejection_reason = 21;
+    repeated common.v1.Attachment attachments = 22;
+    common.v1.AuditInfo audit_info = 23;
+}
+
+enum WarrantyClaimStatus {
+    WARRANTY_CLAIM_STATUS_UNSPECIFIED = 0;
+    WARRANTY_CLAIM_STATUS_SUBMITTED = 1;
+    WARRANTY_CLAIM_STATUS_UNDER_REVIEW = 2;
+    WARRANTY_CLAIM_STATUS_APPROVED = 3;
+    WARRANTY_CLAIM_STATUS_PARTIALLY_APPROVED = 4;
+    WARRANTY_CLAIM_STATUS_REJECTED = 5;
+    WARRANTY_CLAIM_STATUS_PROCESSED = 6;
+    WARRANTY_CLAIM_STATUS_CLOSED = 7;
+}
+
+message ServiceContract {
+    string id = 1;
+    string contract_number = 2;
+    string name = 3;
+    string company_code = 4;
+    string customer_id = 5;
+    string customer_name = 6;
+    ServiceContractType type = 7;
+    google.protobuf.Timestamp start_date = 8;
+    google.protobuf.Timestamp end_date = 9;
+    int32 duration_months = 10;
+    common.v1.Money contract_value = 11;
+    string billing_frequency = 12;
+    common.v1.Money billing_amount = 13;
+    repeated ContractCoveredAsset covered_assets = 14;
+    repeated ContractEntitlement entitlements = 15;
+    repeated ContractSLA slas = 16;
+    ServiceContractStatus status = 17;
+    bool auto_renewal = 18;
+    int32 renewal_notice_days = 19;
+    string payment_terms = 20;
+    string notes = 21;
+    common.v1.AuditInfo audit_info = 22;
+}
+
+enum ServiceContractType {
+    SERVICE_CONTRACT_TYPE_UNSPECIFIED = 0;
+    SERVICE_CONTRACT_TYPE_BASIC = 1;
+    SERVICE_CONTRACT_TYPE_STANDARD = 2;
+    SERVICE_CONTRACT_TYPE_PREMIUM = 3;
+    SERVICE_CONTRACT_TYPE_COMPREHENSIVE = 4;
+    SERVICE_CONTRACT_TYPE_CUSTOM = 5;
+}
+
+enum ServiceContractStatus {
+    SERVICE_CONTRACT_STATUS_UNSPECIFIED = 0;
+    SERVICE_CONTRACT_STATUS_DRAFT = 1;
+    SERVICE_CONTRACT_STATUS_PENDING = 2;
+    SERVICE_CONTRACT_STATUS_ACTIVE = 3;
+    SERVICE_CONTRACT_STATUS_SUSPENDED = 4;
+    SERVICE_CONTRACT_STATUS_EXPIRED = 5;
+    SERVICE_CONTRACT_STATUS_TERMINATED = 6;
+    SERVICE_CONTRACT_STATUS_RENEWED = 7;
+}
+
+message ContractCoveredAsset {
+    string id = 1;
+    string asset_id = 2;
+    string asset_number = 3;
+    string product_id = 4;
+    string product_code = 5;
+    string serial_number = 6;
+    string location = 7;
+    google.protobuf.Timestamp coverage_start = 8;
+    google.protobuf.Timestamp coverage_end = 9;
+}
+
+message ContractEntitlement {
+    string id = 1;
+    string entitlement_type = 2;
+    string description = 3;
+    double quantity = 4;
+    string unit = 5;
+    double used = 6;
+    double remaining = 7;
+    string period = 8;
+}
+
+message ContractSLA {
+    string id = 1;
+    string sla_type = 2;
+    string description = 3;
+    int32 response_time_hours = 4;
+    int32 resolution_time_hours = 5;
+    string service_hours = 6;
+    double penalty_percentage = 7;
+}
+
+message ContractUsage {
+    string id = 1;
+    string contract_id = 2;
+    string entitlement_id = 3;
+    string service_order_id = 4;
+    google.protobuf.Timestamp usage_date = 5;
+    double quantity = 6;
+    string description = 7;
+    common.v1.AuditInfo audit_info = 8;
+}
+
+message CreateWarrantyRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    string product_id = 3;
+    string serial_number = 4;
+    string asset_id = 5;
+    WarrantyType type = 6;
+    google.protobuf.Timestamp purchase_date = 7;
+    google.protobuf.Timestamp start_date = 8;
+    int32 duration_months = 9;
+    repeated WarrantyCoverageInput coverages = 10;
+    string sales_order_id = 11;
+    string notes = 12;
+}
+
+message WarrantyCoverageInput {
+    string coverage_type = 1;
+    string description = 2;
+    bool parts_covered = 3;
+    bool labor_covered = 4;
+    double coverage_percentage = 5;
+    common.v1.Money max_claim_amount = 6;
+    int32 max_claims = 7;
+}
+
+message GetWarrantyRequest {
+    string id = 1;
+}
+
+message UpdateWarrantyRequest {
+    string id = 1;
+    repeated WarrantyCoverageInput coverages = 2;
+    string notes = 3;
+}
+
+message ListWarrantiesRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    string product_id = 3;
+    string serial_number = 4;
+    WarrantyStatus status = 5;
+    common.v1.DateRange date_range = 6;
+    common.v1.Pagination pagination = 7;
+}
+
+message ListWarrantiesResponse {
+    repeated Warranty warranties = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ActivateWarrantyRequest {
+    string id = 1;
+    string registration_code = 2;
+}
+
+message ExtendWarrantyRequest {
+    string id = 1;
+    int32 additional_months = 2;
+    string reason = 3;
+}
+
+message TransferWarrantyRequest {
+    string id = 1;
+    string new_customer_id = 2;
+    string reason = 3;
+}
+
+message VoidWarrantyRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message CheckWarrantyCoverageRequest {
+    string serial_number = 1;
+    string product_id = 2;
+    string coverage_type = 3;
+    google.protobuf.Timestamp check_date = 4;
+}
+
+message CheckWarrantyCoverageResponse {
+    bool covered = 1;
+    Warranty warranty = 2;
+    WarrantyCoverage applicable_coverage = 3;
+    int32 remaining_claims = 4;
+    common.v1.Money remaining_amount = 5;
+    string message = 6;
+}
+
+message CreateWarrantyClaimRequest {
+    string warranty_id = 1;
+    string issue_description = 2;
+    string failure_code = 3;
+    string failure_description = 4;
+    common.v1.Money claimed_amount = 5;
+    string coverage_type = 6;
+    string service_order_id = 7;
+    string case_id = 8;
+}
+
+message GetWarrantyClaimRequest {
+    string id = 1;
+}
+
+message UpdateWarrantyClaimRequest {
+    string id = 1;
+    string issue_description = 2;
+    string failure_code = 3;
+    common.v1.Money claimed_amount = 4;
+}
+
+message ApproveWarrantyClaimRequest {
+    string id = 1;
+    common.v1.Money approved_amount = 2;
+    string comments = 3;
+}
+
+message RejectWarrantyClaimRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message ListWarrantyClaimsRequest {
+    string warranty_id = 1;
+    string customer_id = 2;
+    WarrantyClaimStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListWarrantyClaimsResponse {
+    repeated WarrantyClaim claims = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateServiceContractRequest {
+    string name = 1;
+    string company_code = 2;
+    string customer_id = 3;
+    ServiceContractType type = 4;
+    google.protobuf.Timestamp start_date = 5;
+    int32 duration_months = 6;
+    common.v1.Money contract_value = 7;
+    string billing_frequency = 8;
+    repeated ContractCoveredAssetInput covered_assets = 9;
+    repeated ContractEntitlementInput entitlements = 10;
+    repeated ContractSLAInput slas = 11;
+    bool auto_renewal = 12;
+    int32 renewal_notice_days = 13;
+    string payment_terms = 14;
+    string notes = 15;
+}
+
+message ContractCoveredAssetInput {
+    string asset_id = 1;
+    string serial_number = 2;
+}
+
+message ContractEntitlementInput {
+    string entitlement_type = 1;
+    string description = 2;
+    double quantity = 3;
+    string unit = 4;
+    string period = 5;
+}
+
+message ContractSLAInput {
+    string sla_type = 1;
+    string description = 2;
+    int32 response_time_hours = 3;
+    int32 resolution_time_hours = 4;
+    string service_hours = 5;
+    double penalty_percentage = 6;
+}
+
+message GetServiceContractRequest {
+    string id = 1;
+}
+
+message UpdateServiceContractRequest {
+    string id = 1;
+    string name = 2;
+    repeated ContractCoveredAssetInput covered_assets = 3;
+    repeated ContractEntitlementInput entitlements = 4;
+    string notes = 5;
+}
+
+message ListServiceContractsRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    ServiceContractType type = 3;
+    ServiceContractStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListServiceContractsResponse {
+    repeated ServiceContract contracts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ActivateServiceContractRequest {
+    string id = 1;
+}
+
+message RenewServiceContractRequest {
+    string id = 1;
+    int32 duration_months = 2;
+    common.v1.Money new_value = 3;
+}
+
+message TerminateServiceContractRequest {
+    string id = 1;
+    string reason = 2;
+    google.protobuf.Timestamp termination_date = 3;
+}
+
+message CheckContractCoverageRequest {
+    string customer_id = 1;
+    string asset_id = 2;
+    string serial_number = 3;
+    string service_type = 4;
+    google.protobuf.Timestamp check_date = 5;
+}
+
+message CheckContractCoverageResponse {
+    bool covered = 1;
+    ServiceContract contract = 2;
+    ContractEntitlement applicable_entitlement = 3;
+    ContractSLA applicable_sla = 4;
+    string message = 5;
+}
+
+message RecordContractUsageRequest {
+    string contract_id = 1;
+    string entitlement_id = 2;
+    string service_order_id = 3;
+    double quantity = 4;
+    string description = 5;
+}
+
+message GetContractUsageRequest {
+    string contract_id = 1;
+    common.v1.DateRange date_range = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetContractUsageResponse {
+    repeated ContractUsage usage = 1;
+    common.v1.PaginationResponse pagination = 2;
+    ContractUsageSummary summary = 3;
+}
+
+message ContractUsageSummary {
+    repeated EntitlementUsage entitlements = 1;
+}
+
+message EntitlementUsage {
+    string entitlement_type = 1;
+    double total = 2;
+    double used = 3;
+    double remaining = 4;
+    double usage_percentage = 5;
+}
+
+message GetExpiringWarrantiesRequest {
+    string company_code = 1;
+    int32 days_until_expiration = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetExpiringWarrantiesResponse {
+    repeated ExpiringWarranty warranties = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ExpiringWarranty {
+    string warranty_id = 1;
+    string warranty_number = 2;
+    string customer_name = 3;
+    string product_name = 4;
+    string serial_number = 5;
+    google.protobuf.Timestamp end_date = 6;
+    int32 days_remaining = 7;
+}
+
+message GetExpiringContractsRequest {
+    string company_code = 1;
+    int32 days_until_expiration = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetExpiringContractsResponse {
+    repeated ExpiringContract contracts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ExpiringContract {
+    string contract_id = 1;
+    string contract_number = 2;
+    string customer_name = 3;
+    ServiceContractType type = 4;
+    google.protobuf.Timestamp end_date = 5;
+    int32 days_remaining = 6;
+    common.v1.Money contract_value = 7;
+    bool auto_renewal = 8;
+}
+
+message GetWarrantyMetricsRequest {
+    string company_code = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetWarrantyMetricsResponse {
+    WarrantyMetrics metrics = 1;
+    repeated WarrantyMetricsTrend trend = 2;
+}
+
+message WarrantyMetrics {
+    int32 total_warranties = 1;
+    int32 active_warranties = 2;
+    int32 expiring_soon = 3;
+    int32 total_claims = 4;
+    int32 approved_claims = 5;
+    int32 rejected_claims = 6;
+    double approval_rate = 7;
+    common.v1.Money total_claim_value = 8;
+    common.v1.Money approved_claim_value = 9;
+    double average_claim_value = 10;
+    double average_processing_days = 11;
+}
+
+message WarrantyMetricsTrend {
+    string period = 1;
+    int32 new_warranties = 2;
+    int32 claims = 3;
+    common.v1.Money claim_value = 4;
+    double approval_rate = 5;
+}
+
+// Auto-generated Response messages
+message CreateWarrantyResponse {
+    Warranty warranty = 1;
+}
+
+message GetWarrantyResponse {
+    Warranty warranty = 1;
+}
+
+message UpdateWarrantyResponse {
+    Warranty warranty = 1;
+}
+
+message ActivateWarrantyResponse {
+    Warranty warranty = 1;
+}
+
+message ExtendWarrantyResponse {
+    Warranty warranty = 1;
+}
+
+message TransferWarrantyResponse {
+    Warranty warranty = 1;
+}
+
+message VoidWarrantyResponse {
+    Warranty warranty = 1;
+}
+
+message CreateWarrantyClaimResponse {
+    WarrantyClaim warranty_claim = 1;
+}
+
+message GetWarrantyClaimResponse {
+    WarrantyClaim warranty_claim = 1;
+}
+
+message UpdateWarrantyClaimResponse {
+    WarrantyClaim warranty_claim = 1;
+}
+
+message ApproveWarrantyClaimResponse {
+    WarrantyClaim warranty_claim = 1;
+}
+
+message RejectWarrantyClaimResponse {
+    WarrantyClaim warranty_claim = 1;
+}
+
+message CreateServiceContractResponse {
+    ServiceContract service_contract = 1;
+}
+
+message GetServiceContractResponse {
+    ServiceContract service_contract = 1;
+}
+
+message UpdateServiceContractResponse {
+    ServiceContract service_contract = 1;
+}
+
+message ActivateServiceContractResponse {
+    ServiceContract service_contract = 1;
+}
+
+message RenewServiceContractResponse {
+    ServiceContract service_contract = 1;
+}
+
+message TerminateServiceContractResponse {
+    ServiceContract service_contract = 1;
+}
+
+message RecordContractUsageResponse {
+    ContractUsage contract_usage = 1;
+}

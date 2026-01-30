@@ -1,0 +1,534 @@
+syntax = "proto3";
+
+package sc.df.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service DemandForecastingService {
+    rpc CreateForecast(CreateForecastRequest) returns (CreateForecastResponse);
+    rpc GetForecast(GetForecastRequest) returns (GetForecastResponse);
+    rpc UpdateForecast(UpdateForecastRequest) returns (UpdateForecastResponse);
+    rpc DeleteForecast(DeleteForecastRequest) returns (google.protobuf.Empty);
+    rpc ListForecasts(ListForecastsRequest) returns (ListForecastsResponse);
+
+    rpc GenerateForecast(GenerateForecastRequest) returns (GenerateForecastResponse);
+    rpc ApproveForecast(ApproveForecastRequest) returns (ApproveForecastResponse);
+    rpc PublishForecast(PublishForecastRequest) returns (PublishForecastResponse);
+
+    rpc CreateForecastModel(CreateForecastModelRequest) returns (CreateForecastModelResponse);
+    rpc GetForecastModel(GetForecastModelRequest) returns (GetForecastModelResponse);
+    rpc UpdateForecastModel(UpdateForecastModelRequest) returns (UpdateForecastModelResponse);
+    rpc ListForecastModels(ListForecastModelsRequest) returns (ListForecastModelsResponse);
+    rpc TrainModel(TrainModelRequest) returns (TrainModelResponse);
+
+    rpc GetDemandHistory(GetDemandHistoryRequest) returns (GetDemandHistoryResponse);
+    rpc AnalyzeDemandPatterns(AnalyzeDemandPatternsRequest) returns (AnalyzeDemandPatternsResponse);
+
+    rpc GetForecastAccuracy(GetForecastAccuracyRequest) returns (GetForecastAccuracyResponse);
+    rpc CompareForecastVsActual(CompareForecastVsActualRequest) returns (CompareForecastVsActualResponse);
+
+    rpc CreateCollaborativeForecast(CreateCollaborativeForecastRequest) returns (CreateCollaborativeForecastResponse);
+    rpc SubmitForecastInput(SubmitForecastInputRequest) returns (SubmitForecastInputResponse);
+    rpc ConsolidateForecasts(ConsolidateForecastsRequest) returns (ConsolidateForecastsResponse);
+
+    rpc RunWhatIfScenario(RunWhatIfScenarioRequest) returns (RunWhatIfScenarioResponse);
+}
+
+message Forecast {
+    string id = 1;
+    string forecast_number = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    ForecastType type = 6;
+    ForecastLevel level = 7;
+    string product_id = 8;
+    string product_code = 9;
+    string product_group = 10;
+    string customer_id = 11;
+    string customer_group = 12;
+    string region = 13;
+    string channel = 14;
+    google.protobuf.Timestamp period_start = 15;
+    google.protobuf.Timestamp period_end = 16;
+    string granularity = 17;
+    repeated ForecastPeriod periods = 18;
+    string model_id = 19;
+    string model_name = 20;
+    ForecastStatus status = 21;
+    string version = 22;
+    ForecastAccuracyMetrics accuracy = 23;
+    common.v1.AuditInfo audit_info = 24;
+}
+
+enum ForecastType {
+    FORECAST_TYPE_UNSPECIFIED = 0;
+    FORECAST_TYPE_STATISTICAL = 1;
+    FORECAST_TYPE_JUDGMENTAL = 2;
+    FORECAST_TYPE_COLLABORATIVE = 3;
+    FORECAST_TYPE_CONSENSUS = 4;
+}
+
+enum ForecastLevel {
+    FORECAST_LEVEL_UNSPECIFIED = 0;
+    FORECAST_LEVEL_SKU = 1;
+    FORECAST_LEVEL_PRODUCT_GROUP = 2;
+    FORECAST_LEVEL_CUSTOMER = 3;
+    FORECAST_LEVEL_REGION = 4;
+    FORECAST_LEVEL_CHANNEL = 5;
+}
+
+enum ForecastStatus {
+    FORECAST_STATUS_UNSPECIFIED = 0;
+    FORECAST_STATUS_DRAFT = 1;
+    FORECAST_STATUS_GENERATED = 2;
+    FORECAST_STATUS_REVIEWED = 3;
+    FORECAST_STATUS_APPROVED = 4;
+    FORECAST_STATUS_PUBLISHED = 5;
+    FORECAST_STATUS_SUPERSEDED = 6;
+}
+
+message ForecastPeriod {
+    google.protobuf.Timestamp period_start = 1;
+    google.protobuf.Timestamp period_end = 2;
+    double forecast_quantity = 3;
+    double lower_bound = 4;
+    double upper_bound = 5;
+    double confidence_level = 6;
+    double adjusted_quantity = 7;
+    string adjustment_reason = 8;
+    double actual_quantity = 9;
+    double forecast_error = 10;
+}
+
+message ForecastAccuracyMetrics {
+    double mape = 1;
+    double mae = 2;
+    double rmse = 3;
+    double bias = 4;
+    double tracking_signal = 5;
+    double forecast_value_added = 6;
+}
+
+message ForecastModel {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    ForecastModelType type = 5;
+    repeated ModelParameter parameters = 6;
+    google.protobuf.Timestamp last_trained = 7;
+    ModelPerformance performance = 8;
+    common.v1.Status status = 9;
+    common.v1.AuditInfo audit_info = 10;
+}
+
+enum ForecastModelType {
+    FORECAST_MODEL_TYPE_UNSPECIFIED = 0;
+    FORECAST_MODEL_TYPE_MOVING_AVERAGE = 1;
+    FORECAST_MODEL_TYPE_EXPONENTIAL_SMOOTHING = 2;
+    FORECAST_MODEL_TYPE_HOLT_WINTERS = 3;
+    FORECAST_MODEL_TYPE_ARIMA = 4;
+    FORECAST_MODEL_TYPE_PROPHET = 5;
+    FORECAST_MODEL_TYPE_MACHINE_LEARNING = 6;
+    FORECAST_MODEL_TYPE_ENSEMBLE = 7;
+}
+
+message ModelParameter {
+    string name = 1;
+    string value = 2;
+    string data_type = 3;
+    string description = 4;
+}
+
+message ModelPerformance {
+    double training_mape = 1;
+    double validation_mape = 2;
+    double test_mape = 3;
+    int32 training_samples = 4;
+    google.protobuf.Timestamp evaluated_at = 5;
+}
+
+message DemandHistory {
+    string product_id = 1;
+    string product_code = 2;
+    repeated DemandPeriod periods = 3;
+    DemandStatistics statistics = 4;
+}
+
+message DemandPeriod {
+    google.protobuf.Timestamp period_start = 1;
+    google.protobuf.Timestamp period_end = 2;
+    double quantity = 3;
+    double revenue = 4;
+    int32 order_count = 5;
+    int32 customer_count = 6;
+}
+
+message DemandStatistics {
+    double mean = 1;
+    double std_dev = 2;
+    double coefficient_of_variation = 3;
+    double min = 4;
+    double max = 5;
+    double trend = 6;
+    double seasonality_index = 7;
+}
+
+message DemandPattern {
+    string pattern_type = 1;
+    double strength = 2;
+    string description = 3;
+    repeated SeasonalFactor seasonal_factors = 4;
+}
+
+message SeasonalFactor {
+    string period = 1;
+    double factor = 2;
+}
+
+message CollaborativeForecast {
+    string id = 1;
+    string forecast_number = 2;
+    string name = 3;
+    string product_id = 4;
+    string product_code = 5;
+    google.protobuf.Timestamp period_start = 6;
+    google.protobuf.Timestamp period_end = 7;
+    repeated ForecastInput inputs = 8;
+    Forecast consolidated_forecast = 9;
+    CollaborativeForecastStatus status = 10;
+    google.protobuf.Timestamp deadline = 11;
+    common.v1.AuditInfo audit_info = 12;
+}
+
+enum CollaborativeForecastStatus {
+    COLLABORATIVE_FORECAST_STATUS_UNSPECIFIED = 0;
+    COLLABORATIVE_FORECAST_STATUS_OPEN = 1;
+    COLLABORATIVE_FORECAST_STATUS_IN_PROGRESS = 2;
+    COLLABORATIVE_FORECAST_STATUS_CLOSED = 3;
+    COLLABORATIVE_FORECAST_STATUS_CONSOLIDATED = 4;
+}
+
+message ForecastInput {
+    string id = 1;
+    string collaborative_forecast_id = 2;
+    string contributor_id = 3;
+    string contributor_name = 4;
+    string contributor_role = 5;
+    repeated ForecastPeriod periods = 6;
+    string notes = 7;
+    google.protobuf.Timestamp submitted_at = 8;
+    double weight = 9;
+}
+
+message WhatIfScenario {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string base_forecast_id = 4;
+    repeated ScenarioAssumption assumptions = 5;
+    Forecast result_forecast = 6;
+    common.v1.AuditInfo audit_info = 7;
+}
+
+message ScenarioAssumption {
+    string factor = 1;
+    string change_type = 2;
+    double change_value = 3;
+    google.protobuf.Timestamp effective_from = 4;
+    google.protobuf.Timestamp effective_to = 5;
+}
+
+message CreateForecastRequest {
+    string name = 1;
+    string description = 2;
+    string company_code = 3;
+    ForecastType type = 4;
+    ForecastLevel level = 5;
+    string product_id = 6;
+    string product_group = 7;
+    string customer_id = 8;
+    string region = 9;
+    string channel = 10;
+    google.protobuf.Timestamp period_start = 11;
+    google.protobuf.Timestamp period_end = 12;
+    string granularity = 13;
+    repeated ForecastPeriodInput periods = 14;
+}
+
+message ForecastPeriodInput {
+    google.protobuf.Timestamp period_start = 1;
+    google.protobuf.Timestamp period_end = 2;
+    double forecast_quantity = 3;
+}
+
+message GetForecastRequest {
+    string id = 1;
+}
+
+message UpdateForecastRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated ForecastPeriodAdjustment adjustments = 4;
+}
+
+message ForecastPeriodAdjustment {
+    google.protobuf.Timestamp period_start = 1;
+    double adjusted_quantity = 2;
+    string adjustment_reason = 3;
+}
+
+message DeleteForecastRequest {
+    string id = 1;
+}
+
+message ListForecastsRequest {
+    string company_code = 1;
+    string product_id = 2;
+    string product_group = 3;
+    ForecastType type = 4;
+    ForecastStatus status = 5;
+    common.v1.DateRange date_range = 6;
+    common.v1.Pagination pagination = 7;
+}
+
+message ListForecastsResponse {
+    repeated Forecast forecasts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GenerateForecastRequest {
+    string company_code = 1;
+    string product_id = 2;
+    string product_group = 3;
+    string model_id = 4;
+    google.protobuf.Timestamp period_start = 5;
+    google.protobuf.Timestamp period_end = 6;
+    string granularity = 7;
+    int32 history_periods = 8;
+    double confidence_level = 9;
+}
+
+message ApproveForecastRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message PublishForecastRequest {
+    string id = 1;
+}
+
+message CreateForecastModelRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    ForecastModelType type = 4;
+    repeated ModelParameter parameters = 5;
+}
+
+message GetForecastModelRequest {
+    string id = 1;
+}
+
+message UpdateForecastModelRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated ModelParameter parameters = 4;
+    common.v1.Status status = 5;
+}
+
+message ListForecastModelsRequest {
+    ForecastModelType type = 1;
+    common.v1.Status status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListForecastModelsResponse {
+    repeated ForecastModel models = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message TrainModelRequest {
+    string model_id = 1;
+    string product_id = 2;
+    common.v1.DateRange training_period = 3;
+    double validation_split = 4;
+}
+
+message TrainModelResponse {
+    string model_id = 1;
+    ModelPerformance performance = 2;
+    repeated ModelParameter optimized_parameters = 3;
+    google.protobuf.Timestamp trained_at = 4;
+}
+
+message GetDemandHistoryRequest {
+    string product_id = 1;
+    string product_group = 2;
+    string customer_id = 3;
+    string region = 4;
+    common.v1.DateRange date_range = 5;
+    string granularity = 6;
+}
+
+message GetDemandHistoryResponse {
+    repeated DemandHistory history = 1;
+}
+
+message AnalyzeDemandPatternsRequest {
+    string product_id = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message AnalyzeDemandPatternsResponse {
+    string product_id = 1;
+    string product_code = 2;
+    DemandStatistics statistics = 3;
+    repeated DemandPattern patterns = 4;
+    string demand_classification = 5;
+    string recommended_model = 6;
+}
+
+message GetForecastAccuracyRequest {
+    string forecast_id = 1;
+    string product_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetForecastAccuracyResponse {
+    ForecastAccuracyMetrics overall = 1;
+    repeated PeriodAccuracy by_period = 2;
+    repeated ProductAccuracy by_product = 3;
+}
+
+message PeriodAccuracy {
+    google.protobuf.Timestamp period_start = 1;
+    double forecast = 2;
+    double actual = 3;
+    double error = 4;
+    double ape = 5;
+}
+
+message ProductAccuracy {
+    string product_id = 1;
+    string product_code = 2;
+    ForecastAccuracyMetrics metrics = 3;
+}
+
+message CompareForecastVsActualRequest {
+    string forecast_id = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message CompareForecastVsActualResponse {
+    repeated ForecastVsActual comparisons = 1;
+    ForecastAccuracyMetrics summary = 2;
+}
+
+message ForecastVsActual {
+    google.protobuf.Timestamp period_start = 1;
+    double forecast_quantity = 2;
+    double actual_quantity = 3;
+    double variance = 4;
+    double variance_percentage = 5;
+}
+
+message CreateCollaborativeForecastRequest {
+    string name = 1;
+    string product_id = 2;
+    google.protobuf.Timestamp period_start = 3;
+    google.protobuf.Timestamp period_end = 4;
+    repeated string contributor_ids = 5;
+    google.protobuf.Timestamp deadline = 6;
+}
+
+message SubmitForecastInputRequest {
+    string collaborative_forecast_id = 1;
+    string contributor_id = 2;
+    repeated ForecastPeriodInput periods = 3;
+    string notes = 4;
+}
+
+message ConsolidateForecastsRequest {
+    string collaborative_forecast_id = 1;
+    string consolidation_method = 2;
+    map<string, double> contributor_weights = 3;
+}
+
+message RunWhatIfScenarioRequest {
+    string base_forecast_id = 1;
+    string scenario_name = 2;
+    string description = 3;
+    repeated ScenarioAssumption assumptions = 4;
+}
+
+message RunWhatIfScenarioResponse {
+    WhatIfScenario scenario = 1;
+    Forecast base_forecast = 2;
+    Forecast scenario_forecast = 3;
+    repeated ScenarioImpact impacts = 4;
+}
+
+message ScenarioImpact {
+    string metric = 1;
+    double base_value = 2;
+    double scenario_value = 3;
+    double change = 4;
+    double change_percentage = 5;
+}
+
+// Auto-generated Response messages
+message CreateForecastResponse {
+    Forecast forecast = 1;
+}
+
+message GetForecastResponse {
+    Forecast forecast = 1;
+}
+
+message UpdateForecastResponse {
+    Forecast forecast = 1;
+}
+
+message GenerateForecastResponse {
+    Forecast forecast = 1;
+}
+
+message ApproveForecastResponse {
+    Forecast forecast = 1;
+}
+
+message PublishForecastResponse {
+    Forecast forecast = 1;
+}
+
+message CreateForecastModelResponse {
+    ForecastModel forecast_model = 1;
+}
+
+message GetForecastModelResponse {
+    ForecastModel forecast_model = 1;
+}
+
+message UpdateForecastModelResponse {
+    ForecastModel forecast_model = 1;
+}
+
+message CreateCollaborativeForecastResponse {
+    CollaborativeForecast collaborative_forecast = 1;
+}
+
+message SubmitForecastInputResponse {
+    ForecastInput forecast_input = 1;
+}
+
+message ConsolidateForecastsResponse {
+    Forecast forecast = 1;
+}

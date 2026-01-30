@@ -1,0 +1,16 @@
+app_name = "pm-se"
+app_env = "development"
+
+[database]
+url = "postgres://postgres:postgres@localhost:5432/cuba"
+max_connections = 20
+
+[redis]
+url = "redis://localhost:6379"
+
+[server]
+host = "127.0.0.1"
+port = 50085
+
+[telemetry]
+log_level = "debug"

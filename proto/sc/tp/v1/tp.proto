@@ -1,0 +1,710 @@
+syntax = "proto3";
+
+package sc.tp.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/base.proto";
+
+service TransportManagementService {
+    rpc CreateShipment(CreateShipmentRequest) returns (CreateShipmentResponse);
+    rpc GetShipment(GetShipmentRequest) returns (GetShipmentResponse);
+    rpc UpdateShipment(UpdateShipmentRequest) returns (UpdateShipmentResponse);
+    rpc CancelShipment(CancelShipmentRequest) returns (CancelShipmentResponse);
+    rpc ListShipments(ListShipmentsRequest) returns (ListShipmentsResponse);
+
+    rpc PlanShipment(PlanShipmentRequest) returns (PlanShipmentResponse);
+    rpc TenderShipment(TenderShipmentRequest) returns (TenderShipmentResponse);
+    rpc ConfirmShipment(ConfirmShipmentRequest) returns (ConfirmShipmentResponse);
+    rpc DispatchShipment(DispatchShipmentRequest) returns (DispatchShipmentResponse);
+    rpc CompleteShipment(CompleteShipmentRequest) returns (CompleteShipmentResponse);
+
+    rpc CreateCarrier(CreateCarrierRequest) returns (CreateCarrierResponse);
+    rpc GetCarrier(GetCarrierRequest) returns (GetCarrierResponse);
+    rpc UpdateCarrier(UpdateCarrierRequest) returns (UpdateCarrierResponse);
+    rpc ListCarriers(ListCarriersRequest) returns (ListCarriersResponse);
+
+    rpc CreateRoute(CreateRouteRequest) returns (CreateRouteResponse);
+    rpc GetRoute(GetRouteRequest) returns (GetRouteResponse);
+    rpc UpdateRoute(UpdateRouteRequest) returns (UpdateRouteResponse);
+    rpc ListRoutes(ListRoutesRequest) returns (ListRoutesResponse);
+    rpc OptimizeRoute(OptimizeRouteRequest) returns (OptimizeRouteResponse);
+
+    rpc GetFreightRates(GetFreightRatesRequest) returns (GetFreightRatesResponse);
+    rpc CalculateFreightCost(CalculateFreightCostRequest) returns (CalculateFreightCostResponse);
+
+    rpc TrackShipment(TrackShipmentRequest) returns (TrackShipmentResponse);
+    rpc UpdateTrackingEvent(UpdateTrackingEventRequest) returns (UpdateTrackingEventResponse);
+
+    rpc GetTransportDashboard(GetTransportDashboardRequest) returns (GetTransportDashboardResponse);
+    rpc GetCarrierPerformance(GetCarrierPerformanceRequest) returns (GetCarrierPerformanceResponse);
+}
+
+message Shipment {
+    string id = 1;
+    string shipment_number = 2;
+    string company_code = 3;
+    ShipmentType type = 4;
+    ShipmentDirection direction = 5;
+    string carrier_id = 6;
+    string carrier_name = 7;
+    string service_level = 8;
+    Location origin = 9;
+    Location destination = 10;
+    repeated ShipmentStop stops = 11;
+    google.protobuf.Timestamp planned_pickup = 12;
+    google.protobuf.Timestamp planned_delivery = 13;
+    google.protobuf.Timestamp actual_pickup = 14;
+    google.protobuf.Timestamp actual_delivery = 15;
+    repeated ShipmentItem items = 16;
+    ShipmentWeight weight = 17;
+    ShipmentVolume volume = 18;
+    common.v1.Money freight_cost = 19;
+    common.v1.Money additional_charges = 20;
+    common.v1.Money total_cost = 21;
+    string tracking_number = 22;
+    string pro_number = 23;
+    string bill_of_lading = 24;
+    ShipmentStatus status = 25;
+    repeated TrackingEvent tracking_events = 26;
+    repeated string reference_documents = 27;
+    string special_instructions = 28;
+    common.v1.AuditInfo audit_info = 29;
+}
+
+message Location {
+    string id = 1;
+    string name = 2;
+    string location_type = 3;
+    common.v1.Address address = 4;
+    common.v1.Contact contact = 5;
+    string operating_hours = 6;
+    double latitude = 7;
+    double longitude = 8;
+}
+
+message ShipmentStop {
+    int32 sequence = 1;
+    Location location = 2;
+    StopType type = 3;
+    google.protobuf.Timestamp planned_arrival = 4;
+    google.protobuf.Timestamp planned_departure = 5;
+    google.protobuf.Timestamp actual_arrival = 6;
+    google.protobuf.Timestamp actual_departure = 7;
+    repeated string item_ids = 8;
+    string notes = 9;
+}
+
+enum StopType {
+    STOP_TYPE_UNSPECIFIED = 0;
+    STOP_TYPE_PICKUP = 1;
+    STOP_TYPE_DELIVERY = 2;
+    STOP_TYPE_CROSS_DOCK = 3;
+}
+
+message ShipmentItem {
+    string id = 1;
+    string reference_document = 2;
+    string reference_type = 3;
+    string product_id = 4;
+    string product_code = 5;
+    string description = 6;
+    common.v1.Quantity quantity = 7;
+    double weight = 8;
+    string weight_unit = 9;
+    double volume = 10;
+    string volume_unit = 11;
+    string packaging_type = 12;
+    int32 package_count = 13;
+    bool hazmat = 14;
+    string hazmat_class = 15;
+    common.v1.Money declared_value = 16;
+}
+
+message ShipmentWeight {
+    double gross_weight = 1;
+    double net_weight = 2;
+    double chargeable_weight = 3;
+    string unit = 4;
+}
+
+message ShipmentVolume {
+    double total_volume = 1;
+    string unit = 2;
+}
+
+enum ShipmentType {
+    SHIPMENT_TYPE_UNSPECIFIED = 0;
+    SHIPMENT_TYPE_FTL = 1;
+    SHIPMENT_TYPE_LTL = 2;
+    SHIPMENT_TYPE_PARCEL = 3;
+    SHIPMENT_TYPE_AIR = 4;
+    SHIPMENT_TYPE_OCEAN = 5;
+    SHIPMENT_TYPE_RAIL = 6;
+    SHIPMENT_TYPE_INTERMODAL = 7;
+}
+
+enum ShipmentDirection {
+    SHIPMENT_DIRECTION_UNSPECIFIED = 0;
+    SHIPMENT_DIRECTION_INBOUND = 1;
+    SHIPMENT_DIRECTION_OUTBOUND = 2;
+    SHIPMENT_DIRECTION_TRANSFER = 3;
+}
+
+enum ShipmentStatus {
+    SHIPMENT_STATUS_UNSPECIFIED = 0;
+    SHIPMENT_STATUS_DRAFT = 1;
+    SHIPMENT_STATUS_PLANNED = 2;
+    SHIPMENT_STATUS_TENDERED = 3;
+    SHIPMENT_STATUS_CONFIRMED = 4;
+    SHIPMENT_STATUS_DISPATCHED = 5;
+    SHIPMENT_STATUS_IN_TRANSIT = 6;
+    SHIPMENT_STATUS_OUT_FOR_DELIVERY = 7;
+    SHIPMENT_STATUS_DELIVERED = 8;
+    SHIPMENT_STATUS_EXCEPTION = 9;
+    SHIPMENT_STATUS_CANCELLED = 10;
+}
+
+message TrackingEvent {
+    string id = 1;
+    string shipment_id = 2;
+    google.protobuf.Timestamp event_time = 3;
+    string event_code = 4;
+    string event_description = 5;
+    string location = 6;
+    string city = 7;
+    string state = 8;
+    string country = 9;
+    string postal_code = 10;
+    string signed_by = 11;
+    string notes = 12;
+}
+
+message Carrier {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string legal_name = 4;
+    CarrierType type = 5;
+    repeated string modes = 6;
+    string scac_code = 7;
+    string dot_number = 8;
+    string mc_number = 9;
+    common.v1.Address address = 10;
+    common.v1.Contact contact = 11;
+    string payment_terms = 12;
+    string currency = 13;
+    repeated CarrierService services = 14;
+    CarrierRating rating = 15;
+    common.v1.Status status = 16;
+    common.v1.AuditInfo audit_info = 17;
+}
+
+enum CarrierType {
+    CARRIER_TYPE_UNSPECIFIED = 0;
+    CARRIER_TYPE_ASSET = 1;
+    CARRIER_TYPE_BROKER = 2;
+    CARRIER_TYPE_FREIGHT_FORWARDER = 3;
+    CARRIER_TYPE_PARCEL = 4;
+}
+
+message CarrierService {
+    string code = 1;
+    string name = 2;
+    string mode = 3;
+    int32 transit_days = 4;
+    bool guaranteed = 5;
+}
+
+message CarrierRating {
+    double overall_score = 1;
+    double on_time_delivery = 2;
+    double damage_free = 3;
+    double billing_accuracy = 4;
+    double responsiveness = 5;
+    int32 total_shipments = 6;
+}
+
+message Route {
+    string id = 1;
+    string route_number = 2;
+    string name = 3;
+    string description = 4;
+    Location origin = 5;
+    Location destination = 6;
+    repeated RouteStop stops = 7;
+    double total_distance = 8;
+    string distance_unit = 9;
+    int32 estimated_transit_hours = 10;
+    string preferred_carrier_id = 11;
+    RouteType type = 12;
+    common.v1.Status status = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+message RouteStop {
+    int32 sequence = 1;
+    Location location = 2;
+    double distance_from_previous = 3;
+    int32 estimated_time_minutes = 4;
+    int32 dwell_time_minutes = 5;
+}
+
+enum RouteType {
+    ROUTE_TYPE_UNSPECIFIED = 0;
+    ROUTE_TYPE_DIRECT = 1;
+    ROUTE_TYPE_MILK_RUN = 2;
+    ROUTE_TYPE_HUB_SPOKE = 3;
+}
+
+message FreightRate {
+    string id = 1;
+    string carrier_id = 2;
+    string carrier_name = 3;
+    string service_code = 4;
+    string service_name = 5;
+    string origin_zone = 6;
+    string destination_zone = 7;
+    common.v1.Money base_rate = 8;
+    string rate_basis = 9;
+    common.v1.Money minimum_charge = 10;
+    repeated Surcharge surcharges = 11;
+    google.protobuf.Timestamp effective_from = 12;
+    google.protobuf.Timestamp effective_to = 13;
+    int32 transit_days = 14;
+}
+
+message Surcharge {
+    string code = 1;
+    string name = 2;
+    string calculation_type = 3;
+    double value = 4;
+    common.v1.Money amount = 5;
+}
+
+message TenderShipmentResponse {
+    string shipment_id = 1;
+    repeated TenderResult results = 2;
+    string selected_carrier_id = 3;
+}
+
+message TenderResult {
+    string carrier_id = 1;
+    string carrier_name = 2;
+    string service_code = 3;
+    TenderStatus status = 4;
+    common.v1.Money quoted_rate = 5;
+    int32 transit_days = 6;
+    google.protobuf.Timestamp response_time = 7;
+    string notes = 8;
+}
+
+enum TenderStatus {
+    TENDER_STATUS_UNSPECIFIED = 0;
+    TENDER_STATUS_PENDING = 1;
+    TENDER_STATUS_ACCEPTED = 2;
+    TENDER_STATUS_REJECTED = 3;
+    TENDER_STATUS_EXPIRED = 4;
+}
+
+message TransportDashboard {
+    google.protobuf.Timestamp timestamp = 1;
+    ShipmentSummary shipments = 2;
+    PerformanceSummary performance = 3;
+    CostSummary costs = 4;
+    repeated Alert alerts = 5;
+}
+
+message ShipmentSummary {
+    int32 total_active = 1;
+    int32 in_transit = 2;
+    int32 pending_pickup = 3;
+    int32 delivered_today = 4;
+    int32 exceptions = 5;
+    int32 delayed = 6;
+}
+
+message PerformanceSummary {
+    double on_time_pickup = 1;
+    double on_time_delivery = 2;
+    double damage_free = 3;
+    double tender_acceptance = 4;
+}
+
+message CostSummary {
+    common.v1.Money total_freight_cost = 1;
+    common.v1.Money average_cost_per_shipment = 2;
+    common.v1.Money cost_per_unit = 3;
+    double cost_variance = 4;
+}
+
+message Alert {
+    string id = 1;
+    string type = 2;
+    string severity = 3;
+    string message = 4;
+    string shipment_id = 5;
+    google.protobuf.Timestamp timestamp = 6;
+}
+
+message CreateShipmentRequest {
+    string company_code = 1;
+    ShipmentType type = 2;
+    ShipmentDirection direction = 3;
+    Location origin = 4;
+    Location destination = 5;
+    repeated ShipmentStop stops = 6;
+    google.protobuf.Timestamp planned_pickup = 7;
+    google.protobuf.Timestamp planned_delivery = 8;
+    repeated ShipmentItemInput items = 9;
+    string special_instructions = 10;
+    repeated string reference_documents = 11;
+}
+
+message ShipmentItemInput {
+    string reference_document = 1;
+    string reference_type = 2;
+    string product_id = 3;
+    string description = 4;
+    common.v1.Quantity quantity = 5;
+    double weight = 6;
+    string weight_unit = 7;
+    double volume = 8;
+    string volume_unit = 9;
+    string packaging_type = 10;
+    int32 package_count = 11;
+    bool hazmat = 12;
+    string hazmat_class = 13;
+}
+
+message GetShipmentRequest {
+    string id = 1;
+}
+
+message UpdateShipmentRequest {
+    string id = 1;
+    google.protobuf.Timestamp planned_pickup = 2;
+    google.protobuf.Timestamp planned_delivery = 3;
+    string special_instructions = 4;
+}
+
+message CancelShipmentRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message ListShipmentsRequest {
+    string company_code = 1;
+    ShipmentType type = 2;
+    ShipmentDirection direction = 3;
+    ShipmentStatus status = 4;
+    string carrier_id = 5;
+    common.v1.DateRange date_range = 6;
+    common.v1.Pagination pagination = 7;
+}
+
+message ListShipmentsResponse {
+    repeated Shipment shipments = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message PlanShipmentRequest {
+    string id = 1;
+    string carrier_id = 2;
+    string service_level = 3;
+}
+
+message TenderShipmentRequest {
+    string id = 1;
+    repeated string carrier_ids = 2;
+    google.protobuf.Timestamp response_deadline = 3;
+}
+
+message ConfirmShipmentRequest {
+    string id = 1;
+    string carrier_id = 2;
+    common.v1.Money agreed_rate = 3;
+}
+
+message DispatchShipmentRequest {
+    string id = 1;
+    string tracking_number = 2;
+    string pro_number = 3;
+    string driver_name = 4;
+    string vehicle_number = 5;
+}
+
+message CompleteShipmentRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_delivery = 2;
+    string signed_by = 3;
+    string notes = 4;
+}
+
+message CreateCarrierRequest {
+    string code = 1;
+    string name = 2;
+    string legal_name = 3;
+    CarrierType type = 4;
+    repeated string modes = 5;
+    string scac_code = 6;
+    string dot_number = 7;
+    string mc_number = 8;
+    common.v1.Address address = 9;
+    common.v1.Contact contact = 10;
+    string payment_terms = 11;
+    string currency = 12;
+    repeated CarrierService services = 13;
+}
+
+message GetCarrierRequest {
+    string id = 1;
+}
+
+message UpdateCarrierRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.Address address = 3;
+    common.v1.Contact contact = 4;
+    string payment_terms = 5;
+    repeated CarrierService services = 6;
+    common.v1.Status status = 7;
+}
+
+message ListCarriersRequest {
+    CarrierType type = 1;
+    string mode = 2;
+    common.v1.Status status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListCarriersResponse {
+    repeated Carrier carriers = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateRouteRequest {
+    string name = 1;
+    string description = 2;
+    Location origin = 3;
+    Location destination = 4;
+    repeated RouteStop stops = 5;
+    string preferred_carrier_id = 6;
+    RouteType type = 7;
+}
+
+message GetRouteRequest {
+    string id = 1;
+}
+
+message UpdateRouteRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated RouteStop stops = 4;
+    string preferred_carrier_id = 5;
+    common.v1.Status status = 6;
+}
+
+message ListRoutesRequest {
+    string origin_id = 1;
+    string destination_id = 2;
+    RouteType type = 3;
+    common.v1.Status status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListRoutesResponse {
+    repeated Route routes = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message OptimizeRouteRequest {
+    repeated Location locations = 1;
+    Location start_location = 2;
+    Location end_location = 3;
+    string optimization_goal = 4;
+    repeated RouteConstraint constraints = 5;
+}
+
+message RouteConstraint {
+    string type = 1;
+    string value = 2;
+}
+
+message OptimizeRouteResponse {
+    repeated OptimizedStop stops = 1;
+    double total_distance = 2;
+    int32 total_time_minutes = 3;
+    double estimated_cost = 4;
+}
+
+message OptimizedStop {
+    int32 sequence = 1;
+    Location location = 2;
+    google.protobuf.Timestamp arrival_time = 3;
+    google.protobuf.Timestamp departure_time = 4;
+    double distance_from_previous = 5;
+    int32 time_from_previous = 6;
+}
+
+message GetFreightRatesRequest {
+    string origin_postal_code = 1;
+    string destination_postal_code = 2;
+    double weight = 3;
+    string weight_unit = 4;
+    double volume = 5;
+    string volume_unit = 6;
+    ShipmentType shipment_type = 7;
+    google.protobuf.Timestamp ship_date = 8;
+    repeated string carrier_ids = 9;
+}
+
+message GetFreightRatesResponse {
+    repeated FreightRate rates = 1;
+}
+
+message CalculateFreightCostRequest {
+    string carrier_id = 1;
+    string service_code = 2;
+    string origin_postal_code = 3;
+    string destination_postal_code = 4;
+    double weight = 5;
+    string weight_unit = 6;
+    double volume = 7;
+    string volume_unit = 8;
+    int32 package_count = 9;
+    common.v1.Money declared_value = 10;
+    repeated string accessorials = 11;
+}
+
+message CalculateFreightCostResponse {
+    common.v1.Money base_rate = 1;
+    repeated Surcharge surcharges = 2;
+    common.v1.Money total_cost = 3;
+    int32 transit_days = 4;
+    string service_name = 5;
+}
+
+message TrackShipmentRequest {
+    string shipment_id = 1;
+    string tracking_number = 2;
+    string carrier_id = 3;
+}
+
+message TrackShipmentResponse {
+    string shipment_id = 1;
+    string tracking_number = 2;
+    ShipmentStatus status = 3;
+    google.protobuf.Timestamp estimated_delivery = 4;
+    Location current_location = 5;
+    repeated TrackingEvent events = 6;
+}
+
+message UpdateTrackingEventRequest {
+    string shipment_id = 1;
+    google.protobuf.Timestamp event_time = 2;
+    string event_code = 3;
+    string event_description = 4;
+    string location = 5;
+    string city = 6;
+    string state = 7;
+    string country = 8;
+    string notes = 9;
+}
+
+message GetTransportDashboardRequest {
+    string company_code = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetCarrierPerformanceRequest {
+    string carrier_id = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetCarrierPerformanceResponse {
+    string carrier_id = 1;
+    string carrier_name = 2;
+    CarrierRating rating = 3;
+    int32 total_shipments = 4;
+    int32 on_time_shipments = 5;
+    int32 late_shipments = 6;
+    int32 damaged_shipments = 7;
+    common.v1.Money total_freight_cost = 8;
+    common.v1.Money average_cost_per_shipment = 9;
+    repeated PerformanceTrend trend = 10;
+}
+
+message PerformanceTrend {
+    string period = 1;
+    int32 shipments = 2;
+    double on_time_rate = 3;
+    double damage_rate = 4;
+    common.v1.Money average_cost = 5;
+}
+
+// Auto-generated Response messages
+message CreateShipmentResponse {
+    Shipment shipment = 1;
+}
+
+message GetShipmentResponse {
+    Shipment shipment = 1;
+}
+
+message UpdateShipmentResponse {
+    Shipment shipment = 1;
+}
+
+message CancelShipmentResponse {
+    Shipment shipment = 1;
+}
+
+message PlanShipmentResponse {
+    Shipment shipment = 1;
+}
+
+message ConfirmShipmentResponse {
+    Shipment shipment = 1;
+}
+
+message DispatchShipmentResponse {
+    Shipment shipment = 1;
+}
+
+message CompleteShipmentResponse {
+    Shipment shipment = 1;
+}
+
+message CreateCarrierResponse {
+    Carrier carrier = 1;
+}
+
+message GetCarrierResponse {
+    Carrier carrier = 1;
+}
+
+message UpdateCarrierResponse {
+    Carrier carrier = 1;
+}
+
+message CreateRouteResponse {
+    Route route = 1;
+}
+
+message GetRouteResponse {
+    Route route = 1;
+}
+
+message UpdateRouteResponse {
+    Route route = 1;
+}
+
+message UpdateTrackingEventResponse {
+    TrackingEvent tracking_event = 1;
+}
+
+message GetTransportDashboardResponse {
+    TransportDashboard transport_dashboard = 1;
+}

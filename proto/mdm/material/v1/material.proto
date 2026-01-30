@@ -1,0 +1,776 @@
+syntax = "proto3";
+
+package mdm.material.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+// ============================================================================
+// 物料主数据服务
+// ============================================================================
+service MaterialService {
+    // 物料基本操作
+    rpc CreateMaterial(CreateMaterialRequest) returns (CreateMaterialResponse);
+    rpc GetMaterial(GetMaterialRequest) returns (GetMaterialResponse);
+    rpc UpdateMaterial(UpdateMaterialRequest) returns (UpdateMaterialResponse);
+    rpc DeleteMaterial(DeleteMaterialRequest) returns (google.protobuf.Empty);
+    rpc ListMaterials(ListMaterialsRequest) returns (ListMaterialsResponse);
+
+    // 物料视图扩展
+    rpc ExtendMaterialToPlant(ExtendMaterialToPlantRequest) returns (ExtendMaterialToPlantResponse);
+    rpc ExtendMaterialToSalesOrg(ExtendMaterialToSalesOrgRequest) returns (ExtendMaterialToSalesOrgResponse);
+    rpc ExtendMaterialToPurchaseOrg(ExtendMaterialToPurchaseOrgRequest) returns (ExtendMaterialToPurchaseOrgResponse);
+    rpc UpdatePlantData(UpdatePlantDataRequest) returns (UpdatePlantDataResponse);
+    rpc UpdateSalesData(UpdateSalesDataRequest) returns (UpdateSalesDataResponse);
+    rpc UpdatePurchaseData(UpdatePurchaseDataRequest) returns (UpdatePurchaseDataResponse);
+
+    // 物料状态管理
+    rpc ActivateMaterial(ActivateMaterialRequest) returns (google.protobuf.Empty);
+    rpc DeactivateMaterial(DeactivateMaterialRequest) returns (google.protobuf.Empty);
+    rpc BlockMaterial(BlockMaterialRequest) returns (google.protobuf.Empty);
+    rpc MarkForDeletion(MarkForDeletionRequest) returns (google.protobuf.Empty);
+
+    // 物料分类
+    rpc CreateMaterialGroup(CreateMaterialGroupRequest) returns (CreateMaterialGroupResponse);
+    rpc GetMaterialGroup(GetMaterialGroupRequest) returns (GetMaterialGroupResponse);
+    rpc UpdateMaterialGroup(UpdateMaterialGroupRequest) returns (UpdateMaterialGroupResponse);
+    rpc DeleteMaterialGroup(DeleteMaterialGroupRequest) returns (google.protobuf.Empty);
+    rpc ListMaterialGroups(ListMaterialGroupsRequest) returns (ListMaterialGroupsResponse);
+
+    // 物料类型
+    rpc CreateMaterialType(CreateMaterialTypeRequest) returns (CreateMaterialTypeResponse);
+    rpc GetMaterialType(GetMaterialTypeRequest) returns (GetMaterialTypeResponse);
+    rpc UpdateMaterialType(UpdateMaterialTypeRequest) returns (UpdateMaterialTypeResponse);
+    rpc ListMaterialTypes(ListMaterialTypesRequest) returns (ListMaterialTypesResponse);
+
+    // 批量操作
+    rpc BatchCreateMaterials(BatchCreateMaterialsRequest) returns (BatchCreateMaterialsResponse);
+    rpc BatchUpdateMaterials(BatchUpdateMaterialsRequest) returns (BatchUpdateMaterialsResponse);
+
+    // 物料变更历史
+    rpc GetMaterialChangeHistory(GetMaterialChangeHistoryRequest) returns (GetMaterialChangeHistoryResponse);
+
+    // 物料搜索
+    rpc SearchMaterials(SearchMaterialsRequest) returns (SearchMaterialsResponse);
+
+    // 物料关系
+    rpc GetAlternativeMaterials(GetAlternativeMaterialsRequest) returns (GetAlternativeMaterialsResponse);
+    rpc SetAlternativeMaterial(SetAlternativeMaterialRequest) returns (google.protobuf.Empty);
+    rpc RemoveAlternativeMaterial(RemoveAlternativeMaterialRequest) returns (google.protobuf.Empty);
+
+    // 计量单位换算
+    rpc CreateUnitConversion(CreateUnitConversionRequest) returns (CreateUnitConversionResponse);
+    rpc DeleteUnitConversion(DeleteUnitConversionRequest) returns (google.protobuf.Empty);
+}
+
+// ============================================================================
+// 核心实体
+// ============================================================================
+
+// 物料主数据
+message Material {
+    string id = 1;                              // 物料ID (UUID)
+    string material_number = 2;                 // 物料编号 (业务主键)
+    string description = 3;                     // 物料描述
+    common.v1.LocalizedText localized_description = 4; // 多语言描述
+
+    // 基本数据
+    string material_type_id = 5;                // 物料类型ID
+    string material_type_code = 6;              // 物料类型编码
+    string material_group_id = 7;               // 物料组ID
+    string material_group_code = 8;             // 物料组编码
+    string base_unit = 9;                       // 基本计量单位
+    string old_material_number = 10;            // 旧物料编号
+    string external_material_group = 11;        // 外部物料组
+    string division = 12;                       // 产品组
+
+    // 尺寸/重量
+    double gross_weight = 13;                   // 毛重
+    double net_weight = 14;                     // 净重
+    string weight_unit = 15;                    // 重量单位
+    double volume = 16;                         // 体积
+    string volume_unit = 17;                    // 体积单位
+    double length = 18;                         // 长度
+    double width = 19;                          // 宽度
+    double height = 20;                         // 高度
+    string dimension_unit = 21;                 // 尺寸单位
+
+    // 包装数据
+    string ean_upc = 22;                        // EAN/UPC码
+    string ean_category = 23;                   // EAN类别
+
+    // 状态
+    common.v1.DataStatus status = 24;      // 物料状态
+    bool deletion_flag = 25;                    // 删除标记
+
+    // 扩展视图
+    repeated MaterialPlantData plant_data = 26;           // 工厂视图
+    repeated MaterialSalesData sales_data = 27;           // 销售视图
+    repeated MaterialPurchaseData purchase_data = 28;     // 采购视图
+    repeated MaterialStorageData storage_data = 29;       // 仓储视图
+    repeated MaterialAccountingData accounting_data = 30; // 会计视图
+    repeated MaterialQualityData quality_data = 31;       // 质量视图
+
+    // 单位换算
+    repeated UnitConversion unit_conversions = 32;
+
+    // 自定义属性
+    map<string, string> custom_attributes = 33;
+
+    // 附件
+    repeated common.v1.Attachment attachments = 34;
+
+    // 审计
+    common.v1.AuditInfo audit_info = 35;
+}
+
+// 物料工厂视图
+message MaterialPlantData {
+    string plant = 1;                           // 工厂
+    string plant_name = 2;                      // 工厂名称
+
+    // MRP数据
+    string mrp_type = 3;                        // MRP类型 (PD/VB/ND等)
+    string mrp_controller = 4;                  // MRP控制者
+    double reorder_point = 5;                   // 再订货点
+    double safety_stock = 6;                    // 安全库存
+    double minimum_lot_size = 7;                // 最小批量
+    double maximum_lot_size = 8;                // 最大批量
+    double fixed_lot_size = 9;                  // 固定批量
+    double rounding_value = 10;                 // 舍入值
+    int32 planned_delivery_days = 11;           // 计划交货天数
+    int32 gr_processing_days = 12;              // 收货处理天数
+
+    // 采购数据
+    ProcurementType procurement_type = 13;      // 采购类型
+    string special_procurement = 14;            // 特殊采购类型
+    string production_scheduler = 15;           // 生产计划员
+
+    // 库存数据
+    string storage_location = 16;               // 默认存储位置
+    string storage_bin = 17;                    // 默认仓位
+    bool batch_management = 18;                 // 批次管理标识
+    bool serial_number_profile = 19;            // 序列号管理
+
+    // ABC分类
+    string abc_indicator = 20;                  // ABC分类 (A/B/C)
+
+    // 状态
+    PlantMaterialStatus status = 21;            // 工厂级状态
+    bool deletion_flag = 22;                    // 删除标记
+}
+
+// 物料销售视图
+message MaterialSalesData {
+    string sales_org = 1;                       // 销售组织
+    string distribution_channel = 2;            // 分销渠道
+    string division = 3;                        // 产品组
+
+    // 销售数据
+    string sales_unit = 4;                      // 销售单位
+    double minimum_order_quantity = 5;          // 最小订单数量
+    double minimum_delivery_quantity = 6;       // 最小交货数量
+    string delivery_unit = 7;                   // 交货单位
+    int32 delivery_days = 8;                    // 交货天数
+
+    // 定价
+    string pricing_reference_material = 9;      // 定价参考物料
+    string material_pricing_group = 10;         // 物料定价组
+    string account_assignment_group = 11;       // 科目分配组
+
+    // 税务
+    string tax_classification = 12;             // 税务分类
+
+    // 可用性检查
+    string availability_check = 13;             // 可用性检查组
+
+    // 状态
+    SalesMaterialStatus status = 14;            // 销售状态
+    bool deletion_flag = 15;                    // 删除标记
+}
+
+// 物料采购视图
+message MaterialPurchaseData {
+    string purchase_org = 1;                    // 采购组织
+    string plant = 2;                           // 工厂 (可选)
+
+    // 采购数据
+    string purchase_unit = 3;                   // 采购单位
+    double order_unit_conversion = 4;           // 订单单位换算
+    string purchasing_group = 5;                // 采购组
+    int32 planned_delivery_days = 6;            // 计划交货天数
+    double over_delivery_tolerance = 7;         // 超交容差 (%)
+    double under_delivery_tolerance = 8;        // 欠交容差 (%)
+    bool unlimited_over_delivery = 9;           // 允许无限超交
+
+    // 供应商
+    string preferred_vendor_id = 10;            // 首选供应商
+
+    // 价格
+    common.v1.Money standard_price = 11;   // 标准价格
+    common.v1.Money last_purchase_price = 12; // 最近采购价
+    google.protobuf.Timestamp last_purchase_date = 13; // 最近采购日期
+
+    // 采购控制
+    bool automatic_po = 14;                     // 自动采购订单
+    string source_list = 15;                    // 货源清单
+
+    // 状态
+    PurchaseMaterialStatus status = 16;         // 采购状态
+    bool deletion_flag = 17;                    // 删除标记
+}
+
+// 物料仓储视图
+message MaterialStorageData {
+    string plant = 1;                           // 工厂
+    string storage_location = 2;                // 存储位置
+
+    // 仓储数据
+    string warehouse_number = 3;                // 仓库编号
+    string storage_type = 4;                    // 存储类型
+    string storage_bin = 5;                     // 仓位
+    double max_storage_quantity = 6;            // 最大存储数量
+    double min_storage_quantity = 7;            // 最小存储数量
+    string storage_unit_type = 8;               // 存储单位类型
+
+    // 拣配
+    string picking_area = 9;                    // 拣配区域
+    string storage_section = 10;                // 存储区段
+
+    // 状态
+    bool deletion_flag = 11;                    // 删除标记
+}
+
+// 物料会计视图
+message MaterialAccountingData {
+    string plant = 1;                           // 工厂
+    string valuation_area = 2;                  // 评估范围
+
+    // 评估数据
+    string valuation_class = 3;                 // 评估类
+    PriceControl price_control = 4;             // 价格控制 (S=标准价/V=移动平均价)
+    common.v1.Money standard_price = 5;    // 标准价格
+    common.v1.Money moving_average_price = 6; // 移动平均价
+    string price_unit = 7;                      // 价格单位
+    int32 price_unit_quantity = 8;              // 价格单位数量
+
+    // 总账科目
+    string inventory_account = 9;               // 存货科目
+    string price_difference_account = 10;       // 价差科目
+    string cost_element = 11;                   // 成本要素
+
+    // 成本核算
+    string costing_lot_size = 12;               // 成本核算批量
+    bool with_qty_structure = 13;               // 带数量结构
+
+    // 状态
+    bool deletion_flag = 14;                    // 删除标记
+}
+
+// 物料质量视图
+message MaterialQualityData {
+    string plant = 1;                           // 工厂
+
+    // 质量数据
+    bool inspection_active = 2;                 // 启用检验
+    string inspection_type = 3;                 // 检验类型
+    string inspection_plan = 4;                 // 检验计划
+    double sample_percentage = 5;               // 抽样比例
+    bool certificate_required = 6;              // 需要证书
+    string quality_management_control_key = 7;  // 质量管理控制键
+
+    // 保质期
+    int32 shelf_life_days = 8;                  // 保质期天数
+    int32 remaining_shelf_life = 9;             // 剩余保质期要求
+    int32 total_shelf_life = 10;                // 总保质期
+
+    // 状态
+    bool deletion_flag = 11;                    // 删除标记
+}
+
+// 单位换算
+message UnitConversion {
+    string from_unit = 1;                       // 源单位
+    string to_unit = 2;                         // 目标单位
+    double numerator = 3;                       // 分子
+    double denominator = 4;                     // 分母
+    string ean_upc = 5;                         // EAN/UPC (可选)
+}
+
+// 物料组
+message MaterialGroup {
+    string id = 1;
+    string code = 2;                            // 物料组编码
+    string name = 3;                            // 物料组名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+    string parent_id = 5;                       // 父级ID
+    string parent_code = 6;                     // 父级编码
+    int32 level = 7;                            // 层级
+    string path = 8;                            // 路径 (如: 01/0101/010101)
+    bool is_leaf = 9;                           // 是否叶子节点
+    common.v1.AuditInfo audit_info = 10;
+}
+
+// 物料类型
+message MaterialType {
+    string id = 1;
+    string code = 2;                            // 类型编码 (如: ROH, HALB, FERT, HAWA)
+    string name = 3;                            // 类型名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+    string description = 5;                     // 描述
+
+    // 控制参数
+    bool quantity_update = 6;                   // 数量更新
+    bool value_update = 7;                      // 价值更新
+    bool internal_procurement = 8;              // 允许内部采购
+    bool external_procurement = 9;              // 允许外部采购
+
+    // 默认值
+    string default_valuation_class = 10;        // 默认评估类
+    PriceControl default_price_control = 11;    // 默认价格控制
+
+    common.v1.AuditInfo audit_info = 12;
+}
+
+// 替代物料
+message AlternativeMaterial {
+    string material_id = 1;
+    string material_number = 2;
+    string description = 3;
+    string plant = 4;                           // 工厂 (可选)
+    int32 priority = 5;                         // 优先级
+    common.v1.ValidityPeriod validity = 6; // 有效期
+}
+
+// ============================================================================
+// 枚举
+// ============================================================================
+
+enum ProcurementType {
+    PROCUREMENT_TYPE_UNSPECIFIED = 0;
+    PROCUREMENT_TYPE_EXTERNAL = 1;              // 外部采购 (E)
+    PROCUREMENT_TYPE_INTERNAL = 2;              // 内部生产 (F)
+    PROCUREMENT_TYPE_BOTH = 3;                  // 两者皆可 (X)
+}
+
+enum PriceControl {
+    PRICE_CONTROL_UNSPECIFIED = 0;
+    PRICE_CONTROL_STANDARD = 1;                 // S - 标准价格
+    PRICE_CONTROL_MOVING_AVERAGE = 2;           // V - 移动平均价
+}
+
+enum PlantMaterialStatus {
+    PLANT_MATERIAL_STATUS_UNSPECIFIED = 0;
+    PLANT_MATERIAL_STATUS_ACTIVE = 1;
+    PLANT_MATERIAL_STATUS_BLOCKED_PROCUREMENT = 2;
+    PLANT_MATERIAL_STATUS_BLOCKED_PRODUCTION = 3;
+    PLANT_MATERIAL_STATUS_BLOCKED_ALL = 4;
+}
+
+enum SalesMaterialStatus {
+    SALES_MATERIAL_STATUS_UNSPECIFIED = 0;
+    SALES_MATERIAL_STATUS_ACTIVE = 1;
+    SALES_MATERIAL_STATUS_BLOCKED = 2;
+}
+
+enum PurchaseMaterialStatus {
+    PURCHASE_MATERIAL_STATUS_UNSPECIFIED = 0;
+    PURCHASE_MATERIAL_STATUS_ACTIVE = 1;
+    PURCHASE_MATERIAL_STATUS_BLOCKED = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 物料基本操作
+// ============================================================================
+
+message CreateMaterialRequest {
+    string material_number = 1;                 // 可选,不填则自动生成
+    string description = 2;
+    common.v1.LocalizedText localized_description = 3;
+    string material_type_id = 4;
+    string material_group_id = 5;
+    string base_unit = 6;
+
+    // 基本数据
+    string division = 7;
+    double gross_weight = 8;
+    double net_weight = 9;
+    string weight_unit = 10;
+    double volume = 11;
+    string volume_unit = 12;
+
+    // 可选的初始视图数据
+    MaterialPlantData plant_data = 13;
+    MaterialSalesData sales_data = 14;
+    MaterialPurchaseData purchase_data = 15;
+    MaterialAccountingData accounting_data = 16;
+
+    map<string, string> custom_attributes = 17;
+}
+
+message CreateMaterialResponse {
+    Material material = 1;
+}
+
+message GetMaterialRequest {
+    oneof identifier {
+        string id = 1;
+        string material_number = 2;
+    }
+    // 指定要返回的视图
+    bool include_plant_data = 3;
+    bool include_sales_data = 4;
+    bool include_purchase_data = 5;
+    bool include_storage_data = 6;
+    bool include_accounting_data = 7;
+    bool include_quality_data = 8;
+}
+
+message GetMaterialResponse {
+    Material material = 1;
+}
+
+message UpdateMaterialRequest {
+    string id = 1;
+    string description = 2;
+    common.v1.LocalizedText localized_description = 3;
+    string material_group_id = 4;
+
+    double gross_weight = 5;
+    double net_weight = 6;
+    string weight_unit = 7;
+    double volume = 8;
+    string volume_unit = 9;
+    double length = 10;
+    double width = 11;
+    double height = 12;
+    string dimension_unit = 13;
+
+    string ean_upc = 14;
+
+    map<string, string> custom_attributes = 15;
+}
+
+message UpdateMaterialResponse {
+    Material material = 1;
+}
+
+message DeleteMaterialRequest {
+    string id = 1;
+}
+
+message ListMaterialsRequest {
+    string material_type_id = 1;
+    string material_group_id = 2;
+    common.v1.DataStatus status = 3;
+    string plant = 4;
+    string search_term = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListMaterialsResponse {
+    repeated Material materials = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 物料视图扩展
+// ============================================================================
+
+message ExtendMaterialToPlantRequest {
+    string material_id = 1;
+    MaterialPlantData plant_data = 2;
+}
+
+message ExtendMaterialToPlantResponse {
+    Material material = 1;
+}
+
+message ExtendMaterialToSalesOrgRequest {
+    string material_id = 1;
+    MaterialSalesData sales_data = 2;
+}
+
+message ExtendMaterialToSalesOrgResponse {
+    Material material = 1;
+}
+
+message ExtendMaterialToPurchaseOrgRequest {
+    string material_id = 1;
+    MaterialPurchaseData purchase_data = 2;
+}
+
+message ExtendMaterialToPurchaseOrgResponse {
+    Material material = 1;
+}
+
+message UpdatePlantDataRequest {
+    string material_id = 1;
+    string plant = 2;
+    MaterialPlantData plant_data = 3;
+}
+
+message UpdatePlantDataResponse {
+    Material material = 1;
+}
+
+message UpdateSalesDataRequest {
+    string material_id = 1;
+    string sales_org = 2;
+    string distribution_channel = 3;
+    MaterialSalesData sales_data = 4;
+}
+
+message UpdateSalesDataResponse {
+    Material material = 1;
+}
+
+message UpdatePurchaseDataRequest {
+    string material_id = 1;
+    string purchase_org = 2;
+    MaterialPurchaseData purchase_data = 3;
+}
+
+message UpdatePurchaseDataResponse {
+    Material material = 1;
+}
+
+// ============================================================================
+// 请求/响应消息 - 物料状态管理
+// ============================================================================
+
+message ActivateMaterialRequest {
+    string id = 1;
+}
+
+message DeactivateMaterialRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message BlockMaterialRequest {
+    string id = 1;
+    string reason = 2;
+    string plant = 3;                           // 可选,指定工厂级冻结
+}
+
+message MarkForDeletionRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 物料分类
+// ============================================================================
+
+message CreateMaterialGroupRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string parent_id = 4;
+}
+
+message CreateMaterialGroupResponse {
+    MaterialGroup material_group = 1;
+}
+
+message GetMaterialGroupRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetMaterialGroupResponse {
+    MaterialGroup material_group = 1;
+    repeated MaterialGroup children = 2;
+}
+
+message UpdateMaterialGroupRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+}
+
+message UpdateMaterialGroupResponse {
+    MaterialGroup material_group = 1;
+}
+
+message DeleteMaterialGroupRequest {
+    string id = 1;
+}
+
+message ListMaterialGroupsRequest {
+    string parent_id = 1;
+    bool include_children = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListMaterialGroupsResponse {
+    repeated MaterialGroup material_groups = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 物料类型
+// ============================================================================
+
+message CreateMaterialTypeRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string description = 4;
+    bool quantity_update = 5;
+    bool value_update = 6;
+    bool internal_procurement = 7;
+    bool external_procurement = 8;
+    string default_valuation_class = 9;
+    PriceControl default_price_control = 10;
+}
+
+message CreateMaterialTypeResponse {
+    MaterialType material_type = 1;
+}
+
+message GetMaterialTypeRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetMaterialTypeResponse {
+    MaterialType material_type = 1;
+}
+
+message UpdateMaterialTypeRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string description = 4;
+}
+
+message UpdateMaterialTypeResponse {
+    MaterialType material_type = 1;
+}
+
+message ListMaterialTypesRequest {
+    common.v1.Pagination pagination = 1;
+}
+
+message ListMaterialTypesResponse {
+    repeated MaterialType material_types = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 批量操作
+// ============================================================================
+
+message BatchCreateMaterialsRequest {
+    repeated CreateMaterialRequest materials = 1;
+    bool stop_on_error = 2;
+}
+
+message BatchCreateMaterialsResponse {
+    repeated common.v1.BatchOperationResult results = 1;
+    int32 success_count = 2;
+    int32 error_count = 3;
+}
+
+message BatchUpdateMaterialsRequest {
+    repeated UpdateMaterialRequest materials = 1;
+    bool stop_on_error = 2;
+}
+
+message BatchUpdateMaterialsResponse {
+    repeated common.v1.BatchOperationResult results = 1;
+    int32 success_count = 2;
+    int32 error_count = 3;
+}
+
+// ============================================================================
+// 请求/响应消息 - 物料变更历史
+// ============================================================================
+
+message GetMaterialChangeHistoryRequest {
+    string material_id = 1;
+    common.v1.DateRange date_range = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetMaterialChangeHistoryResponse {
+    repeated common.v1.ChangeLogEntry records = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 物料搜索
+// ============================================================================
+
+message SearchMaterialsRequest {
+    string query = 1;                           // 全文搜索
+    repeated string material_types = 2;
+    repeated string material_groups = 3;
+    repeated string plants = 4;
+    common.v1.DataStatus status = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message SearchMaterialsResponse {
+    repeated MaterialSearchResult results = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message MaterialSearchResult {
+    Material material = 1;
+    double score = 2;                           // 匹配分数
+    repeated string highlights = 3;             // 高亮片段
+}
+
+// ============================================================================
+// 请求/响应消息 - 物料关系
+// ============================================================================
+
+message GetAlternativeMaterialsRequest {
+    string material_id = 1;
+    string plant = 2;
+}
+
+message GetAlternativeMaterialsResponse {
+    repeated AlternativeMaterial alternatives = 1;
+}
+
+message SetAlternativeMaterialRequest {
+    string material_id = 1;
+    string alternative_material_id = 2;
+    string plant = 3;
+    int32 priority = 4;
+    common.v1.ValidityPeriod validity = 5;
+}
+
+message RemoveAlternativeMaterialRequest {
+    string material_id = 1;
+    string alternative_material_id = 2;
+    string plant = 3;
+}
+
+// ============================================================================
+// 请求/响应消息 - 计量单位换算
+// ============================================================================
+
+message CreateUnitConversionRequest {
+    string material_id = 1;
+    UnitConversion conversion = 2;
+}
+
+message CreateUnitConversionResponse {
+    Material material = 1;
+}
+
+message DeleteUnitConversionRequest {
+    string material_id = 1;
+    string from_unit = 2;
+    string to_unit = 3;
+}

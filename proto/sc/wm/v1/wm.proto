@@ -1,0 +1,746 @@
+syntax = "proto3";
+
+package sc.wm.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service WarehouseManagementService {
+    rpc CreateWarehouse(CreateWarehouseRequest) returns (CreateWarehouseResponse);
+    rpc GetWarehouse(GetWarehouseRequest) returns (GetWarehouseResponse);
+    rpc UpdateWarehouse(UpdateWarehouseRequest) returns (UpdateWarehouseResponse);
+    rpc DeleteWarehouse(DeleteWarehouseRequest) returns (google.protobuf.Empty);
+    rpc ListWarehouses(ListWarehousesRequest) returns (ListWarehousesResponse);
+
+    rpc CreateStorageBin(CreateStorageBinRequest) returns (CreateStorageBinResponse);
+    rpc GetStorageBin(GetStorageBinRequest) returns (GetStorageBinResponse);
+    rpc UpdateStorageBin(UpdateStorageBinRequest) returns (UpdateStorageBinResponse);
+    rpc ListStorageBins(ListStorageBinsRequest) returns (ListStorageBinsResponse);
+    rpc GetBinStock(GetBinStockRequest) returns (GetBinStockResponse);
+
+    rpc CreateInboundDelivery(CreateInboundDeliveryRequest) returns (CreateInboundDeliveryResponse);
+    rpc GetInboundDelivery(GetInboundDeliveryRequest) returns (GetInboundDeliveryResponse);
+    rpc ReceiveInboundDelivery(ReceiveInboundDeliveryRequest) returns (ReceiveInboundDeliveryResponse);
+    rpc PutawayInboundDelivery(PutawayInboundDeliveryRequest) returns (PutawayInboundDeliveryResponse);
+    rpc ListInboundDeliveries(ListInboundDeliveriesRequest) returns (ListInboundDeliveriesResponse);
+
+    rpc CreateOutboundDelivery(CreateOutboundDeliveryRequest) returns (CreateOutboundDeliveryResponse);
+    rpc GetOutboundDelivery(GetOutboundDeliveryRequest) returns (GetOutboundDeliveryResponse);
+    rpc CreatePickingWave(CreatePickingWaveRequest) returns (CreatePickingWaveResponse);
+    rpc ConfirmPicking(ConfirmPickingRequest) returns (ConfirmPickingResponse);
+    rpc PackOutboundDelivery(PackOutboundDeliveryRequest) returns (PackOutboundDeliveryResponse);
+    rpc ShipOutboundDelivery(ShipOutboundDeliveryRequest) returns (ShipOutboundDeliveryResponse);
+    rpc ListOutboundDeliveries(ListOutboundDeliveriesRequest) returns (ListOutboundDeliveriesResponse);
+
+    rpc CreateWarehouseTask(CreateWarehouseTaskRequest) returns (CreateWarehouseTaskResponse);
+    rpc GetWarehouseTask(GetWarehouseTaskRequest) returns (GetWarehouseTaskResponse);
+    rpc ConfirmWarehouseTask(ConfirmWarehouseTaskRequest) returns (ConfirmWarehouseTaskResponse);
+    rpc CancelWarehouseTask(CancelWarehouseTaskRequest) returns (CancelWarehouseTaskResponse);
+    rpc ListWarehouseTasks(ListWarehouseTasksRequest) returns (ListWarehouseTasksResponse);
+
+    rpc GetWarehouseUtilization(GetWarehouseUtilizationRequest) returns (GetWarehouseUtilizationResponse);
+    rpc GetWarehouseDashboard(GetWarehouseDashboardRequest) returns (GetWarehouseDashboardResponse);
+}
+
+message Warehouse {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string plant = 5;
+    common.v1.Address address = 6;
+    WarehouseType type = 7;
+    repeated StorageType storage_types = 8;
+    int32 total_bins = 9;
+    double total_capacity = 10;
+    string capacity_unit = 11;
+    common.v1.Status status = 12;
+    string manager_id = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+enum WarehouseType {
+    WAREHOUSE_TYPE_UNSPECIFIED = 0;
+    WAREHOUSE_TYPE_STANDARD = 1;
+    WAREHOUSE_TYPE_COLD_STORAGE = 2;
+    WAREHOUSE_TYPE_HAZMAT = 3;
+    WAREHOUSE_TYPE_BONDED = 4;
+    WAREHOUSE_TYPE_CROSS_DOCK = 5;
+}
+
+message StorageType {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string warehouse_id = 5;
+    StorageStrategy putaway_strategy = 6;
+    StorageStrategy picking_strategy = 7;
+    bool mixed_storage = 8;
+    bool addition_to_stock = 9;
+    int32 capacity_check = 10;
+    common.v1.AuditInfo audit_info = 11;
+}
+
+enum StorageStrategy {
+    STORAGE_STRATEGY_UNSPECIFIED = 0;
+    STORAGE_STRATEGY_FIXED = 1;
+    STORAGE_STRATEGY_RANDOM = 2;
+    STORAGE_STRATEGY_FIFO = 3;
+    STORAGE_STRATEGY_LIFO = 4;
+    STORAGE_STRATEGY_FEFO = 5;
+    STORAGE_STRATEGY_NEAREST = 6;
+}
+
+message StorageBin {
+    string id = 1;
+    string bin_code = 2;
+    string warehouse_id = 3;
+    string storage_type_id = 4;
+    string aisle = 5;
+    string rack = 6;
+    string level = 7;
+    string position = 8;
+    double max_weight = 9;
+    double max_volume = 10;
+    double current_weight = 11;
+    double current_volume = 12;
+    string weight_unit = 13;
+    string volume_unit = 14;
+    BinStatus status = 15;
+    bool blocked_for_putaway = 16;
+    bool blocked_for_picking = 17;
+    string block_reason = 18;
+    common.v1.AuditInfo audit_info = 19;
+}
+
+enum BinStatus {
+    BIN_STATUS_UNSPECIFIED = 0;
+    BIN_STATUS_EMPTY = 1;
+    BIN_STATUS_PARTIALLY_FILLED = 2;
+    BIN_STATUS_FULL = 3;
+    BIN_STATUS_BLOCKED = 4;
+}
+
+message InboundDelivery {
+    string id = 1;
+    string delivery_number = 2;
+    string warehouse_id = 3;
+    string vendor_id = 4;
+    string vendor_name = 5;
+    string purchase_order_id = 6;
+    string purchase_order_number = 7;
+    google.protobuf.Timestamp expected_date = 8;
+    google.protobuf.Timestamp received_date = 9;
+    string carrier = 10;
+    string tracking_number = 11;
+    string door = 12;
+    repeated InboundDeliveryItem items = 13;
+    InboundDeliveryStatus status = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+message InboundDeliveryItem {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    common.v1.Quantity expected_quantity = 6;
+    common.v1.Quantity received_quantity = 7;
+    common.v1.Quantity putaway_quantity = 8;
+    string unit = 9;
+    string batch_number = 10;
+    string serial_number = 11;
+    string target_bin = 12;
+    InboundItemStatus status = 13;
+}
+
+enum InboundDeliveryStatus {
+    INBOUND_DELIVERY_STATUS_UNSPECIFIED = 0;
+    INBOUND_DELIVERY_STATUS_EXPECTED = 1;
+    INBOUND_DELIVERY_STATUS_ARRIVED = 2;
+    INBOUND_DELIVERY_STATUS_RECEIVING = 3;
+    INBOUND_DELIVERY_STATUS_RECEIVED = 4;
+    INBOUND_DELIVERY_STATUS_PUTAWAY_IN_PROGRESS = 5;
+    INBOUND_DELIVERY_STATUS_COMPLETED = 6;
+    INBOUND_DELIVERY_STATUS_CANCELLED = 7;
+}
+
+enum InboundItemStatus {
+    INBOUND_ITEM_STATUS_UNSPECIFIED = 0;
+    INBOUND_ITEM_STATUS_EXPECTED = 1;
+    INBOUND_ITEM_STATUS_RECEIVED = 2;
+    INBOUND_ITEM_STATUS_PUTAWAY = 3;
+    INBOUND_ITEM_STATUS_COMPLETED = 4;
+}
+
+message OutboundDelivery {
+    string id = 1;
+    string delivery_number = 2;
+    string warehouse_id = 3;
+    string customer_id = 4;
+    string customer_name = 5;
+    string sales_order_id = 6;
+    string sales_order_number = 7;
+    google.protobuf.Timestamp requested_date = 8;
+    google.protobuf.Timestamp shipped_date = 9;
+    string carrier = 10;
+    string tracking_number = 11;
+    string door = 12;
+    common.v1.Address shipping_address = 13;
+    repeated OutboundDeliveryItem items = 14;
+    OutboundDeliveryStatus status = 15;
+    string picking_wave_id = 16;
+    common.v1.AuditInfo audit_info = 17;
+}
+
+message OutboundDeliveryItem {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    common.v1.Quantity requested_quantity = 6;
+    common.v1.Quantity picked_quantity = 7;
+    common.v1.Quantity packed_quantity = 8;
+    common.v1.Quantity shipped_quantity = 9;
+    string unit = 10;
+    string batch_number = 11;
+    string serial_number = 12;
+    string source_bin = 13;
+    OutboundItemStatus status = 14;
+}
+
+enum OutboundDeliveryStatus {
+    OUTBOUND_DELIVERY_STATUS_UNSPECIFIED = 0;
+    OUTBOUND_DELIVERY_STATUS_CREATED = 1;
+    OUTBOUND_DELIVERY_STATUS_RELEASED = 2;
+    OUTBOUND_DELIVERY_STATUS_PICKING = 3;
+    OUTBOUND_DELIVERY_STATUS_PICKED = 4;
+    OUTBOUND_DELIVERY_STATUS_PACKING = 5;
+    OUTBOUND_DELIVERY_STATUS_PACKED = 6;
+    OUTBOUND_DELIVERY_STATUS_SHIPPED = 7;
+    OUTBOUND_DELIVERY_STATUS_CANCELLED = 8;
+}
+
+enum OutboundItemStatus {
+    OUTBOUND_ITEM_STATUS_UNSPECIFIED = 0;
+    OUTBOUND_ITEM_STATUS_OPEN = 1;
+    OUTBOUND_ITEM_STATUS_PICKING = 2;
+    OUTBOUND_ITEM_STATUS_PICKED = 3;
+    OUTBOUND_ITEM_STATUS_PACKED = 4;
+    OUTBOUND_ITEM_STATUS_SHIPPED = 5;
+}
+
+message PickingWave {
+    string id = 1;
+    string wave_number = 2;
+    string warehouse_id = 3;
+    google.protobuf.Timestamp created_at = 4;
+    google.protobuf.Timestamp started_at = 5;
+    google.protobuf.Timestamp completed_at = 6;
+    repeated string delivery_ids = 7;
+    int32 total_lines = 8;
+    int32 picked_lines = 9;
+    PickingWaveStatus status = 10;
+    string assigned_to = 11;
+    common.v1.AuditInfo audit_info = 12;
+}
+
+enum PickingWaveStatus {
+    PICKING_WAVE_STATUS_UNSPECIFIED = 0;
+    PICKING_WAVE_STATUS_CREATED = 1;
+    PICKING_WAVE_STATUS_RELEASED = 2;
+    PICKING_WAVE_STATUS_IN_PROGRESS = 3;
+    PICKING_WAVE_STATUS_COMPLETED = 4;
+    PICKING_WAVE_STATUS_CANCELLED = 5;
+}
+
+message WarehouseTask {
+    string id = 1;
+    string task_number = 2;
+    string warehouse_id = 3;
+    WarehouseTaskType type = 4;
+    string product_id = 5;
+    string product_code = 6;
+    common.v1.Quantity quantity = 7;
+    string unit = 8;
+    string source_bin = 9;
+    string destination_bin = 10;
+    string batch_number = 11;
+    string serial_number = 12;
+    string reference_document = 13;
+    string reference_type = 14;
+    WarehouseTaskStatus status = 15;
+    int32 priority = 16;
+    string assigned_to = 17;
+    google.protobuf.Timestamp created_at = 18;
+    google.protobuf.Timestamp started_at = 19;
+    google.protobuf.Timestamp completed_at = 20;
+    common.v1.AuditInfo audit_info = 21;
+}
+
+enum WarehouseTaskType {
+    WAREHOUSE_TASK_TYPE_UNSPECIFIED = 0;
+    WAREHOUSE_TASK_TYPE_PUTAWAY = 1;
+    WAREHOUSE_TASK_TYPE_PICKING = 2;
+    WAREHOUSE_TASK_TYPE_REPLENISHMENT = 3;
+    WAREHOUSE_TASK_TYPE_INTERNAL_MOVE = 4;
+    WAREHOUSE_TASK_TYPE_CYCLE_COUNT = 5;
+}
+
+enum WarehouseTaskStatus {
+    WAREHOUSE_TASK_STATUS_UNSPECIFIED = 0;
+    WAREHOUSE_TASK_STATUS_OPEN = 1;
+    WAREHOUSE_TASK_STATUS_IN_PROGRESS = 2;
+    WAREHOUSE_TASK_STATUS_CONFIRMED = 3;
+    WAREHOUSE_TASK_STATUS_CANCELLED = 4;
+}
+
+message WarehouseDashboard {
+    string warehouse_id = 1;
+    string warehouse_name = 2;
+    google.protobuf.Timestamp timestamp = 3;
+    WarehouseUtilization utilization = 4;
+    InboundSummary inbound = 5;
+    OutboundSummary outbound = 6;
+    TaskSummary tasks = 7;
+    repeated Alert alerts = 8;
+}
+
+message WarehouseUtilization {
+    int32 total_bins = 1;
+    int32 occupied_bins = 2;
+    int32 empty_bins = 3;
+    double utilization_percentage = 4;
+    double total_capacity = 5;
+    double used_capacity = 6;
+    string capacity_unit = 7;
+}
+
+message InboundSummary {
+    int32 expected_today = 1;
+    int32 received_today = 2;
+    int32 pending_putaway = 3;
+    int32 overdue = 4;
+}
+
+message OutboundSummary {
+    int32 due_today = 1;
+    int32 shipped_today = 2;
+    int32 pending_picking = 3;
+    int32 pending_packing = 4;
+    int32 overdue = 5;
+}
+
+message TaskSummary {
+    int32 open_tasks = 1;
+    int32 in_progress = 2;
+    int32 completed_today = 3;
+    double average_completion_time = 4;
+}
+
+message Alert {
+    string id = 1;
+    string type = 2;
+    string severity = 3;
+    string message = 4;
+    google.protobuf.Timestamp timestamp = 5;
+}
+
+message CreateWarehouseRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string plant = 4;
+    common.v1.Address address = 5;
+    WarehouseType type = 6;
+    double total_capacity = 7;
+    string capacity_unit = 8;
+    string manager_id = 9;
+}
+
+message GetWarehouseRequest {
+    string id = 1;
+}
+
+message UpdateWarehouseRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    common.v1.Address address = 4;
+    string manager_id = 5;
+    common.v1.Status status = 6;
+}
+
+message DeleteWarehouseRequest {
+    string id = 1;
+}
+
+message ListWarehousesRequest {
+    string plant = 1;
+    WarehouseType type = 2;
+    common.v1.Status status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListWarehousesResponse {
+    repeated Warehouse warehouses = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateStorageBinRequest {
+    string warehouse_id = 1;
+    string storage_type_id = 2;
+    string bin_code = 3;
+    string aisle = 4;
+    string rack = 5;
+    string level = 6;
+    string position = 7;
+    double max_weight = 8;
+    double max_volume = 9;
+    string weight_unit = 10;
+    string volume_unit = 11;
+}
+
+message GetStorageBinRequest {
+    string id = 1;
+}
+
+message UpdateStorageBinRequest {
+    string id = 1;
+    double max_weight = 2;
+    double max_volume = 3;
+    bool blocked_for_putaway = 4;
+    bool blocked_for_picking = 5;
+    string block_reason = 6;
+    BinStatus status = 7;
+}
+
+message ListStorageBinsRequest {
+    string warehouse_id = 1;
+    string storage_type_id = 2;
+    BinStatus status = 3;
+    string aisle = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListStorageBinsResponse {
+    repeated StorageBin bins = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetBinStockRequest {
+    string bin_id = 1;
+}
+
+message GetBinStockResponse {
+    StorageBin bin = 1;
+    repeated BinStockItem items = 2;
+}
+
+message BinStockItem {
+    string product_id = 1;
+    string product_code = 2;
+    string product_name = 3;
+    common.v1.Quantity quantity = 4;
+    string unit = 5;
+    string batch_number = 6;
+    google.protobuf.Timestamp receipt_date = 7;
+}
+
+message CreateInboundDeliveryRequest {
+    string warehouse_id = 1;
+    string vendor_id = 2;
+    string purchase_order_id = 3;
+    google.protobuf.Timestamp expected_date = 4;
+    string carrier = 5;
+    string tracking_number = 6;
+    repeated InboundDeliveryItemInput items = 7;
+}
+
+message InboundDeliveryItemInput {
+    string product_id = 1;
+    common.v1.Quantity expected_quantity = 2;
+    string unit = 3;
+    string batch_number = 4;
+}
+
+message GetInboundDeliveryRequest {
+    string id = 1;
+}
+
+message ReceiveInboundDeliveryRequest {
+    string id = 1;
+    string door = 2;
+    repeated ReceiveItemInput items = 3;
+}
+
+message ReceiveItemInput {
+    string item_id = 1;
+    common.v1.Quantity received_quantity = 2;
+    string batch_number = 3;
+    string serial_number = 4;
+}
+
+message PutawayInboundDeliveryRequest {
+    string id = 1;
+    repeated PutawayItemInput items = 2;
+}
+
+message PutawayItemInput {
+    string item_id = 1;
+    string target_bin = 2;
+    common.v1.Quantity quantity = 3;
+}
+
+message ListInboundDeliveriesRequest {
+    string warehouse_id = 1;
+    string vendor_id = 2;
+    InboundDeliveryStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListInboundDeliveriesResponse {
+    repeated InboundDelivery deliveries = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateOutboundDeliveryRequest {
+    string warehouse_id = 1;
+    string customer_id = 2;
+    string sales_order_id = 3;
+    google.protobuf.Timestamp requested_date = 4;
+    string carrier = 5;
+    common.v1.Address shipping_address = 6;
+    repeated OutboundDeliveryItemInput items = 7;
+}
+
+message OutboundDeliveryItemInput {
+    string product_id = 1;
+    common.v1.Quantity requested_quantity = 2;
+    string unit = 3;
+    string batch_number = 4;
+}
+
+message GetOutboundDeliveryRequest {
+    string id = 1;
+}
+
+message CreatePickingWaveRequest {
+    string warehouse_id = 1;
+    repeated string delivery_ids = 2;
+    string assigned_to = 3;
+}
+
+message ConfirmPickingRequest {
+    string delivery_id = 1;
+    repeated PickConfirmationInput items = 2;
+}
+
+message PickConfirmationInput {
+    string item_id = 1;
+    common.v1.Quantity picked_quantity = 2;
+    string source_bin = 3;
+    string batch_number = 4;
+    string serial_number = 5;
+}
+
+message PackOutboundDeliveryRequest {
+    string id = 1;
+    repeated PackingInput packages = 2;
+}
+
+message PackingInput {
+    string package_id = 1;
+    string package_type = 2;
+    repeated PackingItemInput items = 3;
+    double weight = 4;
+    string weight_unit = 5;
+}
+
+message PackingItemInput {
+    string item_id = 1;
+    common.v1.Quantity quantity = 2;
+}
+
+message ShipOutboundDeliveryRequest {
+    string id = 1;
+    string carrier = 2;
+    string tracking_number = 3;
+    string door = 4;
+}
+
+message ListOutboundDeliveriesRequest {
+    string warehouse_id = 1;
+    string customer_id = 2;
+    OutboundDeliveryStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListOutboundDeliveriesResponse {
+    repeated OutboundDelivery deliveries = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateWarehouseTaskRequest {
+    string warehouse_id = 1;
+    WarehouseTaskType type = 2;
+    string product_id = 3;
+    common.v1.Quantity quantity = 4;
+    string unit = 5;
+    string source_bin = 6;
+    string destination_bin = 7;
+    string batch_number = 8;
+    string reference_document = 9;
+    string reference_type = 10;
+    int32 priority = 11;
+    string assigned_to = 12;
+}
+
+message GetWarehouseTaskRequest {
+    string id = 1;
+}
+
+message ConfirmWarehouseTaskRequest {
+    string id = 1;
+    common.v1.Quantity confirmed_quantity = 2;
+    string destination_bin = 3;
+}
+
+message CancelWarehouseTaskRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message ListWarehouseTasksRequest {
+    string warehouse_id = 1;
+    WarehouseTaskType type = 2;
+    WarehouseTaskStatus status = 3;
+    string assigned_to = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListWarehouseTasksResponse {
+    repeated WarehouseTask tasks = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetWarehouseUtilizationRequest {
+    string warehouse_id = 1;
+}
+
+message GetWarehouseUtilizationResponse {
+    WarehouseUtilization utilization = 1;
+    repeated StorageTypeUtilization by_storage_type = 2;
+    repeated AisleUtilization by_aisle = 3;
+}
+
+message StorageTypeUtilization {
+    string storage_type_id = 1;
+    string storage_type_name = 2;
+    int32 total_bins = 3;
+    int32 occupied_bins = 4;
+    double utilization_percentage = 5;
+}
+
+message AisleUtilization {
+    string aisle = 1;
+    int32 total_bins = 2;
+    int32 occupied_bins = 3;
+    double utilization_percentage = 4;
+}
+
+message GetWarehouseDashboardRequest {
+    string warehouse_id = 1;
+}
+
+// Auto-generated Response messages
+message CreateWarehouseResponse {
+    Warehouse warehouse = 1;
+}
+
+message GetWarehouseResponse {
+    Warehouse warehouse = 1;
+}
+
+message UpdateWarehouseResponse {
+    Warehouse warehouse = 1;
+}
+
+message CreateStorageBinResponse {
+    StorageBin storage_bin = 1;
+}
+
+message GetStorageBinResponse {
+    StorageBin storage_bin = 1;
+}
+
+message UpdateStorageBinResponse {
+    StorageBin storage_bin = 1;
+}
+
+message CreateInboundDeliveryResponse {
+    InboundDelivery inbound_delivery = 1;
+}
+
+message GetInboundDeliveryResponse {
+    InboundDelivery inbound_delivery = 1;
+}
+
+message ReceiveInboundDeliveryResponse {
+    InboundDelivery inbound_delivery = 1;
+}
+
+message PutawayInboundDeliveryResponse {
+    InboundDelivery inbound_delivery = 1;
+}
+
+message CreateOutboundDeliveryResponse {
+    OutboundDelivery outbound_delivery = 1;
+}
+
+message GetOutboundDeliveryResponse {
+    OutboundDelivery outbound_delivery = 1;
+}
+
+message CreatePickingWaveResponse {
+    PickingWave picking_wave = 1;
+}
+
+message ConfirmPickingResponse {
+    OutboundDelivery outbound_delivery = 1;
+}
+
+message PackOutboundDeliveryResponse {
+    OutboundDelivery outbound_delivery = 1;
+}
+
+message ShipOutboundDeliveryResponse {
+    OutboundDelivery outbound_delivery = 1;
+}
+
+message CreateWarehouseTaskResponse {
+    WarehouseTask warehouse_task = 1;
+}
+
+message GetWarehouseTaskResponse {
+    WarehouseTask warehouse_task = 1;
+}
+
+message ConfirmWarehouseTaskResponse {
+    WarehouseTask warehouse_task = 1;
+}
+
+message CancelWarehouseTaskResponse {
+    WarehouseTask warehouse_task = 1;
+}
+
+message GetWarehouseDashboardResponse {
+    WarehouseDashboard warehouse_dashboard = 1;
+}

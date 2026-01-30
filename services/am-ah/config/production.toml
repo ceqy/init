@@ -1,0 +1,8 @@
+# Production environment overrides
+app_env = "production"
+
+[database]
+max_connections = 100
+
+[telemetry]
+log_level = "info"

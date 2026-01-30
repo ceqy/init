@@ -1,0 +1,672 @@
+syntax = "proto3";
+
+package am.pm.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service PreventiveMaintenanceService {
+    rpc CreateMaintenancePlan(CreateMaintenancePlanRequest) returns (CreateMaintenancePlanResponse);
+    rpc GetMaintenancePlan(GetMaintenancePlanRequest) returns (GetMaintenancePlanResponse);
+    rpc UpdateMaintenancePlan(UpdateMaintenancePlanRequest) returns (UpdateMaintenancePlanResponse);
+    rpc DeleteMaintenancePlan(DeleteMaintenancePlanRequest) returns (google.protobuf.Empty);
+    rpc ListMaintenancePlans(ListMaintenancePlansRequest) returns (ListMaintenancePlansResponse);
+
+    rpc ActivateMaintenancePlan(ActivateMaintenancePlanRequest) returns (ActivateMaintenancePlanResponse);
+    rpc DeactivateMaintenancePlan(DeactivateMaintenancePlanRequest) returns (DeactivateMaintenancePlanResponse);
+
+    rpc CreateWorkOrder(CreateWorkOrderRequest) returns (CreateWorkOrderResponse);
+    rpc GetWorkOrder(GetWorkOrderRequest) returns (GetWorkOrderResponse);
+    rpc UpdateWorkOrder(UpdateWorkOrderRequest) returns (UpdateWorkOrderResponse);
+    rpc ListWorkOrders(ListWorkOrdersRequest) returns (ListWorkOrdersResponse);
+
+    rpc ReleaseWorkOrder(ReleaseWorkOrderRequest) returns (ReleaseWorkOrderResponse);
+    rpc StartWorkOrder(StartWorkOrderRequest) returns (StartWorkOrderResponse);
+    rpc CompleteWorkOrder(CompleteWorkOrderRequest) returns (CompleteWorkOrderResponse);
+    rpc CloseWorkOrder(CloseWorkOrderRequest) returns (CloseWorkOrderResponse);
+    rpc CancelWorkOrder(CancelWorkOrderRequest) returns (CancelWorkOrderResponse);
+
+    rpc AddWorkOrderTask(AddWorkOrderTaskRequest) returns (AddWorkOrderTaskResponse);
+    rpc UpdateWorkOrderTask(UpdateWorkOrderTaskRequest) returns (UpdateWorkOrderTaskResponse);
+    rpc CompleteWorkOrderTask(CompleteWorkOrderTaskRequest) returns (CompleteWorkOrderTaskResponse);
+
+    rpc AddWorkOrderPart(AddWorkOrderPartRequest) returns (AddWorkOrderPartResponse);
+    rpc IssueWorkOrderPart(IssueWorkOrderPartRequest) returns (IssueWorkOrderPartResponse);
+    rpc ReturnWorkOrderPart(ReturnWorkOrderPartRequest) returns (ReturnWorkOrderPartResponse);
+
+    rpc RecordLabor(RecordLaborRequest) returns (RecordLaborResponse);
+    rpc GetLaborEntries(GetLaborEntriesRequest) returns (GetLaborEntriesResponse);
+
+    rpc GenerateScheduledWorkOrders(GenerateScheduledWorkOrdersRequest) returns (GenerateScheduledWorkOrdersResponse);
+    rpc GetMaintenanceSchedule(GetMaintenanceScheduleRequest) returns (GetMaintenanceScheduleResponse);
+    rpc GetMaintenanceBacklog(GetMaintenanceBacklogRequest) returns (GetMaintenanceBacklogResponse);
+
+    rpc GetMaintenanceKPIs(GetMaintenanceKPIsRequest) returns (GetMaintenanceKPIsResponse);
+}
+
+message MaintenancePlan {
+    string id = 1;
+    string plan_number = 2;
+    string name = 3;
+    string description = 4;
+    string asset_id = 5;
+    string asset_number = 6;
+    string asset_name = 7;
+    MaintenancePlanType type = 8;
+    MaintenancePriority priority = 9;
+    ScheduleType schedule_type = 10;
+    ScheduleDefinition schedule = 11;
+    repeated MaintenanceTask tasks = 12;
+    repeated PlannedPart parts = 13;
+    double estimated_duration_hours = 14;
+    common.v1.Money estimated_cost = 15;
+    string work_center = 16;
+    string craft = 17;
+    MaintenancePlanStatus status = 18;
+    google.protobuf.Timestamp last_execution = 19;
+    google.protobuf.Timestamp next_due = 20;
+    int32 execution_count = 21;
+    common.v1.AuditInfo audit_info = 22;
+}
+
+enum MaintenancePlanType {
+    MAINTENANCE_PLAN_TYPE_UNSPECIFIED = 0;
+    MAINTENANCE_PLAN_TYPE_PREVENTIVE = 1;
+    MAINTENANCE_PLAN_TYPE_PREDICTIVE = 2;
+    MAINTENANCE_PLAN_TYPE_CONDITION_BASED = 3;
+    MAINTENANCE_PLAN_TYPE_INSPECTION = 4;
+    MAINTENANCE_PLAN_TYPE_CALIBRATION = 5;
+}
+
+enum MaintenancePriority {
+    MAINTENANCE_PRIORITY_UNSPECIFIED = 0;
+    MAINTENANCE_PRIORITY_EMERGENCY = 1;
+    MAINTENANCE_PRIORITY_URGENT = 2;
+    MAINTENANCE_PRIORITY_HIGH = 3;
+    MAINTENANCE_PRIORITY_MEDIUM = 4;
+    MAINTENANCE_PRIORITY_LOW = 5;
+}
+
+enum ScheduleType {
+    SCHEDULE_TYPE_UNSPECIFIED = 0;
+    SCHEDULE_TYPE_TIME_BASED = 1;
+    SCHEDULE_TYPE_METER_BASED = 2;
+    SCHEDULE_TYPE_CONDITION_BASED = 3;
+    SCHEDULE_TYPE_EVENT_BASED = 4;
+}
+
+message ScheduleDefinition {
+    int32 frequency_value = 1;
+    string frequency_unit = 2;
+    string meter_id = 3;
+    double meter_interval = 4;
+    string condition_parameter = 5;
+    string condition_operator = 6;
+    double condition_threshold = 7;
+    int32 lead_time_days = 8;
+    bool generate_ahead = 9;
+    int32 generate_ahead_days = 10;
+}
+
+message MaintenanceTask {
+    string id = 1;
+    int32 sequence = 2;
+    string description = 3;
+    string instructions = 4;
+    double estimated_hours = 5;
+    string craft = 6;
+    bool requires_shutdown = 7;
+    bool safety_critical = 8;
+    repeated string required_tools = 9;
+    repeated string required_permits = 10;
+}
+
+message PlannedPart {
+    string id = 1;
+    string product_id = 2;
+    string product_code = 3;
+    string product_name = 4;
+    common.v1.Quantity quantity = 5;
+    string unit = 6;
+    common.v1.Money estimated_cost = 7;
+}
+
+enum MaintenancePlanStatus {
+    MAINTENANCE_PLAN_STATUS_UNSPECIFIED = 0;
+    MAINTENANCE_PLAN_STATUS_DRAFT = 1;
+    MAINTENANCE_PLAN_STATUS_ACTIVE = 2;
+    MAINTENANCE_PLAN_STATUS_INACTIVE = 3;
+    MAINTENANCE_PLAN_STATUS_SUSPENDED = 4;
+}
+
+message WorkOrder {
+    string id = 1;
+    string work_order_number = 2;
+    string description = 3;
+    string asset_id = 4;
+    string asset_number = 5;
+    string asset_name = 6;
+    string location_id = 7;
+    string location_name = 8;
+    WorkOrderType type = 9;
+    MaintenancePriority priority = 10;
+    string maintenance_plan_id = 11;
+    google.protobuf.Timestamp scheduled_start = 12;
+    google.protobuf.Timestamp scheduled_end = 13;
+    google.protobuf.Timestamp actual_start = 14;
+    google.protobuf.Timestamp actual_end = 15;
+    double estimated_hours = 16;
+    double actual_hours = 17;
+    common.v1.Money estimated_cost = 18;
+    common.v1.Money actual_cost = 19;
+    repeated WorkOrderTask tasks = 20;
+    repeated WorkOrderPart parts = 21;
+    repeated LaborEntry labor = 22;
+    WorkOrderStatus status = 23;
+    string assigned_to = 24;
+    string assigned_team = 25;
+    string failure_id = 26;
+    string parent_work_order_id = 27;
+    string completion_notes = 28;
+    repeated common.v1.Attachment attachments = 29;
+    common.v1.AuditInfo audit_info = 30;
+}
+
+enum WorkOrderType {
+    WORK_ORDER_TYPE_UNSPECIFIED = 0;
+    WORK_ORDER_TYPE_PREVENTIVE = 1;
+    WORK_ORDER_TYPE_CORRECTIVE = 2;
+    WORK_ORDER_TYPE_EMERGENCY = 3;
+    WORK_ORDER_TYPE_PREDICTIVE = 4;
+    WORK_ORDER_TYPE_INSPECTION = 5;
+    WORK_ORDER_TYPE_PROJECT = 6;
+}
+
+enum WorkOrderStatus {
+    WORK_ORDER_STATUS_UNSPECIFIED = 0;
+    WORK_ORDER_STATUS_DRAFT = 1;
+    WORK_ORDER_STATUS_PLANNED = 2;
+    WORK_ORDER_STATUS_RELEASED = 3;
+    WORK_ORDER_STATUS_IN_PROGRESS = 4;
+    WORK_ORDER_STATUS_ON_HOLD = 5;
+    WORK_ORDER_STATUS_COMPLETED = 6;
+    WORK_ORDER_STATUS_CLOSED = 7;
+    WORK_ORDER_STATUS_CANCELLED = 8;
+}
+
+message WorkOrderTask {
+    string id = 1;
+    string work_order_id = 2;
+    int32 sequence = 3;
+    string description = 4;
+    string instructions = 5;
+    double estimated_hours = 6;
+    double actual_hours = 7;
+    string assigned_to = 8;
+    WorkOrderTaskStatus status = 9;
+    google.protobuf.Timestamp started_at = 10;
+    google.protobuf.Timestamp completed_at = 11;
+    string completion_notes = 12;
+    repeated MeasurementReading measurements = 13;
+}
+
+enum WorkOrderTaskStatus {
+    WORK_ORDER_TASK_STATUS_UNSPECIFIED = 0;
+    WORK_ORDER_TASK_STATUS_PENDING = 1;
+    WORK_ORDER_TASK_STATUS_IN_PROGRESS = 2;
+    WORK_ORDER_TASK_STATUS_COMPLETED = 3;
+    WORK_ORDER_TASK_STATUS_SKIPPED = 4;
+}
+
+message MeasurementReading {
+    string parameter = 1;
+    double value = 2;
+    string unit = 3;
+    double lower_limit = 4;
+    double upper_limit = 5;
+    bool within_spec = 6;
+}
+
+message WorkOrderPart {
+    string id = 1;
+    string work_order_id = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    common.v1.Quantity planned_quantity = 6;
+    common.v1.Quantity issued_quantity = 7;
+    common.v1.Quantity returned_quantity = 8;
+    common.v1.Quantity used_quantity = 9;
+    string unit = 10;
+    common.v1.Money unit_cost = 11;
+    common.v1.Money total_cost = 12;
+    string storage_location = 13;
+    string reservation_id = 14;
+    WorkOrderPartStatus status = 15;
+}
+
+enum WorkOrderPartStatus {
+    WORK_ORDER_PART_STATUS_UNSPECIFIED = 0;
+    WORK_ORDER_PART_STATUS_PLANNED = 1;
+    WORK_ORDER_PART_STATUS_RESERVED = 2;
+    WORK_ORDER_PART_STATUS_ISSUED = 3;
+    WORK_ORDER_PART_STATUS_RETURNED = 4;
+}
+
+message LaborEntry {
+    string id = 1;
+    string work_order_id = 2;
+    string task_id = 3;
+    string employee_id = 4;
+    string employee_name = 5;
+    string craft = 6;
+    google.protobuf.Timestamp start_time = 7;
+    google.protobuf.Timestamp end_time = 8;
+    double regular_hours = 9;
+    double overtime_hours = 10;
+    double total_hours = 11;
+    common.v1.Money hourly_rate = 12;
+    common.v1.Money total_cost = 13;
+    string notes = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+message MaintenanceKPIs {
+    common.v1.DateRange period = 1;
+    int32 total_work_orders = 2;
+    int32 completed_work_orders = 3;
+    int32 overdue_work_orders = 4;
+    double completion_rate = 5;
+    double on_time_completion_rate = 6;
+    double pm_compliance = 7;
+    double schedule_compliance = 8;
+    double wrench_time = 9;
+    common.v1.Money total_maintenance_cost = 10;
+    common.v1.Money labor_cost = 11;
+    common.v1.Money parts_cost = 12;
+    double cost_per_asset = 13;
+    double mtbf = 14;
+    double mttr = 15;
+    int32 backlog_hours = 16;
+}
+
+message CreateMaintenancePlanRequest {
+    string name = 1;
+    string description = 2;
+    string asset_id = 3;
+    MaintenancePlanType type = 4;
+    MaintenancePriority priority = 5;
+    ScheduleType schedule_type = 6;
+    ScheduleDefinition schedule = 7;
+    repeated MaintenanceTaskInput tasks = 8;
+    repeated PlannedPartInput parts = 9;
+    double estimated_duration_hours = 10;
+    string work_center = 11;
+    string craft = 12;
+}
+
+message MaintenanceTaskInput {
+    int32 sequence = 1;
+    string description = 2;
+    string instructions = 3;
+    double estimated_hours = 4;
+    string craft = 5;
+    bool requires_shutdown = 6;
+    bool safety_critical = 7;
+    repeated string required_tools = 8;
+}
+
+message PlannedPartInput {
+    string product_id = 1;
+    common.v1.Quantity quantity = 2;
+}
+
+message GetMaintenancePlanRequest {
+    string id = 1;
+}
+
+message UpdateMaintenancePlanRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    MaintenancePriority priority = 4;
+    ScheduleDefinition schedule = 5;
+    repeated MaintenanceTaskInput tasks = 6;
+    repeated PlannedPartInput parts = 7;
+    double estimated_duration_hours = 8;
+}
+
+message DeleteMaintenancePlanRequest {
+    string id = 1;
+}
+
+message ListMaintenancePlansRequest {
+    string asset_id = 1;
+    MaintenancePlanType type = 2;
+    MaintenancePlanStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListMaintenancePlansResponse {
+    repeated MaintenancePlan plans = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ActivateMaintenancePlanRequest {
+    string id = 1;
+    google.protobuf.Timestamp start_date = 2;
+}
+
+message DeactivateMaintenancePlanRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message CreateWorkOrderRequest {
+    string description = 1;
+    string asset_id = 2;
+    WorkOrderType type = 3;
+    MaintenancePriority priority = 4;
+    string maintenance_plan_id = 5;
+    google.protobuf.Timestamp scheduled_start = 6;
+    google.protobuf.Timestamp scheduled_end = 7;
+    double estimated_hours = 8;
+    string assigned_to = 9;
+    string assigned_team = 10;
+    string failure_id = 11;
+    repeated WorkOrderTaskInput tasks = 12;
+    repeated WorkOrderPartInput parts = 13;
+}
+
+message WorkOrderTaskInput {
+    int32 sequence = 1;
+    string description = 2;
+    string instructions = 3;
+    double estimated_hours = 4;
+    string assigned_to = 5;
+}
+
+message WorkOrderPartInput {
+    string product_id = 1;
+    common.v1.Quantity quantity = 2;
+    string storage_location = 3;
+}
+
+message GetWorkOrderRequest {
+    string id = 1;
+}
+
+message UpdateWorkOrderRequest {
+    string id = 1;
+    string description = 2;
+    MaintenancePriority priority = 3;
+    google.protobuf.Timestamp scheduled_start = 4;
+    google.protobuf.Timestamp scheduled_end = 5;
+    string assigned_to = 6;
+    string assigned_team = 7;
+}
+
+message ListWorkOrdersRequest {
+    string asset_id = 1;
+    string location_id = 2;
+    WorkOrderType type = 3;
+    WorkOrderStatus status = 4;
+    MaintenancePriority priority = 5;
+    string assigned_to = 6;
+    common.v1.DateRange date_range = 7;
+    common.v1.Pagination pagination = 8;
+}
+
+message ListWorkOrdersResponse {
+    repeated WorkOrder work_orders = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ReleaseWorkOrderRequest {
+    string id = 1;
+}
+
+message StartWorkOrderRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_start = 2;
+}
+
+message CompleteWorkOrderRequest {
+    string id = 1;
+    google.protobuf.Timestamp actual_end = 2;
+    string completion_notes = 3;
+}
+
+message CloseWorkOrderRequest {
+    string id = 1;
+}
+
+message CancelWorkOrderRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message AddWorkOrderTaskRequest {
+    string work_order_id = 1;
+    WorkOrderTaskInput task = 2;
+}
+
+message UpdateWorkOrderTaskRequest {
+    string id = 1;
+    string description = 2;
+    string instructions = 3;
+    double estimated_hours = 4;
+    string assigned_to = 5;
+}
+
+message CompleteWorkOrderTaskRequest {
+    string id = 1;
+    double actual_hours = 2;
+    string completion_notes = 3;
+    repeated MeasurementReading measurements = 4;
+}
+
+message AddWorkOrderPartRequest {
+    string work_order_id = 1;
+    WorkOrderPartInput part = 2;
+}
+
+message IssueWorkOrderPartRequest {
+    string id = 1;
+    common.v1.Quantity quantity = 2;
+    string storage_location = 3;
+}
+
+message ReturnWorkOrderPartRequest {
+    string id = 1;
+    common.v1.Quantity quantity = 2;
+    string storage_location = 3;
+    string reason = 4;
+}
+
+message RecordLaborRequest {
+    string work_order_id = 1;
+    string task_id = 2;
+    string employee_id = 3;
+    string craft = 4;
+    google.protobuf.Timestamp start_time = 5;
+    google.protobuf.Timestamp end_time = 6;
+    string notes = 7;
+}
+
+message GetLaborEntriesRequest {
+    string work_order_id = 1;
+    string employee_id = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message GetLaborEntriesResponse {
+    repeated LaborEntry entries = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GenerateScheduledWorkOrdersRequest {
+    string asset_id = 1;
+    string maintenance_plan_id = 2;
+    google.protobuf.Timestamp through_date = 3;
+}
+
+message GenerateScheduledWorkOrdersResponse {
+    repeated WorkOrder work_orders = 1;
+    int32 generated_count = 2;
+}
+
+message GetMaintenanceScheduleRequest {
+    string asset_id = 1;
+    string location_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetMaintenanceScheduleResponse {
+    repeated ScheduledMaintenance schedule = 1;
+}
+
+message ScheduledMaintenance {
+    string id = 1;
+    string type = 2;
+    string asset_id = 3;
+    string asset_number = 4;
+    string asset_name = 5;
+    string description = 6;
+    google.protobuf.Timestamp scheduled_date = 7;
+    double estimated_hours = 8;
+    MaintenancePriority priority = 9;
+    string assigned_to = 10;
+    string status = 11;
+}
+
+message GetMaintenanceBacklogRequest {
+    string asset_id = 1;
+    string location_id = 2;
+    string assigned_to = 3;
+}
+
+message GetMaintenanceBacklogResponse {
+    repeated WorkOrder backlog = 1;
+    int32 total_count = 2;
+    double total_hours = 3;
+    common.v1.Money total_estimated_cost = 4;
+    repeated BacklogByPriority by_priority = 5;
+    repeated BacklogByAge by_age = 6;
+}
+
+message BacklogByPriority {
+    MaintenancePriority priority = 1;
+    string priority_name = 2;
+    int32 count = 3;
+    double hours = 4;
+}
+
+message BacklogByAge {
+    string age_bucket = 1;
+    int32 count = 2;
+    double hours = 3;
+}
+
+message GetMaintenanceKPIsRequest {
+    string asset_id = 1;
+    string location_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetMaintenanceKPIsResponse {
+    MaintenanceKPIs kpis = 1;
+    repeated KPITrend trend = 2;
+}
+
+message KPITrend {
+    string period = 1;
+    double pm_compliance = 2;
+    double on_time_completion = 3;
+    common.v1.Money maintenance_cost = 4;
+    double mtbf = 5;
+}
+
+// Auto-generated Response messages
+message CreateMaintenancePlanResponse {
+    MaintenancePlan maintenance_plan = 1;
+}
+
+message GetMaintenancePlanResponse {
+    MaintenancePlan maintenance_plan = 1;
+}
+
+message UpdateMaintenancePlanResponse {
+    MaintenancePlan maintenance_plan = 1;
+}
+
+message ActivateMaintenancePlanResponse {
+    MaintenancePlan maintenance_plan = 1;
+}
+
+message DeactivateMaintenancePlanResponse {
+    MaintenancePlan maintenance_plan = 1;
+}
+
+message CreateWorkOrderResponse {
+    WorkOrder work_order = 1;
+}
+
+message GetWorkOrderResponse {
+    WorkOrder work_order = 1;
+}
+
+message UpdateWorkOrderResponse {
+    WorkOrder work_order = 1;
+}
+
+message ReleaseWorkOrderResponse {
+    WorkOrder work_order = 1;
+}
+
+message StartWorkOrderResponse {
+    WorkOrder work_order = 1;
+}
+
+message CompleteWorkOrderResponse {
+    WorkOrder work_order = 1;
+}
+
+message CloseWorkOrderResponse {
+    WorkOrder work_order = 1;
+}
+
+message CancelWorkOrderResponse {
+    WorkOrder work_order = 1;
+}
+
+message AddWorkOrderTaskResponse {
+    WorkOrderTask work_order_task = 1;
+}
+
+message UpdateWorkOrderTaskResponse {
+    WorkOrderTask work_order_task = 1;
+}
+
+message CompleteWorkOrderTaskResponse {
+    WorkOrderTask work_order_task = 1;
+}
+
+message AddWorkOrderPartResponse {
+    WorkOrderPart work_order_part = 1;
+}
+
+message IssueWorkOrderPartResponse {
+    WorkOrderPart work_order_part = 1;
+}
+
+message ReturnWorkOrderPartResponse {
+    WorkOrderPart work_order_part = 1;
+}
+
+message RecordLaborResponse {
+    LaborEntry labor_entry = 1;
+}

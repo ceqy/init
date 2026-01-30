@@ -1,0 +1,405 @@
+syntax = "proto3";
+
+package sys.job.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+// ============================================================================
+// 定时任务服务
+// ============================================================================
+service JobService {
+    // 任务管理
+    rpc CreateJob(CreateJobRequest) returns (CreateJobResponse);
+    rpc GetJob(GetJobRequest) returns (GetJobResponse);
+    rpc UpdateJob(UpdateJobRequest) returns (UpdateJobResponse);
+    rpc DeleteJob(DeleteJobRequest) returns (google.protobuf.Empty);
+    rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+
+    // 任务控制
+    rpc EnableJob(EnableJobRequest) returns (google.protobuf.Empty);
+    rpc DisableJob(DisableJobRequest) returns (google.protobuf.Empty);
+    rpc TriggerJob(TriggerJobRequest) returns (TriggerJobResponse);
+    rpc PauseJob(PauseJobRequest) returns (google.protobuf.Empty);
+    rpc ResumeJob(ResumeJobRequest) returns (google.protobuf.Empty);
+
+    // 任务执行历史
+    rpc GetJobExecution(GetJobExecutionRequest) returns (GetJobExecutionResponse);
+    rpc ListJobExecutions(ListJobExecutionsRequest) returns (ListJobExecutionsResponse);
+    rpc GetJobExecutionLog(GetJobExecutionLogRequest) returns (GetJobExecutionLogResponse);
+
+    // 任务统计
+    rpc GetJobStatistics(GetJobStatisticsRequest) returns (GetJobStatisticsResponse);
+
+    // 任务分组
+    rpc CreateJobGroup(CreateJobGroupRequest) returns (CreateJobGroupResponse);
+    rpc GetJobGroup(GetJobGroupRequest) returns (GetJobGroupResponse);
+    rpc UpdateJobGroup(UpdateJobGroupRequest) returns (UpdateJobGroupResponse);
+    rpc ListJobGroups(ListJobGroupsRequest) returns (ListJobGroupsResponse);
+}
+
+// ============================================================================
+// 核心实体
+// ============================================================================
+
+// 定时任务
+message Job {
+    string id = 1;                              // 任务ID (UUID)
+    string code = 2;                            // 任务编码 (唯一)
+    string name = 3;                            // 任务名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+    string description = 5;                     // 描述
+
+    // 分组
+    string group_id = 6;                        // 任务组ID
+    string group_code = 7;                      // 任务组编码
+
+    // 任务类型
+    JobType job_type = 8;                       // 任务类型
+    string handler = 9;                         // 处理器 (类名或函数名)
+    map<string, string> parameters = 10;        // 任务参数
+
+    // 调度配置
+    ScheduleType schedule_type = 11;            // 调度类型
+    string cron_expression = 12;                // Cron表达式 (如: 0 0 * * * ?)
+    int32 interval_seconds = 13;                // 间隔秒数 (固定间隔)
+    google.protobuf.Timestamp start_time = 14;  // 开始时间
+    google.protobuf.Timestamp end_time = 15;    // 结束时间
+
+    // 执行配置
+    int32 timeout_seconds = 16;                 // 超时时间 (秒)
+    int32 max_retry_count = 17;                 // 最大重试次数
+    int32 retry_interval_seconds = 18;          // 重试间隔 (秒)
+    MisfirePolicy misfire_policy = 19;          // 错过执行策略
+
+    // 并发控制
+    bool allow_concurrent = 20;                 // 是否允许并发执行
+
+    // 状态
+    JobStatus status = 21;                      // 任务状态
+    bool is_enabled = 22;                       // 是否启用
+
+    // 最后执行
+    google.protobuf.Timestamp last_execution_time = 23; // 最后执行时间
+    JobExecutionStatus last_execution_status = 24;      // 最后执行状态
+    google.protobuf.Timestamp next_execution_time = 25; // 下次执行时间
+
+    // 审计
+    common.v1.AuditInfo audit_info = 26;
+}
+
+// 任务执行记录
+message JobExecution {
+    string id = 1;                              // 执行ID (UUID)
+    string job_id = 2;                          // 任务ID
+    string job_code = 3;                        // 任务编码
+    string job_name = 4;                        // 任务名称
+
+    // 执行信息
+    google.protobuf.Timestamp start_time = 5;   // 开始时间
+    google.protobuf.Timestamp end_time = 6;     // 结束时间
+    int32 duration_ms = 7;                      // 执行时长 (毫秒)
+
+    // 状态
+    JobExecutionStatus status = 8;              // 执行状态
+    string result_message = 9;                  // 结果消息
+    string error_message = 10;                  // 错误消息
+    string error_stack_trace = 11;              // 错误堆栈
+
+    // 触发方式
+    TriggerType trigger_type = 12;              // 触发类型
+    string triggered_by = 13;                   // 触发人
+
+    // 重试
+    int32 retry_count = 14;                     // 重试次数
+
+    // 执行节点
+    string executor_node = 15;                  // 执行节点
+
+    // 审计
+    common.v1.AuditInfo audit_info = 16;
+}
+
+// 任务组
+message JobGroup {
+    string id = 1;                              // 任务组ID
+    string code = 2;                            // 任务组编码
+    string name = 3;                            // 任务组名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+    string description = 5;                     // 描述
+    int32 sort_order = 6;                       // 排序
+    common.v1.AuditInfo audit_info = 7;
+}
+
+// 任务统计
+message JobStatistics {
+    string job_id = 1;                          // 任务ID
+    int32 total_executions = 2;                 // 总执行次数
+    int32 success_count = 3;                    // 成功次数
+    int32 failure_count = 4;                    // 失败次数
+    int32 running_count = 5;                    // 运行中次数
+    double success_rate = 6;                    // 成功率 (%)
+    int32 avg_duration_ms = 7;                  // 平均执行时长 (毫秒)
+    int32 max_duration_ms = 8;                  // 最大执行时长 (毫秒)
+    int32 min_duration_ms = 9;                  // 最小执行时长 (毫秒)
+    google.protobuf.Timestamp last_success_time = 10; // 最后成功时间
+    google.protobuf.Timestamp last_failure_time = 11; // 最后失败时间
+}
+
+// ============================================================================
+// 枚举
+// ============================================================================
+
+enum JobType {
+    JOB_TYPE_UNSPECIFIED = 0;
+    JOB_TYPE_SYSTEM = 1;                        // 系统任务
+    JOB_TYPE_BUSINESS = 2;                      // 业务任务
+    JOB_TYPE_DATA_SYNC = 3;                     // 数据同步
+    JOB_TYPE_REPORT = 4;                        // 报表生成
+    JOB_TYPE_CLEANUP = 5;                       // 数据清理
+    JOB_TYPE_NOTIFICATION = 6;                  // 通知发送
+}
+
+enum ScheduleType {
+    SCHEDULE_TYPE_UNSPECIFIED = 0;
+    SCHEDULE_TYPE_CRON = 1;                     // Cron表达式
+    SCHEDULE_TYPE_FIXED_RATE = 2;               // 固定频率
+    SCHEDULE_TYPE_FIXED_DELAY = 3;              // 固定延迟
+    SCHEDULE_TYPE_ONE_TIME = 4;                 // 一次性
+}
+
+enum MisfirePolicy {
+    MISFIRE_POLICY_UNSPECIFIED = 0;
+    MISFIRE_POLICY_DO_NOTHING = 1;              // 不处理
+    MISFIRE_POLICY_FIRE_ONCE_NOW = 2;           // 立即执行一次
+    MISFIRE_POLICY_FIRE_ALL_MISSED = 3;         // 执行所有错过的
+}
+
+enum JobStatus {
+    JOB_STATUS_UNSPECIFIED = 0;
+    JOB_STATUS_NORMAL = 1;                      // 正常
+    JOB_STATUS_PAUSED = 2;                      // 暂停
+    JOB_STATUS_BLOCKED = 3;                     // 阻塞
+    JOB_STATUS_ERROR = 4;                       // 错误
+}
+
+enum JobExecutionStatus {
+    JOB_EXECUTION_STATUS_UNSPECIFIED = 0;
+    JOB_EXECUTION_STATUS_RUNNING = 1;           // 运行中
+    JOB_EXECUTION_STATUS_SUCCESS = 2;           // 成功
+    JOB_EXECUTION_STATUS_FAILURE = 3;           // 失败
+    JOB_EXECUTION_STATUS_TIMEOUT = 4;           // 超时
+    JOB_EXECUTION_STATUS_CANCELLED = 5;         // 已取消
+}
+
+enum TriggerType {
+    TRIGGER_TYPE_UNSPECIFIED = 0;
+    TRIGGER_TYPE_SCHEDULED = 1;                 // 定时触发
+    TRIGGER_TYPE_MANUAL = 2;                    // 手动触发
+    TRIGGER_TYPE_API = 3;                       // API触发
+    TRIGGER_TYPE_DEPENDENCY = 4;                // 依赖触发
+}
+
+// ============================================================================
+// 请求/响应消息 - 任务管理
+// ============================================================================
+
+message CreateJobRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string description = 4;
+    string group_id = 5;
+    JobType job_type = 6;
+    string handler = 7;
+    map<string, string> parameters = 8;
+    ScheduleType schedule_type = 9;
+    string cron_expression = 10;
+    int32 interval_seconds = 11;
+    google.protobuf.Timestamp start_time = 12;
+    google.protobuf.Timestamp end_time = 13;
+    int32 timeout_seconds = 14;
+    int32 max_retry_count = 15;
+    int32 retry_interval_seconds = 16;
+    MisfirePolicy misfire_policy = 17;
+    bool allow_concurrent = 18;
+}
+
+message CreateJobResponse {
+    Job job = 1;
+}
+
+message GetJobRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetJobResponse {
+    Job job = 1;
+}
+
+message UpdateJobRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string description = 4;
+    string handler = 5;
+    map<string, string> parameters = 6;
+    ScheduleType schedule_type = 7;
+    string cron_expression = 8;
+    int32 interval_seconds = 9;
+    google.protobuf.Timestamp start_time = 10;
+    google.protobuf.Timestamp end_time = 11;
+    int32 timeout_seconds = 12;
+    int32 max_retry_count = 13;
+    int32 retry_interval_seconds = 14;
+    MisfirePolicy misfire_policy = 15;
+    bool allow_concurrent = 16;
+}
+
+message UpdateJobResponse {
+    Job job = 1;
+}
+
+message DeleteJobRequest {
+    string id = 1;
+}
+
+message ListJobsRequest {
+    string group_id = 1;
+    JobType job_type = 2;
+    JobStatus status = 3;
+    bool is_enabled = 4;
+    string search_term = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListJobsResponse {
+    repeated Job jobs = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 任务控制
+// ============================================================================
+
+message EnableJobRequest {
+    string id = 1;
+}
+
+message DisableJobRequest {
+    string id = 1;
+}
+
+message TriggerJobRequest {
+    string id = 1;
+    map<string, string> parameters = 2;         // 可选,覆盖默认参数
+}
+
+message TriggerJobResponse {
+    string execution_id = 1;                    // 执行ID
+}
+
+message PauseJobRequest {
+    string id = 1;
+}
+
+message ResumeJobRequest {
+    string id = 1;
+}
+
+// ============================================================================
+// 请求/响应消息 - 任务执行历史
+// ============================================================================
+
+message GetJobExecutionRequest {
+    string id = 1;
+}
+
+message GetJobExecutionResponse {
+    JobExecution execution = 1;
+}
+
+message ListJobExecutionsRequest {
+    string job_id = 1;
+    JobExecutionStatus status = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListJobExecutionsResponse {
+    repeated JobExecution executions = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetJobExecutionLogRequest {
+    string execution_id = 1;
+}
+
+message GetJobExecutionLogResponse {
+    string log_content = 1;                     // 日志内容
+}
+
+// ============================================================================
+// 请求/响应消息 - 任务统计
+// ============================================================================
+
+message GetJobStatisticsRequest {
+    string job_id = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetJobStatisticsResponse {
+    JobStatistics statistics = 1;
+}
+
+// ============================================================================
+// 请求/响应消息 - 任务分组
+// ============================================================================
+
+message CreateJobGroupRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string description = 4;
+    int32 sort_order = 5;
+}
+
+message CreateJobGroupResponse {
+    JobGroup job_group = 1;
+}
+
+message GetJobGroupRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetJobGroupResponse {
+    JobGroup job_group = 1;
+}
+
+message UpdateJobGroupRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string description = 4;
+    int32 sort_order = 5;
+}
+
+message UpdateJobGroupResponse {
+    JobGroup job_group = 1;
+}
+
+message ListJobGroupsRequest {
+    common.v1.Pagination pagination = 1;
+}
+
+message ListJobGroupsResponse {
+    repeated JobGroup job_groups = 1;
+    common.v1.PaginationResponse pagination = 2;
+}

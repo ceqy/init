@@ -1,0 +1,12 @@
+app_name = "org-enterprise"
+app_env = "production"
+
+[database]
+max_connections = 50
+
+[server]
+host = "0.0.0.0"
+port = 50160
+
+[telemetry]
+log_level = "info"

@@ -1,0 +1,301 @@
+syntax = "proto3";
+
+package iam.rbac.v1;
+
+option go_package = "github.com/cuba-erp/api/iam/rbac/v1";
+
+import "google/protobuf/timestamp.proto";
+
+// ============ RBAC 服务 ============
+
+service RBACService {
+  // ===== 角色管理 =====
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
+  rpc GetRole(GetRoleRequest) returns (GetRoleResponse);
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+
+  // ===== 权限管理 =====
+  rpc CreatePermission(CreatePermissionRequest) returns (CreatePermissionResponse);
+  rpc UpdatePermission(UpdatePermissionRequest) returns (UpdatePermissionResponse);
+  rpc DeletePermission(DeletePermissionRequest) returns (DeletePermissionResponse);
+  rpc GetPermission(GetPermissionRequest) returns (GetPermissionResponse);
+  rpc ListPermissions(ListPermissionsRequest) returns (ListPermissionsResponse);
+
+  // ===== 角色权限关联 =====
+  rpc AssignPermissionsToRole(AssignPermissionsToRoleRequest) returns (AssignPermissionsToRoleResponse);
+  rpc RemovePermissionsFromRole(RemovePermissionsFromRoleRequest) returns (RemovePermissionsFromRoleResponse);
+  rpc GetRolePermissions(GetRolePermissionsRequest) returns (GetRolePermissionsResponse);
+
+  // ===== 用户角色关联 =====
+  rpc AssignRolesToUser(AssignRolesToUserRequest) returns (AssignRolesToUserResponse);
+  rpc RemoveRolesFromUser(RemoveRolesFromUserRequest) returns (RemoveRolesFromUserResponse);
+  rpc GetUserRoles(GetUserRolesRequest) returns (GetUserRolesResponse);
+  rpc GetUserPermissions(GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
+
+  // ===== 权限检查 =====
+  rpc CheckPermission(CheckPermissionRequest) returns (CheckPermissionResponse);
+  rpc CheckPermissions(CheckPermissionsRequest) returns (CheckPermissionsResponse);
+
+  // ===== 数据导入导出 (流式) =====
+  rpc ExportRoles(ExportRolesRequest) returns (stream ExportRolesResponse);
+  rpc ImportRoles(stream ImportRolesRequest) returns (ImportRolesResponse);
+}
+
+// ============ 角色消息 ============
+
+message CreateRoleRequest {
+  string code = 1;
+  string name = 2;
+  string description = 3;
+  string tenant_id = 4;
+  repeated string permission_ids = 5;
+}
+
+message CreateRoleResponse {
+  Role role = 1;
+}
+
+message UpdateRoleRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  bool is_active = 4;
+}
+
+message UpdateRoleResponse {
+  Role role = 1;
+}
+
+message DeleteRoleRequest {
+  string id = 1;
+}
+
+message DeleteRoleResponse {
+  bool success = 1;
+}
+
+message GetRoleRequest {
+  string id = 1;
+}
+
+message GetRoleResponse {
+  Role role = 1;
+}
+
+message ListRolesRequest {
+  string tenant_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  string search = 4;
+  string cursor = 5;  // 游标分页: 上一页最后一条记录的 ID
+}
+
+message ListRolesResponse {
+  repeated Role roles = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  string next_cursor = 5;  // 下一页游标
+}
+
+// ============ 导入导出消息 ============
+
+message ExportRolesRequest {
+  string tenant_id = 1;
+  bool include_permissions = 2;  // 是否包含权限
+}
+
+message ExportRolesResponse {
+  Role role = 1;
+}
+
+message ImportRolesRequest {
+  Role role = 1;
+  ImportMode mode = 2;
+}
+
+enum ImportMode {
+  IMPORT_MODE_UNSPECIFIED = 0;
+  IMPORT_MODE_SKIP = 1;     // 跳过已存在
+  IMPORT_MODE_OVERWRITE = 2; // 覆盖已存在
+}
+
+message ImportRolesResponse {
+  int32 imported_count = 1;
+  int32 skipped_count = 2;
+  int32 error_count = 3;
+  repeated string errors = 4;
+}
+
+// ============ 权限消息 ============
+
+message CreatePermissionRequest {
+  string code = 1;
+  string name = 2;
+  string description = 3;
+  string resource = 4;
+  string action = 5;
+  string module = 6;
+}
+
+message CreatePermissionResponse {
+  Permission permission = 1;
+}
+
+message UpdatePermissionRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  bool is_active = 4;
+}
+
+message UpdatePermissionResponse {
+  Permission permission = 1;
+}
+
+message DeletePermissionRequest {
+  string id = 1;
+}
+
+message DeletePermissionResponse {
+  bool success = 1;
+}
+
+message GetPermissionRequest {
+  string id = 1;
+}
+
+message GetPermissionResponse {
+  Permission permission = 1;
+}
+
+message ListPermissionsRequest {
+  string module = 1;
+  string resource = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListPermissionsResponse {
+  repeated Permission permissions = 1;
+  int32 total = 2;
+}
+
+// ============ 关联消息 ============
+
+message AssignPermissionsToRoleRequest {
+  string role_id = 1;
+  repeated string permission_ids = 2;
+}
+
+message AssignPermissionsToRoleResponse {
+  bool success = 1;
+}
+
+message RemovePermissionsFromRoleRequest {
+  string role_id = 1;
+  repeated string permission_ids = 2;
+}
+
+message RemovePermissionsFromRoleResponse {
+  bool success = 1;
+}
+
+message GetRolePermissionsRequest {
+  string role_id = 1;
+}
+
+message GetRolePermissionsResponse {
+  repeated Permission permissions = 1;
+}
+
+message AssignRolesToUserRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  repeated string role_ids = 3;
+}
+
+message AssignRolesToUserResponse {
+  bool success = 1;
+}
+
+message RemoveRolesFromUserRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  repeated string role_ids = 3;
+}
+
+message RemoveRolesFromUserResponse {
+  bool success = 1;
+}
+
+message GetUserRolesRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+}
+
+message GetUserRolesResponse {
+  repeated Role roles = 1;
+}
+
+message GetUserPermissionsRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+}
+
+message GetUserPermissionsResponse {
+  repeated Permission permissions = 1;
+  repeated string permission_codes = 2;
+}
+
+// ============ 权限检查消息 ============
+
+message CheckPermissionRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  string permission_code = 3;
+  string resource_id = 4;  // 可选：资源实例 ID
+}
+
+message CheckPermissionResponse {
+  bool allowed = 1;
+}
+
+message CheckPermissionsRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  repeated string permission_codes = 3;
+}
+
+message CheckPermissionsResponse {
+  map<string, bool> results = 1;
+}
+
+// ============ 实体定义 ============
+
+message Role {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  string tenant_id = 5;
+  bool is_system = 6;
+  bool is_active = 7;
+  repeated Permission permissions = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message Permission {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  string resource = 5;
+  string action = 6;
+  string module = 7;
+  bool is_active = 8;
+  google.protobuf.Timestamp created_at = 9;
+}

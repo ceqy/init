@@ -1,0 +1,354 @@
+syntax = "proto3";
+
+package fi.coa.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service ChartOfAccountsService {
+    rpc CreateAccount(CreateAccountRequest) returns (CreateAccountResponse);
+    rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+    rpc UpdateAccount(UpdateAccountRequest) returns (UpdateAccountResponse);
+    rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty);
+    rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+    rpc GetAccountHierarchy(GetAccountHierarchyRequest) returns (GetAccountHierarchyResponse);
+
+    rpc CreateAccountGroup(CreateAccountGroupRequest) returns (CreateAccountGroupResponse);
+    rpc GetAccountGroup(GetAccountGroupRequest) returns (GetAccountGroupResponse);
+    rpc UpdateAccountGroup(UpdateAccountGroupRequest) returns (UpdateAccountGroupResponse);
+    rpc DeleteAccountGroup(DeleteAccountGroupRequest) returns (google.protobuf.Empty);
+    rpc ListAccountGroups(ListAccountGroupsRequest) returns (ListAccountGroupsResponse);
+
+    rpc CreateChartOfAccounts(CreateChartOfAccountsRequest) returns (CreateChartOfAccountsResponse);
+    rpc GetChartOfAccounts(GetChartOfAccountsRequest) returns (GetChartOfAccountsResponse);
+    rpc UpdateChartOfAccounts(UpdateChartOfAccountsRequest) returns (UpdateChartOfAccountsResponse);
+    rpc ListChartsOfAccounts(ListChartsOfAccountsRequest) returns (ListChartsOfAccountsResponse);
+    rpc CopyChartOfAccounts(CopyChartOfAccountsRequest) returns (CopyChartOfAccountsResponse);
+
+    rpc AssignAccountToCompany(AssignAccountToCompanyRequest) returns (AssignAccountToCompanyResponse);
+    rpc GetCompanyAccounts(GetCompanyAccountsRequest) returns (GetCompanyAccountsResponse);
+
+    rpc ValidateAccountAssignment(ValidateAccountAssignmentRequest) returns (ValidateAccountAssignmentResponse);
+}
+
+message ChartOfAccounts {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string country = 5;
+    string language = 6;
+    int32 account_length = 7;
+    bool is_template = 8;
+    common.v1.Status status = 9;
+    common.v1.AuditInfo audit_info = 10;
+}
+
+message Account {
+    string id = 1;
+    string account_code = 2;
+    string name = 3;
+    string description = 4;
+    string chart_of_accounts_id = 5;
+    string parent_id = 6;
+    string account_group_id = 7;
+    AccountType account_type = 8;
+    AccountCategory category = 9;
+    string currency = 10;
+    bool is_reconciliation_account = 11;
+    ReconciliationType reconciliation_type = 12;
+    bool only_balances_in_local_currency = 13;
+    bool open_item_managed = 14;
+    bool line_item_display = 15;
+    bool blocked_for_posting = 16;
+    bool blocked_for_planning = 17;
+    string tax_category = 18;
+    string alternative_account = 19;
+    google.protobuf.Timestamp valid_from = 20;
+    google.protobuf.Timestamp valid_to = 21;
+    common.v1.Status status = 22;
+    common.v1.AuditInfo audit_info = 23;
+}
+
+enum AccountType {
+    ACCOUNT_TYPE_UNSPECIFIED = 0;
+    ACCOUNT_TYPE_BALANCE_SHEET = 1;
+    ACCOUNT_TYPE_PROFIT_LOSS = 2;
+}
+
+enum AccountCategory {
+    ACCOUNT_CATEGORY_UNSPECIFIED = 0;
+    ACCOUNT_CATEGORY_ASSET = 1;
+    ACCOUNT_CATEGORY_LIABILITY = 2;
+    ACCOUNT_CATEGORY_EQUITY = 3;
+    ACCOUNT_CATEGORY_REVENUE = 4;
+    ACCOUNT_CATEGORY_EXPENSE = 5;
+}
+
+enum ReconciliationType {
+    RECONCILIATION_TYPE_UNSPECIFIED = 0;
+    RECONCILIATION_TYPE_CUSTOMER = 1;
+    RECONCILIATION_TYPE_VENDOR = 2;
+    RECONCILIATION_TYPE_ASSET = 3;
+}
+
+message AccountGroup {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string chart_of_accounts_id = 5;
+    string parent_id = 6;
+    string from_account = 7;
+    string to_account = 8;
+    AccountType account_type = 9;
+    common.v1.AuditInfo audit_info = 10;
+}
+
+message CompanyAccount {
+    string id = 1;
+    string company_code = 2;
+    string account_id = 3;
+    string account_code = 4;
+    string alternative_account = 5;
+    string field_status_group = 6;
+    bool post_automatically_only = 7;
+    string sort_key = 8;
+    string authorization_group = 9;
+    common.v1.Status status = 10;
+    common.v1.AuditInfo audit_info = 11;
+}
+
+message AccountNode {
+    Account account = 1;
+    repeated AccountNode children = 2;
+}
+
+message CreateAccountRequest {
+    string account_code = 1;
+    string name = 2;
+    string description = 3;
+    string chart_of_accounts_id = 4;
+    string parent_id = 5;
+    string account_group_id = 6;
+    AccountType account_type = 7;
+    AccountCategory category = 8;
+    string currency = 9;
+    bool is_reconciliation_account = 10;
+    ReconciliationType reconciliation_type = 11;
+    bool only_balances_in_local_currency = 12;
+    bool open_item_managed = 13;
+    bool line_item_display = 14;
+    string tax_category = 15;
+    google.protobuf.Timestamp valid_from = 16;
+    google.protobuf.Timestamp valid_to = 17;
+}
+
+message GetAccountRequest {
+    string id = 1;
+}
+
+message UpdateAccountRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string account_group_id = 4;
+    string currency = 5;
+    bool blocked_for_posting = 6;
+    bool blocked_for_planning = 7;
+    string tax_category = 8;
+    google.protobuf.Timestamp valid_to = 9;
+    common.v1.Status status = 10;
+}
+
+message DeleteAccountRequest {
+    string id = 1;
+}
+
+message ListAccountsRequest {
+    string chart_of_accounts_id = 1;
+    string account_group_id = 2;
+    AccountType account_type = 3;
+    AccountCategory category = 4;
+    string search = 5;
+    common.v1.Status status = 6;
+    common.v1.Pagination pagination = 7;
+}
+
+message ListAccountsResponse {
+    repeated Account accounts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetAccountHierarchyRequest {
+    string chart_of_accounts_id = 1;
+    string root_account_id = 2;
+    int32 max_depth = 3;
+}
+
+message GetAccountHierarchyResponse {
+    repeated AccountNode nodes = 1;
+}
+
+message CreateAccountGroupRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string chart_of_accounts_id = 4;
+    string parent_id = 5;
+    string from_account = 6;
+    string to_account = 7;
+    AccountType account_type = 8;
+}
+
+message GetAccountGroupRequest {
+    string id = 1;
+}
+
+message UpdateAccountGroupRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string from_account = 4;
+    string to_account = 5;
+}
+
+message DeleteAccountGroupRequest {
+    string id = 1;
+}
+
+message ListAccountGroupsRequest {
+    string chart_of_accounts_id = 1;
+    string parent_id = 2;
+    AccountType account_type = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListAccountGroupsResponse {
+    repeated AccountGroup groups = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateChartOfAccountsRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string country = 4;
+    string language = 5;
+    int32 account_length = 6;
+    bool is_template = 7;
+}
+
+message GetChartOfAccountsRequest {
+    string id = 1;
+}
+
+message UpdateChartOfAccountsRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    common.v1.Status status = 4;
+}
+
+message ListChartsOfAccountsRequest {
+    string country = 1;
+    bool is_template = 2;
+    common.v1.Status status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListChartsOfAccountsResponse {
+    repeated ChartOfAccounts charts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CopyChartOfAccountsRequest {
+    string source_id = 1;
+    string new_code = 2;
+    string new_name = 3;
+    bool include_accounts = 4;
+    bool include_account_groups = 5;
+}
+
+message AssignAccountToCompanyRequest {
+    string company_code = 1;
+    string account_id = 2;
+    string alternative_account = 3;
+    string field_status_group = 4;
+    bool post_automatically_only = 5;
+    string sort_key = 6;
+    string authorization_group = 7;
+}
+
+message GetCompanyAccountsRequest {
+    string company_code = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message GetCompanyAccountsResponse {
+    repeated CompanyAccount accounts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ValidateAccountAssignmentRequest {
+    string company_code = 1;
+    string account_code = 2;
+    string posting_key = 3;
+    string cost_center = 4;
+    string profit_center = 5;
+}
+
+message ValidateAccountAssignmentResponse {
+    bool valid = 1;
+    repeated string required_fields = 2;
+    repeated string optional_fields = 3;
+    repeated string suppressed_fields = 4;
+    repeated common.v1.ErrorDetail errors = 5;
+}
+
+// Auto-generated Response messages
+message CreateAccountResponse {
+    Account account = 1;
+}
+
+message GetAccountResponse {
+    Account account = 1;
+}
+
+message UpdateAccountResponse {
+    Account account = 1;
+}
+
+message CreateAccountGroupResponse {
+    AccountGroup account_group = 1;
+}
+
+message GetAccountGroupResponse {
+    AccountGroup account_group = 1;
+}
+
+message UpdateAccountGroupResponse {
+    AccountGroup account_group = 1;
+}
+
+message CreateChartOfAccountsResponse {
+    ChartOfAccounts chart_of_accounts = 1;
+}
+
+message GetChartOfAccountsResponse {
+    ChartOfAccounts chart_of_accounts = 1;
+}
+
+message UpdateChartOfAccountsResponse {
+    ChartOfAccounts chart_of_accounts = 1;
+}
+
+message CopyChartOfAccountsResponse {
+    ChartOfAccounts chart_of_accounts = 1;
+}
+
+message AssignAccountToCompanyResponse {
+    CompanyAccount company_account = 1;
+}

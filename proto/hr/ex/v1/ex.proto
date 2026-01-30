@@ -1,0 +1,514 @@
+syntax = "proto3";
+
+package hr.ex.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service ExpenseService {
+    rpc CreateExpenseReport(CreateExpenseReportRequest) returns (CreateExpenseReportResponse);
+    rpc GetExpenseReport(GetExpenseReportRequest) returns (GetExpenseReportResponse);
+    rpc UpdateExpenseReport(UpdateExpenseReportRequest) returns (UpdateExpenseReportResponse);
+    rpc DeleteExpenseReport(DeleteExpenseReportRequest) returns (google.protobuf.Empty);
+    rpc ListExpenseReports(ListExpenseReportsRequest) returns (ListExpenseReportsResponse);
+
+    rpc SubmitExpenseReport(SubmitExpenseReportRequest) returns (SubmitExpenseReportResponse);
+    rpc ApproveExpenseReport(ApproveExpenseReportRequest) returns (ApproveExpenseReportResponse);
+    rpc RejectExpenseReport(RejectExpenseReportRequest) returns (RejectExpenseReportResponse);
+    rpc ProcessExpenseReport(ProcessExpenseReportRequest) returns (ProcessExpenseReportResponse);
+
+    rpc AddExpenseItem(AddExpenseItemRequest) returns (AddExpenseItemResponse);
+    rpc UpdateExpenseItem(UpdateExpenseItemRequest) returns (UpdateExpenseItemResponse);
+    rpc DeleteExpenseItem(DeleteExpenseItemRequest) returns (google.protobuf.Empty);
+
+    rpc CreateExpensePolicy(CreateExpensePolicyRequest) returns (CreateExpensePolicyResponse);
+    rpc GetExpensePolicy(GetExpensePolicyRequest) returns (GetExpensePolicyResponse);
+    rpc UpdateExpensePolicy(UpdateExpensePolicyRequest) returns (UpdateExpensePolicyResponse);
+    rpc ListExpensePolicies(ListExpensePoliciesRequest) returns (ListExpensePoliciesResponse);
+
+    rpc ValidateExpense(ValidateExpenseRequest) returns (ValidateExpenseResponse);
+
+    rpc CreateAdvanceRequest(CreateAdvanceRequestRequest) returns (CreateAdvanceRequestResponse);
+    rpc GetAdvanceRequest(GetAdvanceRequestRequest) returns (GetAdvanceRequestResponse);
+    rpc ApproveAdvanceRequest(ApproveAdvanceRequestRequest) returns (ApproveAdvanceRequestResponse);
+    rpc ListAdvanceRequests(ListAdvanceRequestsRequest) returns (ListAdvanceRequestsResponse);
+
+    rpc GetExpenseAnalytics(GetExpenseAnalyticsRequest) returns (GetExpenseAnalyticsResponse);
+    rpc GetExpenseByCategory(GetExpenseByCategoryRequest) returns (GetExpenseByCategoryResponse);
+}
+
+message ExpenseReport {
+    string id = 1;
+    string report_number = 2;
+    string employee_id = 3;
+    string employee_name = 4;
+    string department = 5;
+    string title = 6;
+    string description = 7;
+    string purpose = 8;
+    google.protobuf.Timestamp report_date = 9;
+    google.protobuf.Timestamp period_start = 10;
+    google.protobuf.Timestamp period_end = 11;
+    string currency = 12;
+    common.v1.Money total_amount = 13;
+    common.v1.Money approved_amount = 14;
+    common.v1.Money reimbursed_amount = 15;
+    common.v1.Money advance_amount = 16;
+    common.v1.Money balance_due = 17;
+    repeated ExpenseItem items = 18;
+    ExpenseReportStatus status = 19;
+    string project_id = 20;
+    string cost_center = 21;
+    repeated ApprovalStep approvals = 22;
+    string rejection_reason = 23;
+    string payment_reference = 24;
+    google.protobuf.Timestamp paid_date = 25;
+    common.v1.AuditInfo audit_info = 26;
+}
+
+message ExpenseItem {
+    string id = 1;
+    string expense_report_id = 2;
+    int32 item_number = 3;
+    google.protobuf.Timestamp expense_date = 4;
+    ExpenseCategory category = 5;
+    string category_name = 6;
+    string description = 7;
+    string merchant = 8;
+    string location = 9;
+    common.v1.Money amount = 10;
+    common.v1.Money approved_amount = 11;
+    string currency = 12;
+    double exchange_rate = 13;
+    common.v1.Money local_amount = 14;
+    string payment_method = 15;
+    bool billable = 16;
+    string project_id = 17;
+    string client_id = 18;
+    repeated common.v1.Attachment receipts = 19;
+    ExpenseItemStatus status = 20;
+    string rejection_reason = 21;
+    repeated PolicyViolation violations = 22;
+    string notes = 23;
+}
+
+enum ExpenseCategory {
+    EXPENSE_CATEGORY_UNSPECIFIED = 0;
+    EXPENSE_CATEGORY_TRAVEL = 1;
+    EXPENSE_CATEGORY_ACCOMMODATION = 2;
+    EXPENSE_CATEGORY_MEALS = 3;
+    EXPENSE_CATEGORY_TRANSPORTATION = 4;
+    EXPENSE_CATEGORY_ENTERTAINMENT = 5;
+    EXPENSE_CATEGORY_OFFICE_SUPPLIES = 6;
+    EXPENSE_CATEGORY_COMMUNICATION = 7;
+    EXPENSE_CATEGORY_TRAINING = 8;
+    EXPENSE_CATEGORY_EQUIPMENT = 9;
+    EXPENSE_CATEGORY_OTHER = 10;
+}
+
+enum ExpenseReportStatus {
+    EXPENSE_REPORT_STATUS_UNSPECIFIED = 0;
+    EXPENSE_REPORT_STATUS_DRAFT = 1;
+    EXPENSE_REPORT_STATUS_SUBMITTED = 2;
+    EXPENSE_REPORT_STATUS_PENDING_APPROVAL = 3;
+    EXPENSE_REPORT_STATUS_APPROVED = 4;
+    EXPENSE_REPORT_STATUS_REJECTED = 5;
+    EXPENSE_REPORT_STATUS_PROCESSING = 6;
+    EXPENSE_REPORT_STATUS_PAID = 7;
+    EXPENSE_REPORT_STATUS_CANCELLED = 8;
+}
+
+enum ExpenseItemStatus {
+    EXPENSE_ITEM_STATUS_UNSPECIFIED = 0;
+    EXPENSE_ITEM_STATUS_PENDING = 1;
+    EXPENSE_ITEM_STATUS_APPROVED = 2;
+    EXPENSE_ITEM_STATUS_REJECTED = 3;
+    EXPENSE_ITEM_STATUS_PARTIALLY_APPROVED = 4;
+}
+
+message ApprovalStep {
+    int32 step = 1;
+    string approver_id = 2;
+    string approver_name = 3;
+    string role = 4;
+    string status = 5;
+    google.protobuf.Timestamp decision_date = 6;
+    string comments = 7;
+    common.v1.Money approved_amount = 8;
+}
+
+message PolicyViolation {
+    string policy_id = 1;
+    string policy_name = 2;
+    string violation_type = 3;
+    string description = 4;
+    string severity = 5;
+    bool requires_approval = 6;
+}
+
+message ExpensePolicy {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    ExpenseCategory category = 6;
+    common.v1.Money daily_limit = 7;
+    common.v1.Money per_item_limit = 8;
+    common.v1.Money monthly_limit = 9;
+    bool receipt_required = 10;
+    common.v1.Money receipt_threshold = 11;
+    bool pre_approval_required = 12;
+    common.v1.Money pre_approval_threshold = 13;
+    repeated string allowed_payment_methods = 14;
+    repeated string applicable_roles = 15;
+    repeated string applicable_departments = 16;
+    google.protobuf.Timestamp effective_from = 17;
+    google.protobuf.Timestamp effective_to = 18;
+    common.v1.Status status = 19;
+    common.v1.AuditInfo audit_info = 20;
+}
+
+message AdvanceRequest {
+    string id = 1;
+    string request_number = 2;
+    string employee_id = 3;
+    string employee_name = 4;
+    string department = 5;
+    string purpose = 6;
+    common.v1.Money requested_amount = 7;
+    common.v1.Money approved_amount = 8;
+    string currency = 9;
+    google.protobuf.Timestamp required_date = 10;
+    google.protobuf.Timestamp settlement_due_date = 11;
+    AdvanceRequestStatus status = 12;
+    string approver_id = 13;
+    string approver_name = 14;
+    google.protobuf.Timestamp approved_at = 15;
+    string rejection_reason = 16;
+    string payment_reference = 17;
+    google.protobuf.Timestamp paid_date = 18;
+    string expense_report_id = 19;
+    bool settled = 20;
+    google.protobuf.Timestamp settled_date = 21;
+    common.v1.AuditInfo audit_info = 22;
+}
+
+enum AdvanceRequestStatus {
+    ADVANCE_REQUEST_STATUS_UNSPECIFIED = 0;
+    ADVANCE_REQUEST_STATUS_DRAFT = 1;
+    ADVANCE_REQUEST_STATUS_SUBMITTED = 2;
+    ADVANCE_REQUEST_STATUS_APPROVED = 3;
+    ADVANCE_REQUEST_STATUS_REJECTED = 4;
+    ADVANCE_REQUEST_STATUS_PAID = 5;
+    ADVANCE_REQUEST_STATUS_SETTLED = 6;
+    ADVANCE_REQUEST_STATUS_CANCELLED = 7;
+}
+
+message CreateExpenseReportRequest {
+    string employee_id = 1;
+    string title = 2;
+    string description = 3;
+    string purpose = 4;
+    google.protobuf.Timestamp period_start = 5;
+    google.protobuf.Timestamp period_end = 6;
+    string currency = 7;
+    string project_id = 8;
+    string cost_center = 9;
+    string advance_request_id = 10;
+}
+
+message GetExpenseReportRequest {
+    string id = 1;
+}
+
+message UpdateExpenseReportRequest {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    string purpose = 4;
+    string project_id = 5;
+    string cost_center = 6;
+}
+
+message DeleteExpenseReportRequest {
+    string id = 1;
+}
+
+message ListExpenseReportsRequest {
+    string employee_id = 1;
+    string department = 2;
+    ExpenseReportStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListExpenseReportsResponse {
+    repeated ExpenseReport reports = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message SubmitExpenseReportRequest {
+    string id = 1;
+    string comments = 2;
+}
+
+message ApproveExpenseReportRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+    repeated ItemApproval item_approvals = 4;
+}
+
+message ItemApproval {
+    string item_id = 1;
+    bool approved = 2;
+    common.v1.Money approved_amount = 3;
+    string reason = 4;
+}
+
+message RejectExpenseReportRequest {
+    string id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message ProcessExpenseReportRequest {
+    string id = 1;
+    string payment_method = 2;
+    string payment_reference = 3;
+}
+
+message AddExpenseItemRequest {
+    string expense_report_id = 1;
+    google.protobuf.Timestamp expense_date = 2;
+    ExpenseCategory category = 3;
+    string description = 4;
+    string merchant = 5;
+    string location = 6;
+    common.v1.Money amount = 7;
+    string currency = 8;
+    string payment_method = 9;
+    bool billable = 10;
+    string project_id = 11;
+    string client_id = 12;
+    string notes = 13;
+}
+
+message UpdateExpenseItemRequest {
+    string id = 1;
+    google.protobuf.Timestamp expense_date = 2;
+    ExpenseCategory category = 3;
+    string description = 4;
+    string merchant = 5;
+    common.v1.Money amount = 6;
+    string notes = 7;
+}
+
+message DeleteExpenseItemRequest {
+    string id = 1;
+}
+
+message CreateExpensePolicyRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string company_code = 4;
+    ExpenseCategory category = 5;
+    common.v1.Money daily_limit = 6;
+    common.v1.Money per_item_limit = 7;
+    common.v1.Money monthly_limit = 8;
+    bool receipt_required = 9;
+    common.v1.Money receipt_threshold = 10;
+    bool pre_approval_required = 11;
+    common.v1.Money pre_approval_threshold = 12;
+    repeated string allowed_payment_methods = 13;
+    repeated string applicable_roles = 14;
+    repeated string applicable_departments = 15;
+    google.protobuf.Timestamp effective_from = 16;
+    google.protobuf.Timestamp effective_to = 17;
+}
+
+message GetExpensePolicyRequest {
+    string id = 1;
+}
+
+message UpdateExpensePolicyRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    common.v1.Money daily_limit = 4;
+    common.v1.Money per_item_limit = 5;
+    common.v1.Money monthly_limit = 6;
+    bool receipt_required = 7;
+    common.v1.Money receipt_threshold = 8;
+    google.protobuf.Timestamp effective_to = 9;
+    common.v1.Status status = 10;
+}
+
+message ListExpensePoliciesRequest {
+    string company_code = 1;
+    ExpenseCategory category = 2;
+    common.v1.Status status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListExpensePoliciesResponse {
+    repeated ExpensePolicy policies = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ValidateExpenseRequest {
+    string employee_id = 1;
+    ExpenseCategory category = 2;
+    common.v1.Money amount = 3;
+    google.protobuf.Timestamp expense_date = 4;
+    bool has_receipt = 5;
+}
+
+message ValidateExpenseResponse {
+    bool valid = 1;
+    repeated PolicyViolation violations = 2;
+    bool requires_approval = 3;
+    string approval_level = 4;
+}
+
+message CreateAdvanceRequestRequest {
+    string employee_id = 1;
+    string purpose = 2;
+    common.v1.Money requested_amount = 3;
+    string currency = 4;
+    google.protobuf.Timestamp required_date = 5;
+    google.protobuf.Timestamp settlement_due_date = 6;
+}
+
+message GetAdvanceRequestRequest {
+    string id = 1;
+}
+
+message ApproveAdvanceRequestRequest {
+    string id = 1;
+    string approver_id = 2;
+    common.v1.Money approved_amount = 3;
+    string comments = 4;
+}
+
+message ListAdvanceRequestsRequest {
+    string employee_id = 1;
+    string department = 2;
+    AdvanceRequestStatus status = 3;
+    bool unsettled_only = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListAdvanceRequestsResponse {
+    repeated AdvanceRequest requests = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetExpenseAnalyticsRequest {
+    string company_code = 1;
+    string department = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetExpenseAnalyticsResponse {
+    common.v1.Money total_expenses = 1;
+    common.v1.Money total_approved = 2;
+    common.v1.Money total_rejected = 3;
+    common.v1.Money total_pending = 4;
+    int32 report_count = 5;
+    double average_report_amount = 6;
+    double average_processing_days = 7;
+    double policy_compliance_rate = 8;
+    repeated ExpenseTrend trend = 9;
+}
+
+message ExpenseTrend {
+    string period = 1;
+    common.v1.Money amount = 2;
+    int32 report_count = 3;
+}
+
+message GetExpenseByCategoryRequest {
+    string company_code = 1;
+    string department = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetExpenseByCategoryResponse {
+    repeated CategoryExpense categories = 1;
+    common.v1.Money total = 2;
+}
+
+message CategoryExpense {
+    ExpenseCategory category = 1;
+    string category_name = 2;
+    common.v1.Money amount = 3;
+    double percentage = 4;
+    int32 item_count = 5;
+    common.v1.Money average_per_item = 6;
+}
+
+// Auto-generated Response messages
+message CreateExpenseReportResponse {
+    ExpenseReport expense_report = 1;
+}
+
+message GetExpenseReportResponse {
+    ExpenseReport expense_report = 1;
+}
+
+message UpdateExpenseReportResponse {
+    ExpenseReport expense_report = 1;
+}
+
+message SubmitExpenseReportResponse {
+    ExpenseReport expense_report = 1;
+}
+
+message ApproveExpenseReportResponse {
+    ExpenseReport expense_report = 1;
+}
+
+message RejectExpenseReportResponse {
+    ExpenseReport expense_report = 1;
+}
+
+message ProcessExpenseReportResponse {
+    ExpenseReport expense_report = 1;
+}
+
+message AddExpenseItemResponse {
+    ExpenseItem expense_item = 1;
+}
+
+message UpdateExpenseItemResponse {
+    ExpenseItem expense_item = 1;
+}
+
+message CreateExpensePolicyResponse {
+    ExpensePolicy expense_policy = 1;
+}
+
+message GetExpensePolicyResponse {
+    ExpensePolicy expense_policy = 1;
+}
+
+message UpdateExpensePolicyResponse {
+    ExpensePolicy expense_policy = 1;
+}
+
+message CreateAdvanceRequestResponse {
+    AdvanceRequest advance_request = 1;
+}
+
+message GetAdvanceRequestResponse {
+    AdvanceRequest advance_request = 1;
+}
+
+message ApproveAdvanceRequestResponse {
+    AdvanceRequest advance_request = 1;
+}

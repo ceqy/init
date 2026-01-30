@@ -1,0 +1,614 @@
+syntax = "proto3";
+
+package mf.qi.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/base.proto";
+
+service QualityInspectionService {
+    rpc CreateInspectionLot(CreateInspectionLotRequest) returns (CreateInspectionLotResponse);
+    rpc GetInspectionLot(GetInspectionLotRequest) returns (GetInspectionLotResponse);
+    rpc UpdateInspectionLot(UpdateInspectionLotRequest) returns (UpdateInspectionLotResponse);
+    rpc ListInspectionLots(ListInspectionLotsRequest) returns (ListInspectionLotsResponse);
+
+    rpc StartInspection(StartInspectionRequest) returns (StartInspectionResponse);
+    rpc RecordResults(RecordResultsRequest) returns (RecordResultsResponse);
+    rpc CompleteInspection(CompleteInspectionRequest) returns (CompleteInspectionResponse);
+    rpc MakeUsageDecision(MakeUsageDecisionRequest) returns (MakeUsageDecisionResponse);
+
+    rpc CreateInspectionPlan(CreateInspectionPlanRequest) returns (CreateInspectionPlanResponse);
+    rpc GetInspectionPlan(GetInspectionPlanRequest) returns (GetInspectionPlanResponse);
+    rpc UpdateInspectionPlan(UpdateInspectionPlanRequest) returns (UpdateInspectionPlanResponse);
+    rpc ListInspectionPlans(ListInspectionPlansRequest) returns (ListInspectionPlansResponse);
+
+    rpc CreateDefect(CreateDefectRequest) returns (CreateDefectResponse);
+    rpc GetDefect(GetDefectRequest) returns (GetDefectResponse);
+    rpc UpdateDefect(UpdateDefectRequest) returns (UpdateDefectResponse);
+    rpc ListDefects(ListDefectsRequest) returns (ListDefectsResponse);
+
+    rpc CreateNonConformance(CreateNonConformanceRequest) returns (CreateNonConformanceResponse);
+    rpc GetNonConformance(GetNonConformanceRequest) returns (GetNonConformanceResponse);
+    rpc UpdateNonConformance(UpdateNonConformanceRequest) returns (UpdateNonConformanceResponse);
+    rpc ListNonConformances(ListNonConformancesRequest) returns (ListNonConformancesResponse);
+
+    rpc GetQualityStatistics(GetQualityStatisticsRequest) returns (GetQualityStatisticsResponse);
+    rpc GetSPCChart(GetSPCChartRequest) returns (GetSPCChartResponse);
+}
+
+message InspectionLot {
+    string id = 1;
+    string lot_number = 2;
+    string plant = 3;
+    InspectionLotOrigin origin = 4;
+    string origin_document_id = 5;
+    string origin_document_number = 6;
+    string product_id = 7;
+    string product_code = 8;
+    string product_name = 9;
+    string batch_number = 10;
+    common.v1.Quantity lot_quantity = 11;
+    common.v1.Quantity sample_quantity = 12;
+    string inspection_plan_id = 13;
+    google.protobuf.Timestamp created_date = 14;
+    google.protobuf.Timestamp inspection_start = 15;
+    google.protobuf.Timestamp inspection_end = 16;
+    string inspector_id = 17;
+    string inspector_name = 18;
+    repeated InspectionCharacteristic characteristics = 19;
+    InspectionLotStatus status = 20;
+    UsageDecision usage_decision = 21;
+    string usage_decision_code = 22;
+    string quality_score = 23;
+    string notes = 24;
+    common.v1.AuditInfo audit_info = 25;
+}
+
+enum InspectionLotOrigin {
+    INSPECTION_LOT_ORIGIN_UNSPECIFIED = 0;
+    INSPECTION_LOT_ORIGIN_GOODS_RECEIPT = 1;
+    INSPECTION_LOT_ORIGIN_PRODUCTION = 2;
+    INSPECTION_LOT_ORIGIN_DELIVERY = 3;
+    INSPECTION_LOT_ORIGIN_STOCK_TRANSFER = 4;
+    INSPECTION_LOT_ORIGIN_MANUAL = 5;
+}
+
+enum InspectionLotStatus {
+    INSPECTION_LOT_STATUS_UNSPECIFIED = 0;
+    INSPECTION_LOT_STATUS_CREATED = 1;
+    INSPECTION_LOT_STATUS_IN_PROGRESS = 2;
+    INSPECTION_LOT_STATUS_RESULTS_RECORDED = 3;
+    INSPECTION_LOT_STATUS_COMPLETED = 4;
+    INSPECTION_LOT_STATUS_USAGE_DECISION_MADE = 5;
+    INSPECTION_LOT_STATUS_CANCELLED = 6;
+}
+
+enum UsageDecision {
+    USAGE_DECISION_UNSPECIFIED = 0;
+    USAGE_DECISION_ACCEPT = 1;
+    USAGE_DECISION_REJECT = 2;
+    USAGE_DECISION_CONDITIONAL_ACCEPT = 3;
+    USAGE_DECISION_REWORK = 4;
+    USAGE_DECISION_SCRAP = 5;
+}
+
+message InspectionCharacteristic {
+    string id = 1;
+    int32 sequence = 2;
+    string characteristic_code = 3;
+    string characteristic_name = 4;
+    string description = 5;
+    CharacteristicType type = 6;
+    string unit = 7;
+    double target_value = 8;
+    double lower_limit = 9;
+    double upper_limit = 10;
+    double measured_value = 11;
+    string attribute_value = 12;
+    CharacteristicResult result = 13;
+    int32 sample_size = 14;
+    int32 defects_found = 15;
+    string inspection_method = 16;
+    string equipment_id = 17;
+    google.protobuf.Timestamp inspection_time = 18;
+    string inspector_id = 19;
+    string notes = 20;
+}
+
+enum CharacteristicType {
+    CHARACTERISTIC_TYPE_UNSPECIFIED = 0;
+    CHARACTERISTIC_TYPE_QUANTITATIVE = 1;
+    CHARACTERISTIC_TYPE_QUALITATIVE = 2;
+    CHARACTERISTIC_TYPE_ATTRIBUTE = 3;
+}
+
+enum CharacteristicResult {
+    CHARACTERISTIC_RESULT_UNSPECIFIED = 0;
+    CHARACTERISTIC_RESULT_PASS = 1;
+    CHARACTERISTIC_RESULT_FAIL = 2;
+    CHARACTERISTIC_RESULT_PENDING = 3;
+}
+
+message InspectionPlan {
+    string id = 1;
+    string plan_number = 2;
+    string name = 3;
+    string description = 4;
+    string plant = 5;
+    string product_id = 6;
+    string product_code = 7;
+    InspectionPlanType type = 8;
+    SamplingProcedure sampling_procedure = 9;
+    repeated InspectionPlanCharacteristic characteristics = 10;
+    google.protobuf.Timestamp valid_from = 11;
+    google.protobuf.Timestamp valid_to = 12;
+    common.v1.Status status = 13;
+    string version = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+enum InspectionPlanType {
+    INSPECTION_PLAN_TYPE_UNSPECIFIED = 0;
+    INSPECTION_PLAN_TYPE_INCOMING = 1;
+    INSPECTION_PLAN_TYPE_IN_PROCESS = 2;
+    INSPECTION_PLAN_TYPE_FINAL = 3;
+    INSPECTION_PLAN_TYPE_PERIODIC = 4;
+}
+
+message SamplingProcedure {
+    string code = 1;
+    string name = 2;
+    SamplingType type = 3;
+    int32 sample_size = 4;
+    double sample_percentage = 5;
+    int32 acceptance_number = 6;
+    int32 rejection_number = 7;
+    string aql = 8;
+}
+
+enum SamplingType {
+    SAMPLING_TYPE_UNSPECIFIED = 0;
+    SAMPLING_TYPE_FIXED = 1;
+    SAMPLING_TYPE_PERCENTAGE = 2;
+    SAMPLING_TYPE_HUNDRED_PERCENT = 3;
+    SAMPLING_TYPE_SKIP_LOT = 4;
+}
+
+message InspectionPlanCharacteristic {
+    string id = 1;
+    int32 sequence = 2;
+    string characteristic_code = 3;
+    string characteristic_name = 4;
+    string description = 5;
+    CharacteristicType type = 6;
+    string unit = 7;
+    double target_value = 8;
+    double lower_limit = 9;
+    double upper_limit = 10;
+    bool is_critical = 11;
+    string inspection_method = 12;
+    string equipment_type = 13;
+    int32 sample_size = 14;
+}
+
+message Defect {
+    string id = 1;
+    string defect_number = 2;
+    string inspection_lot_id = 3;
+    string characteristic_id = 4;
+    string product_id = 5;
+    string product_code = 6;
+    string batch_number = 7;
+    string defect_code = 8;
+    string defect_type = 9;
+    string description = 10;
+    DefectSeverity severity = 11;
+    common.v1.Quantity quantity = 12;
+    string location = 13;
+    string root_cause = 14;
+    string corrective_action = 15;
+    DefectStatus status = 16;
+    string reported_by = 17;
+    google.protobuf.Timestamp reported_date = 18;
+    repeated common.v1.Attachment attachments = 19;
+    common.v1.AuditInfo audit_info = 20;
+}
+
+enum DefectSeverity {
+    DEFECT_SEVERITY_UNSPECIFIED = 0;
+    DEFECT_SEVERITY_CRITICAL = 1;
+    DEFECT_SEVERITY_MAJOR = 2;
+    DEFECT_SEVERITY_MINOR = 3;
+    DEFECT_SEVERITY_COSMETIC = 4;
+}
+
+enum DefectStatus {
+    DEFECT_STATUS_UNSPECIFIED = 0;
+    DEFECT_STATUS_OPEN = 1;
+    DEFECT_STATUS_IN_ANALYSIS = 2;
+    DEFECT_STATUS_CORRECTIVE_ACTION = 3;
+    DEFECT_STATUS_CLOSED = 4;
+}
+
+message NonConformance {
+    string id = 1;
+    string nc_number = 2;
+    string plant = 3;
+    string product_id = 4;
+    string product_code = 5;
+    string batch_number = 6;
+    string inspection_lot_id = 7;
+    string description = 8;
+    NonConformanceType type = 9;
+    NonConformanceSeverity severity = 10;
+    common.v1.Quantity affected_quantity = 11;
+    string root_cause = 12;
+    string immediate_action = 13;
+    string corrective_action = 14;
+    string preventive_action = 15;
+    NonConformanceStatus status = 16;
+    string responsible_person = 17;
+    google.protobuf.Timestamp due_date = 18;
+    google.protobuf.Timestamp closed_date = 19;
+    common.v1.Money cost_impact = 20;
+    repeated common.v1.Attachment attachments = 21;
+    common.v1.AuditInfo audit_info = 22;
+}
+
+enum NonConformanceType {
+    NON_CONFORMANCE_TYPE_UNSPECIFIED = 0;
+    NON_CONFORMANCE_TYPE_PRODUCT = 1;
+    NON_CONFORMANCE_TYPE_PROCESS = 2;
+    NON_CONFORMANCE_TYPE_SUPPLIER = 3;
+    NON_CONFORMANCE_TYPE_CUSTOMER = 4;
+}
+
+enum NonConformanceSeverity {
+    NON_CONFORMANCE_SEVERITY_UNSPECIFIED = 0;
+    NON_CONFORMANCE_SEVERITY_CRITICAL = 1;
+    NON_CONFORMANCE_SEVERITY_MAJOR = 2;
+    NON_CONFORMANCE_SEVERITY_MINOR = 3;
+}
+
+enum NonConformanceStatus {
+    NON_CONFORMANCE_STATUS_UNSPECIFIED = 0;
+    NON_CONFORMANCE_STATUS_OPEN = 1;
+    NON_CONFORMANCE_STATUS_UNDER_INVESTIGATION = 2;
+    NON_CONFORMANCE_STATUS_CORRECTIVE_ACTION = 3;
+    NON_CONFORMANCE_STATUS_VERIFICATION = 4;
+    NON_CONFORMANCE_STATUS_CLOSED = 5;
+}
+
+message CreateInspectionLotRequest {
+    string plant = 1;
+    InspectionLotOrigin origin = 2;
+    string origin_document_id = 3;
+    string product_id = 4;
+    string batch_number = 5;
+    common.v1.Quantity lot_quantity = 6;
+    string inspection_plan_id = 7;
+}
+
+message GetInspectionLotRequest {
+    string id = 1;
+}
+
+message UpdateInspectionLotRequest {
+    string id = 1;
+    string inspector_id = 2;
+    string notes = 3;
+}
+
+message ListInspectionLotsRequest {
+    string plant = 1;
+    string product_id = 2;
+    InspectionLotOrigin origin = 3;
+    InspectionLotStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListInspectionLotsResponse {
+    repeated InspectionLot lots = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message StartInspectionRequest {
+    string id = 1;
+    string inspector_id = 2;
+}
+
+message RecordResultsRequest {
+    string id = 1;
+    repeated CharacteristicResultInput results = 2;
+}
+
+message CharacteristicResultInput {
+    string characteristic_id = 1;
+    double measured_value = 2;
+    string attribute_value = 3;
+    int32 defects_found = 4;
+    string notes = 5;
+}
+
+message CompleteInspectionRequest {
+    string id = 1;
+    string notes = 2;
+}
+
+message MakeUsageDecisionRequest {
+    string id = 1;
+    UsageDecision decision = 2;
+    string decision_code = 3;
+    string notes = 4;
+}
+
+message CreateInspectionPlanRequest {
+    string name = 1;
+    string description = 2;
+    string plant = 3;
+    string product_id = 4;
+    InspectionPlanType type = 5;
+    SamplingProcedure sampling_procedure = 6;
+    repeated InspectionPlanCharacteristicInput characteristics = 7;
+    google.protobuf.Timestamp valid_from = 8;
+    google.protobuf.Timestamp valid_to = 9;
+}
+
+message InspectionPlanCharacteristicInput {
+    string characteristic_code = 1;
+    string characteristic_name = 2;
+    string description = 3;
+    CharacteristicType type = 4;
+    string unit = 5;
+    double target_value = 6;
+    double lower_limit = 7;
+    double upper_limit = 8;
+    bool is_critical = 9;
+    string inspection_method = 10;
+    string equipment_type = 11;
+    int32 sample_size = 12;
+}
+
+message GetInspectionPlanRequest {
+    string id = 1;
+}
+
+message UpdateInspectionPlanRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    SamplingProcedure sampling_procedure = 4;
+    repeated InspectionPlanCharacteristicInput characteristics = 5;
+    google.protobuf.Timestamp valid_to = 6;
+    common.v1.Status status = 7;
+}
+
+message ListInspectionPlansRequest {
+    string plant = 1;
+    string product_id = 2;
+    InspectionPlanType type = 3;
+    common.v1.Status status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListInspectionPlansResponse {
+    repeated InspectionPlan plans = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateDefectRequest {
+    string inspection_lot_id = 1;
+    string characteristic_id = 2;
+    string defect_code = 3;
+    string defect_type = 4;
+    string description = 5;
+    DefectSeverity severity = 6;
+    common.v1.Quantity quantity = 7;
+    string location = 8;
+}
+
+message GetDefectRequest {
+    string id = 1;
+}
+
+message UpdateDefectRequest {
+    string id = 1;
+    string root_cause = 2;
+    string corrective_action = 3;
+    DefectStatus status = 4;
+}
+
+message ListDefectsRequest {
+    string inspection_lot_id = 1;
+    string product_id = 2;
+    DefectSeverity severity = 3;
+    DefectStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListDefectsResponse {
+    repeated Defect defects = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateNonConformanceRequest {
+    string plant = 1;
+    string product_id = 2;
+    string batch_number = 3;
+    string inspection_lot_id = 4;
+    string description = 5;
+    NonConformanceType type = 6;
+    NonConformanceSeverity severity = 7;
+    common.v1.Quantity affected_quantity = 8;
+    string responsible_person = 9;
+    google.protobuf.Timestamp due_date = 10;
+}
+
+message GetNonConformanceRequest {
+    string id = 1;
+}
+
+message UpdateNonConformanceRequest {
+    string id = 1;
+    string root_cause = 2;
+    string immediate_action = 3;
+    string corrective_action = 4;
+    string preventive_action = 5;
+    NonConformanceStatus status = 6;
+    common.v1.Money cost_impact = 7;
+}
+
+message ListNonConformancesRequest {
+    string plant = 1;
+    string product_id = 2;
+    NonConformanceType type = 3;
+    NonConformanceStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListNonConformancesResponse {
+    repeated NonConformance non_conformances = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetQualityStatisticsRequest {
+    string plant = 1;
+    string product_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetQualityStatisticsResponse {
+    int32 total_lots_inspected = 1;
+    int32 lots_accepted = 2;
+    int32 lots_rejected = 3;
+    double acceptance_rate = 4;
+    int32 total_defects = 5;
+    double defects_per_million = 6;
+    double first_pass_yield = 7;
+    repeated DefectPareto defect_pareto = 8;
+    repeated QualityTrend trend = 9;
+}
+
+message DefectPareto {
+    string defect_code = 1;
+    string defect_name = 2;
+    int32 count = 3;
+    double percentage = 4;
+    double cumulative_percentage = 5;
+}
+
+message QualityTrend {
+    google.protobuf.Timestamp date = 1;
+    int32 lots_inspected = 2;
+    int32 lots_accepted = 3;
+    double acceptance_rate = 4;
+    int32 defects = 5;
+}
+
+message GetSPCChartRequest {
+    string product_id = 1;
+    string characteristic_code = 2;
+    common.v1.DateRange date_range = 3;
+    string chart_type = 4;
+}
+
+message GetSPCChartResponse {
+    string characteristic_code = 1;
+    string characteristic_name = 2;
+    string chart_type = 3;
+    double ucl = 4;
+    double lcl = 5;
+    double center_line = 6;
+    double usl = 7;
+    double lsl = 8;
+    double target = 9;
+    repeated SPCDataPoint data_points = 10;
+    SPCStatistics statistics = 11;
+    bool in_control = 12;
+    repeated string violations = 13;
+}
+
+message SPCDataPoint {
+    google.protobuf.Timestamp timestamp = 1;
+    double value = 2;
+    string batch_number = 3;
+    string inspection_lot_id = 4;
+    bool out_of_control = 5;
+}
+
+message SPCStatistics {
+    double mean = 1;
+    double std_dev = 2;
+    double cp = 3;
+    double cpk = 4;
+    double pp = 5;
+    double ppk = 6;
+}
+
+// Auto-generated Response messages
+message CreateInspectionLotResponse {
+    InspectionLot inspection_lot = 1;
+}
+
+message GetInspectionLotResponse {
+    InspectionLot inspection_lot = 1;
+}
+
+message UpdateInspectionLotResponse {
+    InspectionLot inspection_lot = 1;
+}
+
+message StartInspectionResponse {
+    InspectionLot inspection_lot = 1;
+}
+
+message RecordResultsResponse {
+    InspectionLot inspection_lot = 1;
+}
+
+message CompleteInspectionResponse {
+    InspectionLot inspection_lot = 1;
+}
+
+message MakeUsageDecisionResponse {
+    InspectionLot inspection_lot = 1;
+}
+
+message CreateInspectionPlanResponse {
+    InspectionPlan inspection_plan = 1;
+}
+
+message GetInspectionPlanResponse {
+    InspectionPlan inspection_plan = 1;
+}
+
+message UpdateInspectionPlanResponse {
+    InspectionPlan inspection_plan = 1;
+}
+
+message CreateDefectResponse {
+    Defect defect = 1;
+}
+
+message GetDefectResponse {
+    Defect defect = 1;
+}
+
+message UpdateDefectResponse {
+    Defect defect = 1;
+}
+
+message CreateNonConformanceResponse {
+    NonConformance non_conformance = 1;
+}
+
+message GetNonConformanceResponse {
+    NonConformance non_conformance = 1;
+}
+
+message UpdateNonConformanceResponse {
+    NonConformance non_conformance = 1;
+}

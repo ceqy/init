@@ -1,0 +1,1153 @@
+syntax = "proto3";
+
+package pm.vs.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+// Vendor Management Service - 供应商主数据与评估管理
+service VendorService {
+    // 供应商主数据
+    rpc CreateVendor(CreateVendorRequest) returns (CreateVendorResponse);
+    rpc GetVendor(GetVendorRequest) returns (GetVendorResponse);
+    rpc UpdateVendor(UpdateVendorRequest) returns (UpdateVendorResponse);
+    rpc DeleteVendor(DeleteVendorRequest) returns (google.protobuf.Empty);
+    rpc ListVendors(ListVendorsRequest) returns (ListVendorsResponse);
+    rpc SearchVendors(SearchVendorsRequest) returns (SearchVendorsResponse);
+
+    // 供应商状态管理
+    rpc ActivateVendor(ActivateVendorRequest) returns (ActivateVendorResponse);
+    rpc DeactivateVendor(DeactivateVendorRequest) returns (DeactivateVendorResponse);
+    rpc BlockVendor(BlockVendorRequest) returns (BlockVendorResponse);
+    rpc UnblockVendor(UnblockVendorRequest) returns (UnblockVendorResponse);
+
+    // 供应商分类与分组
+    rpc CreateVendorGroup(CreateVendorGroupRequest) returns (CreateVendorGroupResponse);
+    rpc GetVendorGroup(GetVendorGroupRequest) returns (GetVendorGroupResponse);
+    rpc UpdateVendorGroup(UpdateVendorGroupRequest) returns (UpdateVendorGroupResponse);
+    rpc ListVendorGroups(ListVendorGroupsRequest) returns (ListVendorGroupsResponse);
+    rpc AssignVendorToGroup(AssignVendorToGroupRequest) returns (AssignVendorToGroupResponse);
+
+    // 供应商联系人管理
+    rpc AddVendorContact(AddVendorContactRequest) returns (AddVendorContactResponse);
+    rpc UpdateVendorContact(UpdateVendorContactRequest) returns (UpdateVendorContactResponse);
+    rpc RemoveVendorContact(RemoveVendorContactRequest) returns (google.protobuf.Empty);
+    rpc ListVendorContacts(ListVendorContactsRequest) returns (ListVendorContactsResponse);
+    rpc SetPrimaryContact(SetPrimaryContactRequest) returns (SetPrimaryContactResponse);
+
+    // 供应商银行信息
+    rpc AddBankAccount(AddBankAccountRequest) returns (AddBankAccountResponse);
+    rpc UpdateBankAccount(UpdateBankAccountRequest) returns (UpdateBankAccountResponse);
+    rpc RemoveBankAccount(RemoveBankAccountRequest) returns (google.protobuf.Empty);
+    rpc ListBankAccounts(ListBankAccountsRequest) returns (ListBankAccountsResponse);
+    rpc SetDefaultBankAccount(SetDefaultBankAccountRequest) returns (SetDefaultBankAccountResponse);
+
+    // 供应商资质管理
+    rpc AddCertification(AddCertificationRequest) returns (AddCertificationResponse);
+    rpc UpdateCertification(UpdateCertificationRequest) returns (UpdateCertificationResponse);
+    rpc RemoveCertification(RemoveCertificationRequest) returns (google.protobuf.Empty);
+    rpc ListCertifications(ListCertificationsRequest) returns (ListCertificationsResponse);
+    rpc GetExpiringCertifications(GetExpiringCertificationsRequest) returns (GetExpiringCertificationsResponse);
+
+    // 供应商评估
+    rpc CreateEvaluation(CreateEvaluationRequest) returns (CreateEvaluationResponse);
+    rpc GetEvaluation(GetEvaluationRequest) returns (GetEvaluationResponse);
+    rpc UpdateEvaluation(UpdateEvaluationRequest) returns (UpdateEvaluationResponse);
+    rpc SubmitEvaluation(SubmitEvaluationRequest) returns (SubmitEvaluationResponse);
+    rpc ApproveEvaluation(ApproveEvaluationRequest) returns (ApproveEvaluationResponse);
+    rpc ListEvaluations(ListEvaluationsRequest) returns (ListEvaluationsResponse);
+
+    // 供应商绩效
+    rpc GetVendorPerformance(GetVendorPerformanceRequest) returns (GetVendorPerformanceResponse);
+    rpc GetVendorScorecard(GetVendorScorecardRequest) returns (GetVendorScorecardResponse);
+    rpc GetPerformanceTrend(GetPerformanceTrendRequest) returns (GetPerformanceTrendResponse);
+    rpc CompareVendors(CompareVendorsRequest) returns (CompareVendorsResponse);
+
+    // 供应商风险评估
+    rpc AssessVendorRisk(AssessVendorRiskRequest) returns (AssessVendorRiskResponse);
+    rpc GetVendorRiskProfile(GetVendorRiskProfileRequest) returns (GetVendorRiskProfileResponse);
+    rpc ListHighRiskVendors(ListHighRiskVendorsRequest) returns (ListHighRiskVendorsResponse);
+
+    // 供应商文档
+    rpc AddVendorDocument(AddVendorDocumentRequest) returns (AddVendorDocumentResponse);
+    rpc GetVendorDocuments(GetVendorDocumentsRequest) returns (GetVendorDocumentsResponse);
+    rpc RemoveVendorDocument(RemoveVendorDocumentRequest) returns (google.protobuf.Empty);
+
+    // 供应商审批
+    rpc SubmitVendorForApproval(SubmitVendorForApprovalRequest) returns (SubmitVendorForApprovalResponse);
+    rpc ApproveVendor(ApproveVendorRequest) returns (ApproveVendorResponse);
+    rpc RejectVendor(RejectVendorRequest) returns (RejectVendorResponse);
+
+    // 供应商报表
+    rpc GetVendorDashboard(GetVendorDashboardRequest) returns (GetVendorDashboardResponse);
+    rpc GetVendorSpendAnalysis(GetVendorSpendAnalysisRequest) returns (GetVendorSpendAnalysisResponse);
+    rpc GetVendorMetrics(GetVendorMetricsRequest) returns (GetVendorMetricsResponse);
+}
+
+// ==================== 供应商主数据 ====================
+
+message Vendor {
+    string id = 1;
+    string vendor_number = 2;
+    string name = 3;
+    string name_2 = 4;
+    string legal_name = 5;
+    string company_code = 6;
+    string purchasing_org = 7;
+    VendorType type = 8;
+    string vendor_group_id = 9;
+    string vendor_group_name = 10;
+    string industry = 11;
+    string tax_id = 12;
+    string vat_number = 13;
+    string duns_number = 14;
+    common.v1.Address address = 15;
+    common.v1.Address remit_to_address = 16;
+    string phone = 17;
+    string fax = 18;
+    string email = 19;
+    string website = 20;
+    string language = 21;
+    string currency = 22;
+    string payment_terms = 23;
+    string incoterms = 24;
+    string incoterms_location = 25;
+    double payment_discount_percent = 26;
+    int32 payment_discount_days = 27;
+    string purchasing_block = 28;
+    string payment_block = 29;
+    bool one_time_vendor = 30;
+    VendorStatus status = 31;
+    VendorApprovalStatus approval_status = 32;
+    google.protobuf.Timestamp approved_date = 33;
+    string approved_by = 34;
+    VendorRating rating = 35;
+    double overall_score = 36;
+    repeated string categories = 37;
+    repeated string tags = 38;
+    string notes = 39;
+    common.v1.AuditInfo audit_info = 40;
+}
+
+enum VendorType {
+    VENDOR_TYPE_UNSPECIFIED = 0;
+    VENDOR_TYPE_SUPPLIER = 1;
+    VENDOR_TYPE_CONTRACTOR = 2;
+    VENDOR_TYPE_SERVICE_PROVIDER = 3;
+    VENDOR_TYPE_DISTRIBUTOR = 4;
+    VENDOR_TYPE_MANUFACTURER = 5;
+    VENDOR_TYPE_INTERCOMPANY = 6;
+}
+
+enum VendorStatus {
+    VENDOR_STATUS_UNSPECIFIED = 0;
+    VENDOR_STATUS_ACTIVE = 1;
+    VENDOR_STATUS_INACTIVE = 2;
+    VENDOR_STATUS_BLOCKED = 3;
+    VENDOR_STATUS_PENDING = 4;
+}
+
+enum VendorApprovalStatus {
+    VENDOR_APPROVAL_STATUS_UNSPECIFIED = 0;
+    VENDOR_APPROVAL_STATUS_DRAFT = 1;
+    VENDOR_APPROVAL_STATUS_PENDING = 2;
+    VENDOR_APPROVAL_STATUS_APPROVED = 3;
+    VENDOR_APPROVAL_STATUS_REJECTED = 4;
+}
+
+enum VendorRating {
+    VENDOR_RATING_UNSPECIFIED = 0;
+    VENDOR_RATING_PREFERRED = 1;
+    VENDOR_RATING_APPROVED = 2;
+    VENDOR_RATING_CONDITIONAL = 3;
+    VENDOR_RATING_PROBATION = 4;
+    VENDOR_RATING_DISQUALIFIED = 5;
+}
+
+message VendorGroup {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string parent_group_id = 5;
+    string gl_account = 6;
+    string payment_terms = 7;
+    common.v1.Status status = 8;
+    common.v1.AuditInfo audit_info = 9;
+}
+
+message VendorContact {
+    string id = 1;
+    string vendor_id = 2;
+    string first_name = 3;
+    string last_name = 4;
+    string title = 5;
+    string department = 6;
+    string function = 7;
+    string phone = 8;
+    string mobile = 9;
+    string email = 10;
+    bool is_primary = 11;
+    bool receives_po = 12;
+    bool receives_remittance = 13;
+    string notes = 14;
+    common.v1.Status status = 15;
+    common.v1.AuditInfo audit_info = 16;
+}
+
+message VendorBankAccount {
+    string id = 1;
+    string vendor_id = 2;
+    string bank_name = 3;
+    string bank_code = 4;
+    string branch_code = 5;
+    string account_number = 6;
+    string account_name = 7;
+    string iban = 8;
+    string swift_code = 9;
+    string routing_number = 10;
+    string currency = 11;
+    string country = 12;
+    bool is_default = 13;
+    bool is_verified = 14;
+    google.protobuf.Timestamp verified_date = 15;
+    common.v1.Status status = 16;
+    common.v1.AuditInfo audit_info = 17;
+}
+
+message VendorCertification {
+    string id = 1;
+    string vendor_id = 2;
+    string certification_type = 3;
+    string certification_name = 4;
+    string certification_number = 5;
+    string issuing_authority = 6;
+    google.protobuf.Timestamp issue_date = 7;
+    google.protobuf.Timestamp expiry_date = 8;
+    string scope = 9;
+    CertificationStatus status = 10;
+    string document_url = 11;
+    string notes = 12;
+    common.v1.AuditInfo audit_info = 13;
+}
+
+enum CertificationStatus {
+    CERTIFICATION_STATUS_UNSPECIFIED = 0;
+    CERTIFICATION_STATUS_VALID = 1;
+    CERTIFICATION_STATUS_EXPIRED = 2;
+    CERTIFICATION_STATUS_PENDING_RENEWAL = 3;
+    CERTIFICATION_STATUS_REVOKED = 4;
+}
+
+// ==================== 供应商评估 ====================
+
+message VendorEvaluation {
+    string id = 1;
+    string evaluation_number = 2;
+    string vendor_id = 3;
+    string vendor_name = 4;
+    string evaluation_period = 5;
+    google.protobuf.Timestamp period_start = 6;
+    google.protobuf.Timestamp period_end = 7;
+    string evaluator_id = 8;
+    string evaluator_name = 9;
+    repeated EvaluationCriteria criteria = 10;
+    double total_score = 11;
+    double weighted_score = 12;
+    VendorRating resulting_rating = 13;
+    string strengths = 14;
+    string weaknesses = 15;
+    string improvement_areas = 16;
+    string recommendations = 17;
+    EvaluationStatus status = 18;
+    string approver_id = 19;
+    google.protobuf.Timestamp approved_date = 20;
+    string notes = 21;
+    common.v1.AuditInfo audit_info = 22;
+}
+
+message EvaluationCriteria {
+    string id = 1;
+    string category = 2;
+    string criterion = 3;
+    double weight = 4;
+    double score = 5;
+    double weighted_score = 6;
+    string comments = 7;
+    repeated string evidence = 8;
+}
+
+enum EvaluationStatus {
+    EVALUATION_STATUS_UNSPECIFIED = 0;
+    EVALUATION_STATUS_DRAFT = 1;
+    EVALUATION_STATUS_IN_PROGRESS = 2;
+    EVALUATION_STATUS_SUBMITTED = 3;
+    EVALUATION_STATUS_APPROVED = 4;
+    EVALUATION_STATUS_REJECTED = 5;
+}
+
+// ==================== 供应商绩效 ====================
+
+message VendorPerformance {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    common.v1.DateRange period = 3;
+    QualityMetrics quality = 4;
+    DeliveryMetrics delivery = 5;
+    PriceMetrics price = 6;
+    ServiceMetrics service = 7;
+    double overall_score = 8;
+    VendorRating rating = 9;
+    string rating_trend = 10;
+}
+
+message QualityMetrics {
+    double defect_rate = 1;
+    double rejection_rate = 2;
+    double inspection_pass_rate = 3;
+    int32 quality_incidents = 4;
+    double quality_score = 5;
+}
+
+message DeliveryMetrics {
+    double on_time_delivery_rate = 1;
+    double early_delivery_rate = 2;
+    double late_delivery_rate = 3;
+    double average_lead_time_days = 4;
+    double lead_time_variance = 5;
+    double fill_rate = 6;
+    double delivery_score = 7;
+}
+
+message PriceMetrics {
+    double price_variance = 1;
+    double cost_reduction = 2;
+    double invoice_accuracy = 3;
+    double price_competitiveness = 4;
+    double price_score = 5;
+}
+
+message ServiceMetrics {
+    double responsiveness_score = 1;
+    double communication_score = 2;
+    double flexibility_score = 3;
+    double issue_resolution_time_hours = 4;
+    double service_score = 5;
+}
+
+message VendorScorecard {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    common.v1.DateRange period = 3;
+    double overall_score = 4;
+    VendorRating current_rating = 5;
+    VendorRating previous_rating = 6;
+    repeated ScorecardCategory categories = 7;
+    repeated ScorecardKPI kpis = 8;
+    string executive_summary = 9;
+    repeated string action_items = 10;
+}
+
+message ScorecardCategory {
+    string category = 1;
+    double weight = 2;
+    double score = 3;
+    double weighted_score = 4;
+    string trend = 5;
+}
+
+message ScorecardKPI {
+    string kpi_name = 1;
+    string category = 2;
+    double target = 3;
+    double actual = 4;
+    double variance = 5;
+    string status = 6;
+}
+
+// ==================== 供应商风险 ====================
+
+message VendorRiskAssessment {
+    string id = 1;
+    string vendor_id = 2;
+    string vendor_name = 3;
+    google.protobuf.Timestamp assessment_date = 4;
+    string assessor_id = 5;
+    repeated RiskFactor risk_factors = 6;
+    double overall_risk_score = 7;
+    RiskLevel risk_level = 8;
+    repeated string mitigation_actions = 9;
+    google.protobuf.Timestamp next_review_date = 10;
+    common.v1.AuditInfo audit_info = 11;
+}
+
+message RiskFactor {
+    string factor = 1;
+    string category = 2;
+    double weight = 3;
+    double score = 4;
+    RiskLevel level = 5;
+    string description = 6;
+    string mitigation = 7;
+}
+
+enum RiskLevel {
+    RISK_LEVEL_UNSPECIFIED = 0;
+    RISK_LEVEL_LOW = 1;
+    RISK_LEVEL_MEDIUM = 2;
+    RISK_LEVEL_HIGH = 3;
+    RISK_LEVEL_CRITICAL = 4;
+}
+
+message VendorRiskProfile {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    RiskLevel overall_risk_level = 3;
+    double financial_risk_score = 4;
+    double operational_risk_score = 5;
+    double compliance_risk_score = 6;
+    double geopolitical_risk_score = 7;
+    double supply_chain_risk_score = 8;
+    double concentration_risk_score = 9;
+    repeated RiskIndicator indicators = 10;
+    google.protobuf.Timestamp last_assessment_date = 11;
+}
+
+message RiskIndicator {
+    string indicator = 1;
+    string value = 2;
+    string trend = 3;
+    RiskLevel level = 4;
+}
+
+// ==================== 供应商文档 ====================
+
+message VendorDocument {
+    string id = 1;
+    string vendor_id = 2;
+    string document_type = 3;
+    string title = 4;
+    string description = 5;
+    common.v1.Attachment attachment = 6;
+    google.protobuf.Timestamp expiry_date = 7;
+    bool is_mandatory = 8;
+    common.v1.AuditInfo audit_info = 9;
+}
+
+// ==================== 供应商仪表板 ====================
+
+message VendorDashboard {
+    google.protobuf.Timestamp timestamp = 1;
+    VendorSummary summary = 2;
+    PerformanceOverview performance = 3;
+    RiskOverview risk = 4;
+    repeated TopVendor top_vendors = 5;
+    repeated VendorAlert alerts = 6;
+}
+
+message VendorSummary {
+    int32 total_vendors = 1;
+    int32 active_vendors = 2;
+    int32 preferred_vendors = 3;
+    int32 approved_vendors = 4;
+    int32 on_probation = 5;
+    int32 pending_approval = 6;
+    int32 blocked_vendors = 7;
+}
+
+message PerformanceOverview {
+    double average_quality_score = 1;
+    double average_delivery_score = 2;
+    double average_price_score = 3;
+    double average_service_score = 4;
+    double average_overall_score = 5;
+    int32 vendors_improved = 6;
+    int32 vendors_declined = 7;
+}
+
+message RiskOverview {
+    int32 high_risk_vendors = 1;
+    int32 medium_risk_vendors = 2;
+    int32 low_risk_vendors = 3;
+    int32 expiring_certifications = 4;
+    int32 compliance_issues = 5;
+}
+
+message TopVendor {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    double score = 3;
+    VendorRating rating = 4;
+    common.v1.Money spend = 5;
+}
+
+message VendorAlert {
+    string id = 1;
+    string vendor_id = 2;
+    string vendor_name = 3;
+    string alert_type = 4;
+    string severity = 5;
+    string message = 6;
+    google.protobuf.Timestamp timestamp = 7;
+}
+
+// ==================== Request/Response ====================
+
+message CreateVendorRequest {
+    string vendor_number = 1;
+    string name = 2;
+    string name_2 = 3;
+    string legal_name = 4;
+    string company_code = 5;
+    string purchasing_org = 6;
+    VendorType type = 7;
+    string vendor_group_id = 8;
+    string industry = 9;
+    string tax_id = 10;
+    string vat_number = 11;
+    common.v1.Address address = 12;
+    string phone = 13;
+    string email = 14;
+    string website = 15;
+    string language = 16;
+    string currency = 17;
+    string payment_terms = 18;
+    string incoterms = 19;
+    repeated string categories = 20;
+    string notes = 21;
+}
+
+message GetVendorRequest {
+    string id = 1;
+}
+
+message UpdateVendorRequest {
+    string id = 1;
+    string name = 2;
+    string name_2 = 3;
+    string legal_name = 4;
+    string vendor_group_id = 5;
+    string industry = 6;
+    common.v1.Address address = 7;
+    common.v1.Address remit_to_address = 8;
+    string phone = 9;
+    string email = 10;
+    string website = 11;
+    string payment_terms = 12;
+    string incoterms = 13;
+    string incoterms_location = 14;
+    repeated string categories = 15;
+    repeated string tags = 16;
+    string notes = 17;
+}
+
+message DeleteVendorRequest {
+    string id = 1;
+}
+
+message ListVendorsRequest {
+    string company_code = 1;
+    string purchasing_org = 2;
+    VendorType type = 3;
+    string vendor_group_id = 4;
+    VendorStatus status = 5;
+    VendorRating rating = 6;
+    string category = 7;
+    string search = 8;
+    common.v1.Pagination pagination = 9;
+}
+
+message ListVendorsResponse {
+    repeated Vendor vendors = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message SearchVendorsRequest {
+    string query = 1;
+    string company_code = 2;
+    repeated string categories = 3;
+    VendorStatus status = 4;
+    int32 limit = 5;
+}
+
+message SearchVendorsResponse {
+    repeated Vendor vendors = 1;
+}
+
+message ActivateVendorRequest {
+    string id = 1;
+}
+
+message DeactivateVendorRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message BlockVendorRequest {
+    string id = 1;
+    string block_type = 2;
+    string reason = 3;
+}
+
+message UnblockVendorRequest {
+    string id = 1;
+}
+
+message CreateVendorGroupRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string parent_group_id = 4;
+    string gl_account = 5;
+    string payment_terms = 6;
+}
+
+message GetVendorGroupRequest {
+    string id = 1;
+}
+
+message UpdateVendorGroupRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string gl_account = 4;
+    string payment_terms = 5;
+    common.v1.Status status = 6;
+}
+
+message ListVendorGroupsRequest {
+    string parent_group_id = 1;
+    common.v1.Status status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListVendorGroupsResponse {
+    repeated VendorGroup groups = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message AssignVendorToGroupRequest {
+    string vendor_id = 1;
+    string group_id = 2;
+}
+
+message AddVendorContactRequest {
+    string vendor_id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string title = 4;
+    string department = 5;
+    string function = 6;
+    string phone = 7;
+    string mobile = 8;
+    string email = 9;
+    bool is_primary = 10;
+    bool receives_po = 11;
+    bool receives_remittance = 12;
+    string notes = 13;
+}
+
+message UpdateVendorContactRequest {
+    string id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string title = 4;
+    string department = 5;
+    string phone = 6;
+    string mobile = 7;
+    string email = 8;
+    bool receives_po = 9;
+    bool receives_remittance = 10;
+    common.v1.Status status = 11;
+}
+
+message RemoveVendorContactRequest {
+    string id = 1;
+}
+
+message ListVendorContactsRequest {
+    string vendor_id = 1;
+    common.v1.Status status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListVendorContactsResponse {
+    repeated VendorContact contacts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message SetPrimaryContactRequest {
+    string contact_id = 1;
+}
+
+message AddBankAccountRequest {
+    string vendor_id = 1;
+    string bank_name = 2;
+    string bank_code = 3;
+    string branch_code = 4;
+    string account_number = 5;
+    string account_name = 6;
+    string iban = 7;
+    string swift_code = 8;
+    string routing_number = 9;
+    string currency = 10;
+    string country = 11;
+    bool is_default = 12;
+}
+
+message UpdateBankAccountRequest {
+    string id = 1;
+    string bank_name = 2;
+    string account_number = 3;
+    string account_name = 4;
+    string iban = 5;
+    string swift_code = 6;
+    common.v1.Status status = 7;
+}
+
+message RemoveBankAccountRequest {
+    string id = 1;
+}
+
+message ListBankAccountsRequest {
+    string vendor_id = 1;
+    common.v1.Status status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListBankAccountsResponse {
+    repeated VendorBankAccount accounts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message SetDefaultBankAccountRequest {
+    string account_id = 1;
+}
+
+message AddCertificationRequest {
+    string vendor_id = 1;
+    string certification_type = 2;
+    string certification_name = 3;
+    string certification_number = 4;
+    string issuing_authority = 5;
+    google.protobuf.Timestamp issue_date = 6;
+    google.protobuf.Timestamp expiry_date = 7;
+    string scope = 8;
+    string document_url = 9;
+    string notes = 10;
+}
+
+message UpdateCertificationRequest {
+    string id = 1;
+    string certification_number = 2;
+    google.protobuf.Timestamp expiry_date = 3;
+    string scope = 4;
+    string document_url = 5;
+    CertificationStatus status = 6;
+}
+
+message RemoveCertificationRequest {
+    string id = 1;
+}
+
+message ListCertificationsRequest {
+    string vendor_id = 1;
+    string certification_type = 2;
+    CertificationStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListCertificationsResponse {
+    repeated VendorCertification certifications = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetExpiringCertificationsRequest {
+    string company_code = 1;
+    int32 days_until_expiry = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetExpiringCertificationsResponse {
+    repeated VendorCertification certifications = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateEvaluationRequest {
+    string vendor_id = 1;
+    google.protobuf.Timestamp period_start = 2;
+    google.protobuf.Timestamp period_end = 3;
+    repeated EvaluationCriteriaInput criteria = 4;
+    string strengths = 5;
+    string weaknesses = 6;
+    string improvement_areas = 7;
+    string recommendations = 8;
+}
+
+message EvaluationCriteriaInput {
+    string category = 1;
+    string criterion = 2;
+    double weight = 3;
+    double score = 4;
+    string comments = 5;
+}
+
+message GetEvaluationRequest {
+    string id = 1;
+}
+
+message UpdateEvaluationRequest {
+    string id = 1;
+    repeated EvaluationCriteriaInput criteria = 2;
+    string strengths = 3;
+    string weaknesses = 4;
+    string improvement_areas = 5;
+    string recommendations = 6;
+}
+
+message SubmitEvaluationRequest {
+    string id = 1;
+}
+
+message ApproveEvaluationRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message ListEvaluationsRequest {
+    string vendor_id = 1;
+    EvaluationStatus status = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListEvaluationsResponse {
+    repeated VendorEvaluation evaluations = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetVendorPerformanceRequest {
+    string vendor_id = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetVendorScorecardRequest {
+    string vendor_id = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetPerformanceTrendRequest {
+    string vendor_id = 1;
+    common.v1.DateRange date_range = 2;
+    string granularity = 3;
+}
+
+message GetPerformanceTrendResponse {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    repeated PerformanceTrendPoint trend = 3;
+}
+
+message PerformanceTrendPoint {
+    string period = 1;
+    double quality_score = 2;
+    double delivery_score = 3;
+    double price_score = 4;
+    double service_score = 5;
+    double overall_score = 6;
+}
+
+message CompareVendorsRequest {
+    repeated string vendor_ids = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message CompareVendorsResponse {
+    repeated VendorComparison comparisons = 1;
+}
+
+message VendorComparison {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    VendorRating rating = 3;
+    double quality_score = 4;
+    double delivery_score = 5;
+    double price_score = 6;
+    double service_score = 7;
+    double overall_score = 8;
+    common.v1.Money total_spend = 9;
+}
+
+message AssessVendorRiskRequest {
+    string vendor_id = 1;
+    repeated RiskFactorInput risk_factors = 2;
+    repeated string mitigation_actions = 3;
+}
+
+message RiskFactorInput {
+    string factor = 1;
+    string category = 2;
+    double weight = 3;
+    double score = 4;
+    string description = 5;
+    string mitigation = 6;
+}
+
+message GetVendorRiskProfileRequest {
+    string vendor_id = 1;
+}
+
+message ListHighRiskVendorsRequest {
+    string company_code = 1;
+    RiskLevel min_risk_level = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListHighRiskVendorsResponse {
+    repeated VendorRiskProfile vendors = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message AddVendorDocumentRequest {
+    string vendor_id = 1;
+    string document_type = 2;
+    string title = 3;
+    string description = 4;
+    bytes content = 5;
+    string filename = 6;
+    string content_type = 7;
+    google.protobuf.Timestamp expiry_date = 8;
+    bool is_mandatory = 9;
+}
+
+message GetVendorDocumentsRequest {
+    string vendor_id = 1;
+    string document_type = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetVendorDocumentsResponse {
+    repeated VendorDocument documents = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message RemoveVendorDocumentRequest {
+    string id = 1;
+}
+
+message SubmitVendorForApprovalRequest {
+    string id = 1;
+}
+
+message ApproveVendorRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message RejectVendorRequest {
+    string id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message GetVendorDashboardRequest {
+    string company_code = 1;
+}
+
+message GetVendorSpendAnalysisRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetVendorSpendAnalysisResponse {
+    common.v1.Money total_spend = 1;
+    repeated VendorSpend by_vendor = 2;
+    repeated CategorySpend by_category = 3;
+    repeated SpendTrend trend = 4;
+}
+
+message VendorSpend {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    common.v1.Money spend = 3;
+    double percentage = 4;
+    int32 po_count = 5;
+}
+
+message CategorySpend {
+    string category = 1;
+    common.v1.Money spend = 2;
+    double percentage = 3;
+}
+
+message SpendTrend {
+    string period = 1;
+    common.v1.Money spend = 2;
+    int32 po_count = 3;
+}
+
+message GetVendorMetricsRequest {
+    string company_code = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetVendorMetricsResponse {
+    VendorMetrics metrics = 1;
+    repeated VendorMetricsTrend trend = 2;
+}
+
+message VendorMetrics {
+    int32 total_vendors = 1;
+    int32 new_vendors = 2;
+    int32 evaluated_vendors = 3;
+    double average_performance_score = 4;
+    double average_quality_score = 5;
+    double average_delivery_score = 6;
+    int32 high_risk_vendors = 7;
+    int32 expiring_certifications = 8;
+}
+
+message VendorMetricsTrend {
+    string period = 1;
+    int32 active_vendors = 2;
+    double average_score = 3;
+    common.v1.Money total_spend = 4;
+}
+
+// Auto-generated Response messages
+message CreateVendorResponse {
+    Vendor vendor = 1;
+}
+
+message GetVendorResponse {
+    Vendor vendor = 1;
+}
+
+message UpdateVendorResponse {
+    Vendor vendor = 1;
+}
+
+message ActivateVendorResponse {
+    Vendor vendor = 1;
+}
+
+message DeactivateVendorResponse {
+    Vendor vendor = 1;
+}
+
+message BlockVendorResponse {
+    Vendor vendor = 1;
+}
+
+message UnblockVendorResponse {
+    Vendor vendor = 1;
+}
+
+message CreateVendorGroupResponse {
+    VendorGroup vendor_group = 1;
+}
+
+message GetVendorGroupResponse {
+    VendorGroup vendor_group = 1;
+}
+
+message UpdateVendorGroupResponse {
+    VendorGroup vendor_group = 1;
+}
+
+message AssignVendorToGroupResponse {
+    Vendor vendor = 1;
+}
+
+message AddVendorContactResponse {
+    VendorContact vendor_contact = 1;
+}
+
+message UpdateVendorContactResponse {
+    VendorContact vendor_contact = 1;
+}
+
+message SetPrimaryContactResponse {
+    VendorContact vendor_contact = 1;
+}
+
+message AddBankAccountResponse {
+    VendorBankAccount vendor_bank_account = 1;
+}
+
+message UpdateBankAccountResponse {
+    VendorBankAccount vendor_bank_account = 1;
+}
+
+message SetDefaultBankAccountResponse {
+    VendorBankAccount vendor_bank_account = 1;
+}
+
+message AddCertificationResponse {
+    VendorCertification vendor_certification = 1;
+}
+
+message UpdateCertificationResponse {
+    VendorCertification vendor_certification = 1;
+}
+
+message CreateEvaluationResponse {
+    VendorEvaluation vendor_evaluation = 1;
+}
+
+message GetEvaluationResponse {
+    VendorEvaluation vendor_evaluation = 1;
+}
+
+message UpdateEvaluationResponse {
+    VendorEvaluation vendor_evaluation = 1;
+}
+
+message SubmitEvaluationResponse {
+    VendorEvaluation vendor_evaluation = 1;
+}
+
+message ApproveEvaluationResponse {
+    VendorEvaluation vendor_evaluation = 1;
+}
+
+message GetVendorPerformanceResponse {
+    VendorPerformance vendor_performance = 1;
+}
+
+message GetVendorScorecardResponse {
+    VendorScorecard vendor_scorecard = 1;
+}
+
+message AssessVendorRiskResponse {
+    VendorRiskAssessment vendor_risk_assessment = 1;
+}
+
+message GetVendorRiskProfileResponse {
+    VendorRiskProfile vendor_risk_profile = 1;
+}
+
+message AddVendorDocumentResponse {
+    VendorDocument vendor_document = 1;
+}
+
+message SubmitVendorForApprovalResponse {
+    Vendor vendor = 1;
+}
+
+message ApproveVendorResponse {
+    Vendor vendor = 1;
+}
+
+message RejectVendorResponse {
+    Vendor vendor = 1;
+}
+
+message GetVendorDashboardResponse {
+    VendorDashboard vendor_dashboard = 1;
+}

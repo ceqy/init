@@ -1,0 +1,559 @@
+syntax = "proto3";
+
+package fi.tr.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service TreasuryService {
+    rpc CreateBankAccount(CreateBankAccountRequest) returns (CreateBankAccountResponse);
+    rpc GetBankAccount(GetBankAccountRequest) returns (GetBankAccountResponse);
+    rpc UpdateBankAccount(UpdateBankAccountRequest) returns (UpdateBankAccountResponse);
+    rpc DeleteBankAccount(DeleteBankAccountRequest) returns (google.protobuf.Empty);
+    rpc ListBankAccounts(ListBankAccountsRequest) returns (ListBankAccountsResponse);
+
+    rpc GetCashPosition(GetCashPositionRequest) returns (GetCashPositionResponse);
+    rpc GetCashForecast(GetCashForecastRequest) returns (GetCashForecastResponse);
+
+    rpc CreateBankStatement(CreateBankStatementRequest) returns (CreateBankStatementResponse);
+    rpc GetBankStatement(GetBankStatementRequest) returns (GetBankStatementResponse);
+    rpc ImportBankStatement(ImportBankStatementRequest) returns (ImportBankStatementResponse);
+    rpc ReconcileBankStatement(ReconcileBankStatementRequest) returns (ReconcileBankStatementResponse);
+    rpc ListBankStatements(ListBankStatementsRequest) returns (ListBankStatementsResponse);
+
+    rpc CreateCashTransfer(CreateCashTransferRequest) returns (CreateCashTransferResponse);
+    rpc GetCashTransfer(GetCashTransferRequest) returns (GetCashTransferResponse);
+    rpc ExecuteCashTransfer(ExecuteCashTransferRequest) returns (ExecuteCashTransferResponse);
+    rpc ListCashTransfers(ListCashTransfersRequest) returns (ListCashTransfersResponse);
+
+    rpc CreateLoan(CreateLoanRequest) returns (CreateLoanResponse);
+    rpc GetLoan(GetLoanRequest) returns (GetLoanResponse);
+    rpc UpdateLoan(UpdateLoanRequest) returns (UpdateLoanResponse);
+    rpc ListLoans(ListLoansRequest) returns (ListLoansResponse);
+    rpc GetLoanSchedule(GetLoanScheduleRequest) returns (GetLoanScheduleResponse);
+
+    rpc CreateInvestment(CreateInvestmentRequest) returns (CreateInvestmentResponse);
+    rpc GetInvestment(GetInvestmentRequest) returns (GetInvestmentResponse);
+    rpc ListInvestments(ListInvestmentsRequest) returns (ListInvestmentsResponse);
+
+    rpc GetExchangeRate(GetExchangeRateRequest) returns (GetExchangeRateResponse);
+    rpc UpdateExchangeRates(UpdateExchangeRatesRequest) returns (UpdateExchangeRatesResponse);
+}
+
+message BankAccount {
+    string id = 1;
+    string account_number = 2;
+    string account_name = 3;
+    string bank_name = 4;
+    string bank_code = 5;
+    string swift_code = 6;
+    string iban = 7;
+    string company_code = 8;
+    string currency = 9;
+    string gl_account = 10;
+    BankAccountType account_type = 11;
+    common.v1.Money current_balance = 12;
+    common.v1.Money available_balance = 13;
+    common.v1.Address bank_address = 14;
+    common.v1.Status status = 15;
+    common.v1.AuditInfo audit_info = 16;
+}
+
+enum BankAccountType {
+    BANK_ACCOUNT_TYPE_UNSPECIFIED = 0;
+    BANK_ACCOUNT_TYPE_CHECKING = 1;
+    BANK_ACCOUNT_TYPE_SAVINGS = 2;
+    BANK_ACCOUNT_TYPE_MONEY_MARKET = 3;
+    BANK_ACCOUNT_TYPE_CREDIT_LINE = 4;
+}
+
+message BankStatement {
+    string id = 1;
+    string statement_number = 2;
+    string bank_account_id = 3;
+    google.protobuf.Timestamp statement_date = 4;
+    google.protobuf.Timestamp from_date = 5;
+    google.protobuf.Timestamp to_date = 6;
+    common.v1.Money opening_balance = 7;
+    common.v1.Money closing_balance = 8;
+    common.v1.Money total_credits = 9;
+    common.v1.Money total_debits = 10;
+    repeated BankStatementLine lines = 11;
+    BankStatementStatus status = 12;
+    int32 matched_count = 13;
+    int32 unmatched_count = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+message BankStatementLine {
+    string id = 1;
+    int32 line_number = 2;
+    google.protobuf.Timestamp transaction_date = 3;
+    google.protobuf.Timestamp value_date = 4;
+    string reference = 5;
+    string description = 6;
+    common.v1.Money amount = 7;
+    string transaction_type = 8;
+    string bank_reference = 9;
+    bool reconciled = 10;
+    string matched_document_id = 11;
+    string matched_document_type = 12;
+}
+
+enum BankStatementStatus {
+    BANK_STATEMENT_STATUS_UNSPECIFIED = 0;
+    BANK_STATEMENT_STATUS_IMPORTED = 1;
+    BANK_STATEMENT_STATUS_IN_PROGRESS = 2;
+    BANK_STATEMENT_STATUS_RECONCILED = 3;
+    BANK_STATEMENT_STATUS_POSTED = 4;
+}
+
+message CashTransfer {
+    string id = 1;
+    string transfer_number = 2;
+    string company_code = 3;
+    string source_account_id = 4;
+    string target_account_id = 5;
+    common.v1.Money source_amount = 6;
+    common.v1.Money target_amount = 7;
+    double exchange_rate = 8;
+    google.protobuf.Timestamp transfer_date = 9;
+    google.protobuf.Timestamp value_date = 10;
+    string reference = 11;
+    string description = 12;
+    CashTransferStatus status = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+enum CashTransferStatus {
+    CASH_TRANSFER_STATUS_UNSPECIFIED = 0;
+    CASH_TRANSFER_STATUS_DRAFT = 1;
+    CASH_TRANSFER_STATUS_PENDING = 2;
+    CASH_TRANSFER_STATUS_EXECUTED = 3;
+    CASH_TRANSFER_STATUS_CANCELLED = 4;
+}
+
+message Loan {
+    string id = 1;
+    string loan_number = 2;
+    string company_code = 3;
+    string lender = 4;
+    LoanType loan_type = 5;
+    common.v1.Money principal_amount = 6;
+    common.v1.Money outstanding_balance = 7;
+    double interest_rate = 8;
+    string interest_type = 9;
+    google.protobuf.Timestamp start_date = 10;
+    google.protobuf.Timestamp maturity_date = 11;
+    string payment_frequency = 12;
+    string bank_account_id = 13;
+    string gl_account = 14;
+    LoanStatus status = 15;
+    common.v1.AuditInfo audit_info = 16;
+}
+
+enum LoanType {
+    LOAN_TYPE_UNSPECIFIED = 0;
+    LOAN_TYPE_TERM = 1;
+    LOAN_TYPE_REVOLVING = 2;
+    LOAN_TYPE_MORTGAGE = 3;
+    LOAN_TYPE_LINE_OF_CREDIT = 4;
+}
+
+enum LoanStatus {
+    LOAN_STATUS_UNSPECIFIED = 0;
+    LOAN_STATUS_ACTIVE = 1;
+    LOAN_STATUS_PAID_OFF = 2;
+    LOAN_STATUS_DEFAULTED = 3;
+    LOAN_STATUS_CANCELLED = 4;
+}
+
+message LoanScheduleEntry {
+    int32 period = 1;
+    google.protobuf.Timestamp due_date = 2;
+    common.v1.Money payment_amount = 3;
+    common.v1.Money principal = 4;
+    common.v1.Money interest = 5;
+    common.v1.Money balance = 6;
+    bool paid = 7;
+    google.protobuf.Timestamp paid_date = 8;
+}
+
+message Investment {
+    string id = 1;
+    string investment_number = 2;
+    string company_code = 3;
+    InvestmentType investment_type = 4;
+    string description = 5;
+    common.v1.Money principal_amount = 6;
+    common.v1.Money current_value = 7;
+    double interest_rate = 8;
+    google.protobuf.Timestamp purchase_date = 9;
+    google.protobuf.Timestamp maturity_date = 10;
+    string custodian = 11;
+    string gl_account = 12;
+    InvestmentStatus status = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+enum InvestmentType {
+    INVESTMENT_TYPE_UNSPECIFIED = 0;
+    INVESTMENT_TYPE_DEPOSIT = 1;
+    INVESTMENT_TYPE_BOND = 2;
+    INVESTMENT_TYPE_MONEY_MARKET = 3;
+    INVESTMENT_TYPE_COMMERCIAL_PAPER = 4;
+}
+
+enum InvestmentStatus {
+    INVESTMENT_STATUS_UNSPECIFIED = 0;
+    INVESTMENT_STATUS_ACTIVE = 1;
+    INVESTMENT_STATUS_MATURED = 2;
+    INVESTMENT_STATUS_REDEEMED = 3;
+}
+
+message CashPosition {
+    string bank_account_id = 1;
+    string bank_account_name = 2;
+    string currency = 3;
+    common.v1.Money current_balance = 4;
+    common.v1.Money available_balance = 5;
+    common.v1.Money pending_inflows = 6;
+    common.v1.Money pending_outflows = 7;
+    common.v1.Money projected_balance = 8;
+}
+
+message CashForecastEntry {
+    google.protobuf.Timestamp date = 1;
+    common.v1.Money opening_balance = 2;
+    common.v1.Money inflows = 3;
+    common.v1.Money outflows = 4;
+    common.v1.Money net_change = 5;
+    common.v1.Money closing_balance = 6;
+    repeated CashFlowItem items = 7;
+}
+
+message CashFlowItem {
+    string source = 1;
+    string description = 2;
+    common.v1.Money amount = 3;
+    string document_reference = 4;
+}
+
+message CreateBankAccountRequest {
+    string account_number = 1;
+    string account_name = 2;
+    string bank_name = 3;
+    string bank_code = 4;
+    string swift_code = 5;
+    string iban = 6;
+    string company_code = 7;
+    string currency = 8;
+    string gl_account = 9;
+    BankAccountType account_type = 10;
+    common.v1.Address bank_address = 11;
+}
+
+message GetBankAccountRequest {
+    string id = 1;
+}
+
+message UpdateBankAccountRequest {
+    string id = 1;
+    string account_name = 2;
+    string gl_account = 3;
+    common.v1.Status status = 4;
+}
+
+message DeleteBankAccountRequest {
+    string id = 1;
+}
+
+message ListBankAccountsRequest {
+    string company_code = 1;
+    string currency = 2;
+    BankAccountType account_type = 3;
+    common.v1.Status status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListBankAccountsResponse {
+    repeated BankAccount accounts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetCashPositionRequest {
+    string company_code = 1;
+    repeated string bank_account_ids = 2;
+    google.protobuf.Timestamp as_of_date = 3;
+}
+
+message GetCashPositionResponse {
+    repeated CashPosition positions = 1;
+    common.v1.Money total_balance = 2;
+}
+
+message GetCashForecastRequest {
+    string company_code = 1;
+    repeated string bank_account_ids = 2;
+    google.protobuf.Timestamp from_date = 3;
+    google.protobuf.Timestamp to_date = 4;
+    string granularity = 5;
+}
+
+message GetCashForecastResponse {
+    repeated CashForecastEntry entries = 1;
+}
+
+message CreateBankStatementRequest {
+    string bank_account_id = 1;
+    google.protobuf.Timestamp statement_date = 2;
+    google.protobuf.Timestamp from_date = 3;
+    google.protobuf.Timestamp to_date = 4;
+    common.v1.Money opening_balance = 5;
+    common.v1.Money closing_balance = 6;
+    repeated BankStatementLineInput lines = 7;
+}
+
+message BankStatementLineInput {
+    google.protobuf.Timestamp transaction_date = 1;
+    google.protobuf.Timestamp value_date = 2;
+    string reference = 3;
+    string description = 4;
+    common.v1.Money amount = 5;
+    string transaction_type = 6;
+    string bank_reference = 7;
+}
+
+message GetBankStatementRequest {
+    string id = 1;
+}
+
+message ImportBankStatementRequest {
+    string bank_account_id = 1;
+    string format = 2;
+    bytes content = 3;
+}
+
+message ReconcileBankStatementRequest {
+    string id = 1;
+    repeated ReconciliationMatch matches = 2;
+}
+
+message ReconciliationMatch {
+    string statement_line_id = 1;
+    string document_id = 2;
+    string document_type = 3;
+}
+
+message ReconcileBankStatementResponse {
+    BankStatement statement = 1;
+    int32 matched_count = 2;
+    int32 unmatched_count = 3;
+}
+
+message ListBankStatementsRequest {
+    string bank_account_id = 1;
+    common.v1.DateRange date_range = 2;
+    BankStatementStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListBankStatementsResponse {
+    repeated BankStatement statements = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateCashTransferRequest {
+    string company_code = 1;
+    string source_account_id = 2;
+    string target_account_id = 3;
+    common.v1.Money amount = 4;
+    google.protobuf.Timestamp transfer_date = 5;
+    string reference = 6;
+    string description = 7;
+}
+
+message GetCashTransferRequest {
+    string id = 1;
+}
+
+message ExecuteCashTransferRequest {
+    string id = 1;
+}
+
+message ListCashTransfersRequest {
+    string company_code = 1;
+    string bank_account_id = 2;
+    CashTransferStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListCashTransfersResponse {
+    repeated CashTransfer transfers = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateLoanRequest {
+    string company_code = 1;
+    string lender = 2;
+    LoanType loan_type = 3;
+    common.v1.Money principal_amount = 4;
+    double interest_rate = 5;
+    string interest_type = 6;
+    google.protobuf.Timestamp start_date = 7;
+    google.protobuf.Timestamp maturity_date = 8;
+    string payment_frequency = 9;
+    string bank_account_id = 10;
+    string gl_account = 11;
+}
+
+message GetLoanRequest {
+    string id = 1;
+}
+
+message UpdateLoanRequest {
+    string id = 1;
+    double interest_rate = 2;
+    string bank_account_id = 3;
+    LoanStatus status = 4;
+}
+
+message ListLoansRequest {
+    string company_code = 1;
+    LoanType loan_type = 2;
+    LoanStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListLoansResponse {
+    repeated Loan loans = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetLoanScheduleRequest {
+    string id = 1;
+}
+
+message GetLoanScheduleResponse {
+    Loan loan = 1;
+    repeated LoanScheduleEntry schedule = 2;
+}
+
+message CreateInvestmentRequest {
+    string company_code = 1;
+    InvestmentType investment_type = 2;
+    string description = 3;
+    common.v1.Money principal_amount = 4;
+    double interest_rate = 5;
+    google.protobuf.Timestamp purchase_date = 6;
+    google.protobuf.Timestamp maturity_date = 7;
+    string custodian = 8;
+    string gl_account = 9;
+}
+
+message GetInvestmentRequest {
+    string id = 1;
+}
+
+message ListInvestmentsRequest {
+    string company_code = 1;
+    InvestmentType investment_type = 2;
+    InvestmentStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListInvestmentsResponse {
+    repeated Investment investments = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetExchangeRateRequest {
+    string source_currency = 1;
+    string target_currency = 2;
+    google.protobuf.Timestamp date = 3;
+    string rate_type = 4;
+}
+
+message GetExchangeRateResponse {
+    string source_currency = 1;
+    string target_currency = 2;
+    double rate = 3;
+    google.protobuf.Timestamp effective_date = 4;
+    string rate_type = 5;
+}
+
+message UpdateExchangeRatesRequest {
+    repeated ExchangeRateInput rates = 1;
+}
+
+message ExchangeRateInput {
+    string source_currency = 1;
+    string target_currency = 2;
+    double rate = 3;
+    google.protobuf.Timestamp effective_date = 4;
+    string rate_type = 5;
+}
+
+message UpdateExchangeRatesResponse {
+    int32 updated_count = 1;
+}
+
+// Auto-generated Response messages
+message CreateBankAccountResponse {
+    BankAccount bank_account = 1;
+}
+
+message GetBankAccountResponse {
+    BankAccount bank_account = 1;
+}
+
+message UpdateBankAccountResponse {
+    BankAccount bank_account = 1;
+}
+
+message CreateBankStatementResponse {
+    BankStatement bank_statement = 1;
+}
+
+message GetBankStatementResponse {
+    BankStatement bank_statement = 1;
+}
+
+message ImportBankStatementResponse {
+    BankStatement bank_statement = 1;
+}
+
+message CreateCashTransferResponse {
+    CashTransfer cash_transfer = 1;
+}
+
+message GetCashTransferResponse {
+    CashTransfer cash_transfer = 1;
+}
+
+message ExecuteCashTransferResponse {
+    CashTransfer cash_transfer = 1;
+}
+
+message CreateLoanResponse {
+    Loan loan = 1;
+}
+
+message GetLoanResponse {
+    Loan loan = 1;
+}
+
+message UpdateLoanResponse {
+    Loan loan = 1;
+}
+
+message CreateInvestmentResponse {
+    Investment investment = 1;
+}
+
+message GetInvestmentResponse {
+    Investment investment = 1;
+}

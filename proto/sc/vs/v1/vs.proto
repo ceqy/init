@@ -1,0 +1,627 @@
+syntax = "proto3";
+
+package sc.vs.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/base.proto";
+
+service SupplierCollaborationService {
+    rpc CreateSupplierPortalUser(CreateSupplierPortalUserRequest) returns (CreateSupplierPortalUserResponse);
+    rpc GetSupplierPortalUser(GetSupplierPortalUserRequest) returns (GetSupplierPortalUserResponse);
+    rpc UpdateSupplierPortalUser(UpdateSupplierPortalUserRequest) returns (UpdateSupplierPortalUserResponse);
+    rpc ListSupplierPortalUsers(ListSupplierPortalUsersRequest) returns (ListSupplierPortalUsersResponse);
+
+    rpc ShareForecast(ShareForecastRequest) returns (ShareForecastResponse);
+    rpc GetSharedForecasts(GetSharedForecastsRequest) returns (GetSharedForecastsResponse);
+    rpc AcknowledgeForecast(AcknowledgeForecastRequest) returns (AcknowledgeForecastResponse);
+
+    rpc CreateSupplierSchedule(CreateSupplierScheduleRequest) returns (CreateSupplierScheduleResponse);
+    rpc GetSupplierSchedule(GetSupplierScheduleRequest) returns (GetSupplierScheduleResponse);
+    rpc UpdateSupplierSchedule(UpdateSupplierScheduleRequest) returns (UpdateSupplierScheduleResponse);
+    rpc ListSupplierSchedules(ListSupplierSchedulesRequest) returns (ListSupplierSchedulesResponse);
+    rpc ConfirmSchedule(ConfirmScheduleRequest) returns (ConfirmScheduleResponse);
+
+    rpc GetSupplierInventory(GetSupplierInventoryRequest) returns (GetSupplierInventoryResponse);
+    rpc UpdateSupplierInventory(UpdateSupplierInventoryRequest) returns (UpdateSupplierInventoryResponse);
+
+    rpc CreateASN(CreateASNRequest) returns (CreateASNResponse);
+    rpc GetASN(GetASNRequest) returns (GetASNResponse);
+    rpc UpdateASN(UpdateASNRequest) returns (UpdateASNResponse);
+    rpc ListASNs(ListASNsRequest) returns (ListASNsResponse);
+
+    rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+    rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+    rpc MarkMessageRead(MarkMessageReadRequest) returns (MarkMessageReadResponse);
+
+    rpc GetSupplierDashboard(GetSupplierDashboardRequest) returns (GetSupplierDashboardResponse);
+    rpc GetCollaborationMetrics(GetCollaborationMetricsRequest) returns (GetCollaborationMetricsResponse);
+}
+
+message SupplierPortalUser {
+    string id = 1;
+    string vendor_id = 2;
+    string vendor_name = 3;
+    string username = 4;
+    string email = 5;
+    string first_name = 6;
+    string last_name = 7;
+    string phone = 8;
+    string role = 9;
+    repeated string permissions = 10;
+    common.v1.Status status = 11;
+    google.protobuf.Timestamp last_login = 12;
+    common.v1.AuditInfo audit_info = 13;
+}
+
+message SharedForecast {
+    string id = 1;
+    string forecast_number = 2;
+    string company_code = 3;
+    string vendor_id = 4;
+    string vendor_name = 5;
+    string product_id = 6;
+    string product_code = 7;
+    string product_name = 8;
+    google.protobuf.Timestamp period_start = 9;
+    google.protobuf.Timestamp period_end = 10;
+    string granularity = 11;
+    repeated ForecastPeriod periods = 12;
+    SharedForecastStatus status = 13;
+    google.protobuf.Timestamp shared_at = 14;
+    google.protobuf.Timestamp acknowledged_at = 15;
+    string acknowledged_by = 16;
+    string supplier_comments = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+message ForecastPeriod {
+    google.protobuf.Timestamp period_start = 1;
+    google.protobuf.Timestamp period_end = 2;
+    common.v1.Quantity forecast_quantity = 3;
+    common.v1.Quantity committed_quantity = 4;
+    string supplier_notes = 5;
+}
+
+enum SharedForecastStatus {
+    SHARED_FORECAST_STATUS_UNSPECIFIED = 0;
+    SHARED_FORECAST_STATUS_SHARED = 1;
+    SHARED_FORECAST_STATUS_VIEWED = 2;
+    SHARED_FORECAST_STATUS_ACKNOWLEDGED = 3;
+    SHARED_FORECAST_STATUS_COMMITTED = 4;
+    SHARED_FORECAST_STATUS_EXPIRED = 5;
+}
+
+message SupplierSchedule {
+    string id = 1;
+    string schedule_number = 2;
+    string company_code = 3;
+    string vendor_id = 4;
+    string vendor_name = 5;
+    string product_id = 6;
+    string product_code = 7;
+    string product_name = 8;
+    string plant = 9;
+    google.protobuf.Timestamp period_start = 10;
+    google.protobuf.Timestamp period_end = 11;
+    repeated ScheduleLine lines = 12;
+    SupplierScheduleStatus status = 13;
+    string contract_reference = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+message ScheduleLine {
+    string id = 1;
+    int32 line_number = 2;
+    google.protobuf.Timestamp delivery_date = 3;
+    common.v1.Quantity scheduled_quantity = 4;
+    common.v1.Quantity confirmed_quantity = 5;
+    common.v1.Quantity received_quantity = 6;
+    string delivery_location = 7;
+    ScheduleLineStatus status = 8;
+    string supplier_reference = 9;
+    string notes = 10;
+}
+
+enum SupplierScheduleStatus {
+    SUPPLIER_SCHEDULE_STATUS_UNSPECIFIED = 0;
+    SUPPLIER_SCHEDULE_STATUS_DRAFT = 1;
+    SUPPLIER_SCHEDULE_STATUS_SENT = 2;
+    SUPPLIER_SCHEDULE_STATUS_CONFIRMED = 3;
+    SUPPLIER_SCHEDULE_STATUS_PARTIALLY_CONFIRMED = 4;
+    SUPPLIER_SCHEDULE_STATUS_IN_PROGRESS = 5;
+    SUPPLIER_SCHEDULE_STATUS_COMPLETED = 6;
+    SUPPLIER_SCHEDULE_STATUS_CANCELLED = 7;
+}
+
+enum ScheduleLineStatus {
+    SCHEDULE_LINE_STATUS_UNSPECIFIED = 0;
+    SCHEDULE_LINE_STATUS_OPEN = 1;
+    SCHEDULE_LINE_STATUS_CONFIRMED = 2;
+    SCHEDULE_LINE_STATUS_SHIPPED = 3;
+    SCHEDULE_LINE_STATUS_RECEIVED = 4;
+    SCHEDULE_LINE_STATUS_CANCELLED = 5;
+}
+
+message SupplierInventory {
+    string id = 1;
+    string vendor_id = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    string location = 6;
+    common.v1.Quantity on_hand = 7;
+    common.v1.Quantity available = 8;
+    common.v1.Quantity in_production = 9;
+    common.v1.Quantity committed = 10;
+    string unit = 11;
+    google.protobuf.Timestamp last_updated = 12;
+    int32 lead_time_days = 13;
+    common.v1.Quantity minimum_order = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+message ASN {
+    string id = 1;
+    string asn_number = 2;
+    string vendor_id = 3;
+    string vendor_name = 4;
+    string company_code = 5;
+    string purchase_order_id = 6;
+    string purchase_order_number = 7;
+    google.protobuf.Timestamp ship_date = 8;
+    google.protobuf.Timestamp expected_arrival = 9;
+    string carrier = 10;
+    string tracking_number = 11;
+    string bill_of_lading = 12;
+    repeated ASNItem items = 13;
+    ASNStatus status = 14;
+    ShipmentDetails shipment = 15;
+    common.v1.AuditInfo audit_info = 16;
+}
+
+message ASNItem {
+    string id = 1;
+    int32 item_number = 2;
+    string po_line_id = 3;
+    string product_id = 4;
+    string product_code = 5;
+    string description = 6;
+    common.v1.Quantity shipped_quantity = 7;
+    string unit = 8;
+    string batch_number = 9;
+    string serial_numbers = 10;
+    google.protobuf.Timestamp production_date = 11;
+    google.protobuf.Timestamp expiration_date = 12;
+    string country_of_origin = 13;
+}
+
+message ShipmentDetails {
+    int32 package_count = 1;
+    double gross_weight = 2;
+    string weight_unit = 3;
+    double volume = 4;
+    string volume_unit = 5;
+    string shipping_instructions = 6;
+}
+
+enum ASNStatus {
+    ASN_STATUS_UNSPECIFIED = 0;
+    ASN_STATUS_DRAFT = 1;
+    ASN_STATUS_SUBMITTED = 2;
+    ASN_STATUS_IN_TRANSIT = 3;
+    ASN_STATUS_RECEIVED = 4;
+    ASN_STATUS_PARTIALLY_RECEIVED = 5;
+    ASN_STATUS_CANCELLED = 6;
+}
+
+message CollaborationMessage {
+    string id = 1;
+    string thread_id = 2;
+    string vendor_id = 3;
+    string company_code = 4;
+    string sender_id = 5;
+    string sender_name = 6;
+    string sender_type = 7;
+    string subject = 8;
+    string body = 9;
+    string reference_type = 10;
+    string reference_id = 11;
+    MessagePriority priority = 12;
+    bool read = 13;
+    google.protobuf.Timestamp read_at = 14;
+    repeated common.v1.Attachment attachments = 15;
+    google.protobuf.Timestamp sent_at = 16;
+}
+
+enum MessagePriority {
+    MESSAGE_PRIORITY_UNSPECIFIED = 0;
+    MESSAGE_PRIORITY_LOW = 1;
+    MESSAGE_PRIORITY_NORMAL = 2;
+    MESSAGE_PRIORITY_HIGH = 3;
+    MESSAGE_PRIORITY_URGENT = 4;
+}
+
+message SupplierDashboard {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    google.protobuf.Timestamp timestamp = 3;
+    OrderSummary orders = 4;
+    ScheduleSummary schedules = 5;
+    ASNSummary asns = 6;
+    PerformanceSummary performance = 7;
+    repeated Alert alerts = 8;
+    repeated PendingAction pending_actions = 9;
+}
+
+message OrderSummary {
+    int32 open_orders = 1;
+    int32 pending_confirmation = 2;
+    int32 overdue = 3;
+    common.v1.Money total_value = 4;
+}
+
+message ScheduleSummary {
+    int32 active_schedules = 1;
+    int32 pending_confirmation = 2;
+    int32 deliveries_this_week = 3;
+    int32 deliveries_next_week = 4;
+}
+
+message ASNSummary {
+    int32 pending_submission = 1;
+    int32 in_transit = 2;
+    int32 delivered_this_week = 3;
+}
+
+message PerformanceSummary {
+    double on_time_delivery = 1;
+    double quality_rate = 2;
+    double fill_rate = 3;
+    string rating = 4;
+}
+
+message Alert {
+    string id = 1;
+    string type = 2;
+    string severity = 3;
+    string message = 4;
+    string reference_id = 5;
+    google.protobuf.Timestamp timestamp = 6;
+}
+
+message PendingAction {
+    string id = 1;
+    string type = 2;
+    string description = 3;
+    string reference_id = 4;
+    google.protobuf.Timestamp due_date = 5;
+    string priority = 6;
+}
+
+message CreateSupplierPortalUserRequest {
+    string vendor_id = 1;
+    string username = 2;
+    string email = 3;
+    string first_name = 4;
+    string last_name = 5;
+    string phone = 6;
+    string role = 7;
+    repeated string permissions = 8;
+}
+
+message GetSupplierPortalUserRequest {
+    string id = 1;
+}
+
+message UpdateSupplierPortalUserRequest {
+    string id = 1;
+    string email = 2;
+    string first_name = 3;
+    string last_name = 4;
+    string phone = 5;
+    string role = 6;
+    repeated string permissions = 7;
+    common.v1.Status status = 8;
+}
+
+message ListSupplierPortalUsersRequest {
+    string vendor_id = 1;
+    common.v1.Status status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListSupplierPortalUsersResponse {
+    repeated SupplierPortalUser users = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ShareForecastRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    string product_id = 3;
+    google.protobuf.Timestamp period_start = 4;
+    google.protobuf.Timestamp period_end = 5;
+    string granularity = 6;
+    repeated ForecastPeriodInput periods = 7;
+}
+
+message ForecastPeriodInput {
+    google.protobuf.Timestamp period_start = 1;
+    google.protobuf.Timestamp period_end = 2;
+    common.v1.Quantity forecast_quantity = 3;
+}
+
+message GetSharedForecastsRequest {
+    string vendor_id = 1;
+    string product_id = 2;
+    SharedForecastStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetSharedForecastsResponse {
+    repeated SharedForecast forecasts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message AcknowledgeForecastRequest {
+    string id = 1;
+    repeated ForecastCommitmentInput commitments = 2;
+    string comments = 3;
+}
+
+message ForecastCommitmentInput {
+    google.protobuf.Timestamp period_start = 1;
+    common.v1.Quantity committed_quantity = 2;
+    string notes = 3;
+}
+
+message CreateSupplierScheduleRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    string product_id = 3;
+    string plant = 4;
+    google.protobuf.Timestamp period_start = 5;
+    google.protobuf.Timestamp period_end = 6;
+    repeated ScheduleLineInput lines = 7;
+    string contract_reference = 8;
+}
+
+message ScheduleLineInput {
+    google.protobuf.Timestamp delivery_date = 1;
+    common.v1.Quantity scheduled_quantity = 2;
+    string delivery_location = 3;
+    string notes = 4;
+}
+
+message GetSupplierScheduleRequest {
+    string id = 1;
+}
+
+message UpdateSupplierScheduleRequest {
+    string id = 1;
+    repeated ScheduleLineInput lines = 2;
+}
+
+message ListSupplierSchedulesRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    string product_id = 3;
+    SupplierScheduleStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListSupplierSchedulesResponse {
+    repeated SupplierSchedule schedules = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ConfirmScheduleRequest {
+    string id = 1;
+    repeated ScheduleLineConfirmation confirmations = 2;
+    string supplier_reference = 3;
+}
+
+message ScheduleLineConfirmation {
+    string line_id = 1;
+    common.v1.Quantity confirmed_quantity = 2;
+    google.protobuf.Timestamp confirmed_date = 3;
+    string notes = 4;
+}
+
+message GetSupplierInventoryRequest {
+    string vendor_id = 1;
+    string product_id = 2;
+}
+
+message GetSupplierInventoryResponse {
+    repeated SupplierInventory inventory = 1;
+}
+
+message UpdateSupplierInventoryRequest {
+    string vendor_id = 1;
+    string product_id = 2;
+    string location = 3;
+    common.v1.Quantity on_hand = 4;
+    common.v1.Quantity available = 5;
+    common.v1.Quantity in_production = 6;
+    int32 lead_time_days = 7;
+}
+
+message CreateASNRequest {
+    string vendor_id = 1;
+    string purchase_order_id = 2;
+    google.protobuf.Timestamp ship_date = 3;
+    google.protobuf.Timestamp expected_arrival = 4;
+    string carrier = 5;
+    string tracking_number = 6;
+    string bill_of_lading = 7;
+    repeated ASNItemInput items = 8;
+    ShipmentDetails shipment = 9;
+}
+
+message ASNItemInput {
+    string po_line_id = 1;
+    string product_id = 2;
+    common.v1.Quantity shipped_quantity = 3;
+    string unit = 4;
+    string batch_number = 5;
+    string serial_numbers = 6;
+    google.protobuf.Timestamp production_date = 7;
+    google.protobuf.Timestamp expiration_date = 8;
+    string country_of_origin = 9;
+}
+
+message GetASNRequest {
+    string id = 1;
+}
+
+message UpdateASNRequest {
+    string id = 1;
+    google.protobuf.Timestamp expected_arrival = 2;
+    string carrier = 3;
+    string tracking_number = 4;
+    ASNStatus status = 5;
+}
+
+message ListASNsRequest {
+    string vendor_id = 1;
+    string company_code = 2;
+    string purchase_order_id = 3;
+    ASNStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListASNsResponse {
+    repeated ASN asns = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message SendMessageRequest {
+    string vendor_id = 1;
+    string company_code = 2;
+    string thread_id = 3;
+    string subject = 4;
+    string body = 5;
+    string reference_type = 6;
+    string reference_id = 7;
+    MessagePriority priority = 8;
+}
+
+message GetMessagesRequest {
+    string vendor_id = 1;
+    string company_code = 2;
+    string thread_id = 3;
+    bool unread_only = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetMessagesResponse {
+    repeated CollaborationMessage messages = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message MarkMessageReadRequest {
+    string id = 1;
+}
+
+message GetSupplierDashboardRequest {
+    string vendor_id = 1;
+}
+
+message GetCollaborationMetricsRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetCollaborationMetricsResponse {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    CollaborationMetrics metrics = 3;
+    repeated CollaborationTrend trend = 4;
+}
+
+message CollaborationMetrics {
+    double forecast_acknowledgment_rate = 1;
+    double schedule_confirmation_rate = 2;
+    double asn_compliance_rate = 3;
+    double response_time_hours = 4;
+    int32 messages_exchanged = 5;
+    int32 issues_resolved = 6;
+}
+
+message CollaborationTrend {
+    string period = 1;
+    double acknowledgment_rate = 2;
+    double confirmation_rate = 3;
+    double asn_compliance = 4;
+}
+
+// Auto-generated Response messages
+message CreateSupplierPortalUserResponse {
+    SupplierPortalUser supplier_portal_user = 1;
+}
+
+message GetSupplierPortalUserResponse {
+    SupplierPortalUser supplier_portal_user = 1;
+}
+
+message UpdateSupplierPortalUserResponse {
+    SupplierPortalUser supplier_portal_user = 1;
+}
+
+message ShareForecastResponse {
+    SharedForecast shared_forecast = 1;
+}
+
+message AcknowledgeForecastResponse {
+    SharedForecast shared_forecast = 1;
+}
+
+message CreateSupplierScheduleResponse {
+    SupplierSchedule supplier_schedule = 1;
+}
+
+message GetSupplierScheduleResponse {
+    SupplierSchedule supplier_schedule = 1;
+}
+
+message UpdateSupplierScheduleResponse {
+    SupplierSchedule supplier_schedule = 1;
+}
+
+message ConfirmScheduleResponse {
+    SupplierSchedule supplier_schedule = 1;
+}
+
+message UpdateSupplierInventoryResponse {
+    SupplierInventory supplier_inventory = 1;
+}
+
+message CreateASNResponse {
+    ASN a_s_n = 1;
+}
+
+message GetASNResponse {
+    ASN a_s_n = 1;
+}
+
+message UpdateASNResponse {
+    ASN a_s_n = 1;
+}
+
+message SendMessageResponse {
+    CollaborationMessage collaboration_message = 1;
+}
+
+message MarkMessageReadResponse {
+    CollaborationMessage collaboration_message = 1;
+}
+
+message GetSupplierDashboardResponse {
+    SupplierDashboard supplier_dashboard = 1;
+}

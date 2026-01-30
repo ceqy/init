@@ -1,0 +1,379 @@
+syntax = "proto3";
+
+package fi.ap.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service AccountsPayableService {
+    rpc CreateVendorInvoice(CreateVendorInvoiceRequest) returns (CreateVendorInvoiceResponse);
+    rpc GetVendorInvoice(GetVendorInvoiceRequest) returns (GetVendorInvoiceResponse);
+    rpc UpdateVendorInvoice(UpdateVendorInvoiceRequest) returns (UpdateVendorInvoiceResponse);
+    rpc DeleteVendorInvoice(DeleteVendorInvoiceRequest) returns (google.protobuf.Empty);
+    rpc ListVendorInvoices(ListVendorInvoicesRequest) returns (ListVendorInvoicesResponse);
+    rpc PostVendorInvoice(PostVendorInvoiceRequest) returns (PostVendorInvoiceResponse);
+
+    rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+    rpc GetPayment(GetPaymentRequest) returns (GetPaymentResponse);
+    rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
+    rpc ProcessPayment(ProcessPaymentRequest) returns (ProcessPaymentResponse);
+    rpc VoidPayment(VoidPaymentRequest) returns (VoidPaymentResponse);
+
+    rpc CreatePaymentRun(CreatePaymentRunRequest) returns (CreatePaymentRunResponse);
+    rpc GetPaymentRun(GetPaymentRunRequest) returns (GetPaymentRunResponse);
+    rpc ExecutePaymentRun(ExecutePaymentRunRequest) returns (ExecutePaymentRunResponse);
+
+    rpc GetVendorBalance(GetVendorBalanceRequest) returns (GetVendorBalanceResponse);
+    rpc GetAgingReport(GetAgingReportRequest) returns (GetAgingReportResponse);
+    rpc GetOpenItems(GetOpenItemsRequest) returns (GetOpenItemsResponse);
+}
+
+message VendorInvoice {
+    string id = 1;
+    string invoice_number = 2;
+    string company_code = 3;
+    string vendor_id = 4;
+    string vendor_name = 5;
+    google.protobuf.Timestamp invoice_date = 6;
+    google.protobuf.Timestamp posting_date = 7;
+    google.protobuf.Timestamp due_date = 8;
+    string payment_terms = 9;
+    string currency = 10;
+    common.v1.Money gross_amount = 11;
+    common.v1.Money tax_amount = 12;
+    common.v1.Money net_amount = 13;
+    common.v1.Money paid_amount = 14;
+    common.v1.Money balance = 15;
+    repeated VendorInvoiceLine lines = 16;
+    VendorInvoiceStatus status = 17;
+    string reference = 18;
+    string description = 19;
+    string po_reference = 20;
+    repeated common.v1.Attachment attachments = 21;
+    common.v1.AuditInfo audit_info = 22;
+}
+
+message VendorInvoiceLine {
+    string id = 1;
+    int32 line_number = 2;
+    string gl_account = 3;
+    string cost_center = 4;
+    string description = 5;
+    common.v1.Quantity quantity = 6;
+    common.v1.Money unit_price = 7;
+    common.v1.Money net_amount = 8;
+    string tax_code = 9;
+    common.v1.Money tax_amount = 10;
+    common.v1.Money gross_amount = 11;
+    string po_line_reference = 12;
+}
+
+enum VendorInvoiceStatus {
+    VENDOR_INVOICE_STATUS_UNSPECIFIED = 0;
+    VENDOR_INVOICE_STATUS_DRAFT = 1;
+    VENDOR_INVOICE_STATUS_PENDING_APPROVAL = 2;
+    VENDOR_INVOICE_STATUS_APPROVED = 3;
+    VENDOR_INVOICE_STATUS_POSTED = 4;
+    VENDOR_INVOICE_STATUS_PARTIALLY_PAID = 5;
+    VENDOR_INVOICE_STATUS_PAID = 6;
+    VENDOR_INVOICE_STATUS_CANCELLED = 7;
+}
+
+message Payment {
+    string id = 1;
+    string payment_number = 2;
+    string company_code = 3;
+    string vendor_id = 4;
+    string vendor_name = 5;
+    google.protobuf.Timestamp payment_date = 6;
+    string payment_method = 7;
+    string bank_account = 8;
+    string currency = 9;
+    common.v1.Money amount = 10;
+    repeated PaymentAllocation allocations = 11;
+    PaymentStatus status = 12;
+    string reference = 13;
+    string check_number = 14;
+    string bank_reference = 15;
+    common.v1.AuditInfo audit_info = 16;
+}
+
+message PaymentAllocation {
+    string invoice_id = 1;
+    string invoice_number = 2;
+    common.v1.Money allocated_amount = 3;
+    common.v1.Money discount_taken = 4;
+}
+
+enum PaymentStatus {
+    PAYMENT_STATUS_UNSPECIFIED = 0;
+    PAYMENT_STATUS_DRAFT = 1;
+    PAYMENT_STATUS_PENDING = 2;
+    PAYMENT_STATUS_PROCESSED = 3;
+    PAYMENT_STATUS_CLEARED = 4;
+    PAYMENT_STATUS_VOIDED = 5;
+    PAYMENT_STATUS_FAILED = 6;
+}
+
+message PaymentRun {
+    string id = 1;
+    string run_number = 2;
+    string company_code = 3;
+    google.protobuf.Timestamp run_date = 4;
+    google.protobuf.Timestamp payment_date = 5;
+    string payment_method = 6;
+    string bank_account = 7;
+    repeated string vendor_ids = 8;
+    common.v1.DateRange due_date_range = 9;
+    common.v1.Money total_amount = 10;
+    int32 payment_count = 11;
+    PaymentRunStatus status = 12;
+    repeated Payment payments = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+enum PaymentRunStatus {
+    PAYMENT_RUN_STATUS_UNSPECIFIED = 0;
+    PAYMENT_RUN_STATUS_DRAFT = 1;
+    PAYMENT_RUN_STATUS_PROPOSAL = 2;
+    PAYMENT_RUN_STATUS_APPROVED = 3;
+    PAYMENT_RUN_STATUS_EXECUTED = 4;
+    PAYMENT_RUN_STATUS_COMPLETED = 5;
+    PAYMENT_RUN_STATUS_CANCELLED = 6;
+}
+
+message CreateVendorInvoiceRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    string invoice_number = 3;
+    google.protobuf.Timestamp invoice_date = 4;
+    google.protobuf.Timestamp due_date = 5;
+    string payment_terms = 6;
+    string currency = 7;
+    string reference = 8;
+    string description = 9;
+    string po_reference = 10;
+    repeated VendorInvoiceLineInput lines = 11;
+}
+
+message VendorInvoiceLineInput {
+    string gl_account = 1;
+    string cost_center = 2;
+    string description = 3;
+    common.v1.Quantity quantity = 4;
+    common.v1.Money unit_price = 5;
+    string tax_code = 6;
+    string po_line_reference = 7;
+}
+
+message GetVendorInvoiceRequest {
+    string id = 1;
+}
+
+message UpdateVendorInvoiceRequest {
+    string id = 1;
+    google.protobuf.Timestamp due_date = 2;
+    string payment_terms = 3;
+    string reference = 4;
+    string description = 5;
+    repeated VendorInvoiceLineInput lines = 6;
+}
+
+message DeleteVendorInvoiceRequest {
+    string id = 1;
+}
+
+message ListVendorInvoicesRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    VendorInvoiceStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListVendorInvoicesResponse {
+    repeated VendorInvoice invoices = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message PostVendorInvoiceRequest {
+    string id = 1;
+    google.protobuf.Timestamp posting_date = 2;
+}
+
+message CreatePaymentRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    google.protobuf.Timestamp payment_date = 3;
+    string payment_method = 4;
+    string bank_account = 5;
+    string currency = 6;
+    common.v1.Money amount = 7;
+    repeated PaymentAllocationInput allocations = 8;
+    string reference = 9;
+}
+
+message PaymentAllocationInput {
+    string invoice_id = 1;
+    common.v1.Money allocated_amount = 2;
+    common.v1.Money discount_taken = 3;
+}
+
+message GetPaymentRequest {
+    string id = 1;
+}
+
+message ListPaymentsRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    PaymentStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListPaymentsResponse {
+    repeated Payment payments = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ProcessPaymentRequest {
+    string id = 1;
+}
+
+message VoidPaymentRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message CreatePaymentRunRequest {
+    string company_code = 1;
+    google.protobuf.Timestamp payment_date = 2;
+    string payment_method = 3;
+    string bank_account = 4;
+    repeated string vendor_ids = 5;
+    common.v1.DateRange due_date_range = 6;
+}
+
+message GetPaymentRunRequest {
+    string id = 1;
+}
+
+message ExecutePaymentRunRequest {
+    string id = 1;
+}
+
+message GetVendorBalanceRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    google.protobuf.Timestamp as_of_date = 3;
+}
+
+message GetVendorBalanceResponse {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    common.v1.Money total_invoiced = 3;
+    common.v1.Money total_paid = 4;
+    common.v1.Money balance = 5;
+    common.v1.Money overdue_amount = 6;
+}
+
+message GetAgingReportRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    google.protobuf.Timestamp as_of_date = 3;
+    repeated int32 aging_buckets = 4;
+}
+
+message GetAgingReportResponse {
+    repeated AgingReportLine lines = 1;
+    AgingBucketTotals totals = 2;
+}
+
+message AgingReportLine {
+    string vendor_id = 1;
+    string vendor_name = 2;
+    common.v1.Money current = 3;
+    common.v1.Money days_1_30 = 4;
+    common.v1.Money days_31_60 = 5;
+    common.v1.Money days_61_90 = 6;
+    common.v1.Money over_90 = 7;
+    common.v1.Money total = 8;
+}
+
+message AgingBucketTotals {
+    common.v1.Money current = 1;
+    common.v1.Money days_1_30 = 2;
+    common.v1.Money days_31_60 = 3;
+    common.v1.Money days_61_90 = 4;
+    common.v1.Money over_90 = 5;
+    common.v1.Money total = 6;
+}
+
+message GetOpenItemsRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetOpenItemsResponse {
+    repeated OpenItem items = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message OpenItem {
+    string document_id = 1;
+    string document_number = 2;
+    string document_type = 3;
+    google.protobuf.Timestamp document_date = 4;
+    google.protobuf.Timestamp due_date = 5;
+    common.v1.Money original_amount = 6;
+    common.v1.Money open_amount = 7;
+    int32 days_overdue = 8;
+}
+
+// Auto-generated Response messages
+message CreateVendorInvoiceResponse {
+    VendorInvoice vendor_invoice = 1;
+}
+
+message GetVendorInvoiceResponse {
+    VendorInvoice vendor_invoice = 1;
+}
+
+message UpdateVendorInvoiceResponse {
+    VendorInvoice vendor_invoice = 1;
+}
+
+message PostVendorInvoiceResponse {
+    VendorInvoice vendor_invoice = 1;
+}
+
+message CreatePaymentResponse {
+    Payment payment = 1;
+}
+
+message GetPaymentResponse {
+    Payment payment = 1;
+}
+
+message ProcessPaymentResponse {
+    Payment payment = 1;
+}
+
+message VoidPaymentResponse {
+    Payment payment = 1;
+}
+
+message CreatePaymentRunResponse {
+    PaymentRun payment_run = 1;
+}
+
+message GetPaymentRunResponse {
+    PaymentRun payment_run = 1;
+}
+
+message ExecutePaymentRunResponse {
+    PaymentRun payment_run = 1;
+}

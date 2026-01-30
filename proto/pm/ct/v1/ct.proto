@@ -1,0 +1,408 @@
+syntax = "proto3";
+
+package pm.ct.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service ContractService {
+    rpc CreateContract(CreateContractRequest) returns (CreateContractResponse);
+    rpc GetContract(GetContractRequest) returns (GetContractResponse);
+    rpc UpdateContract(UpdateContractRequest) returns (UpdateContractResponse);
+    rpc DeleteContract(DeleteContractRequest) returns (google.protobuf.Empty);
+    rpc ListContracts(ListContractsRequest) returns (ListContractsResponse);
+
+    rpc ActivateContract(ActivateContractRequest) returns (ActivateContractResponse);
+    rpc SuspendContract(SuspendContractRequest) returns (SuspendContractResponse);
+    rpc TerminateContract(TerminateContractRequest) returns (TerminateContractResponse);
+    rpc RenewContract(RenewContractRequest) returns (RenewContractResponse);
+
+    rpc CreateContractItem(CreateContractItemRequest) returns (CreateContractItemResponse);
+    rpc UpdateContractItem(UpdateContractItemRequest) returns (UpdateContractItemResponse);
+    rpc DeleteContractItem(DeleteContractItemRequest) returns (google.protobuf.Empty);
+
+    rpc CreateReleaseOrder(CreateReleaseOrderRequest) returns (CreateReleaseOrderResponse);
+    rpc GetReleaseOrder(GetReleaseOrderRequest) returns (GetReleaseOrderResponse);
+    rpc ListReleaseOrders(ListReleaseOrdersRequest) returns (ListReleaseOrdersResponse);
+
+    rpc GetContractUtilization(GetContractUtilizationRequest) returns (GetContractUtilizationResponse);
+    rpc GetExpiringContracts(GetExpiringContractsRequest) returns (GetExpiringContractsResponse);
+
+    rpc AddContractDocument(AddContractDocumentRequest) returns (AddContractDocumentResponse);
+    rpc ListContractDocuments(ListContractDocumentsRequest) returns (ListContractDocumentsResponse);
+}
+
+message Contract {
+    string id = 1;
+    string contract_number = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    string purchasing_organization = 6;
+    string purchasing_group = 7;
+    string vendor_id = 8;
+    string vendor_name = 9;
+    ContractType contract_type = 10;
+    google.protobuf.Timestamp start_date = 11;
+    google.protobuf.Timestamp end_date = 12;
+    google.protobuf.Timestamp signing_date = 13;
+    string currency = 14;
+    common.v1.Money target_value = 15;
+    common.v1.Money released_value = 16;
+    common.v1.Money remaining_value = 17;
+    string payment_terms = 18;
+    string incoterms = 19;
+    string incoterms_location = 20;
+    repeated ContractItem items = 21;
+    ContractStatus status = 22;
+    int32 renewal_period_months = 23;
+    bool auto_renewal = 24;
+    int32 notice_period_days = 25;
+    repeated ApprovalRecord approvals = 26;
+    common.v1.AuditInfo audit_info = 27;
+}
+
+enum ContractType {
+    CONTRACT_TYPE_UNSPECIFIED = 0;
+    CONTRACT_TYPE_VALUE = 1;
+    CONTRACT_TYPE_QUANTITY = 2;
+    CONTRACT_TYPE_SERVICE = 3;
+    CONTRACT_TYPE_BLANKET = 4;
+}
+
+enum ContractStatus {
+    CONTRACT_STATUS_UNSPECIFIED = 0;
+    CONTRACT_STATUS_DRAFT = 1;
+    CONTRACT_STATUS_PENDING_APPROVAL = 2;
+    CONTRACT_STATUS_APPROVED = 3;
+    CONTRACT_STATUS_ACTIVE = 4;
+    CONTRACT_STATUS_SUSPENDED = 5;
+    CONTRACT_STATUS_EXPIRED = 6;
+    CONTRACT_STATUS_TERMINATED = 7;
+    CONTRACT_STATUS_RENEWED = 8;
+}
+
+message ContractItem {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string description = 5;
+    common.v1.Quantity target_quantity = 6;
+    common.v1.Quantity released_quantity = 7;
+    common.v1.Money unit_price = 8;
+    common.v1.Money target_value = 9;
+    common.v1.Money released_value = 10;
+    string plant = 11;
+    string storage_location = 12;
+    PriceConditionType price_condition = 13;
+    google.protobuf.Timestamp price_valid_from = 14;
+    google.protobuf.Timestamp price_valid_to = 15;
+}
+
+enum PriceConditionType {
+    PRICE_CONDITION_TYPE_UNSPECIFIED = 0;
+    PRICE_CONDITION_TYPE_FIXED = 1;
+    PRICE_CONDITION_TYPE_DISCOUNT = 2;
+    PRICE_CONDITION_TYPE_TIERED = 3;
+}
+
+message ReleaseOrder {
+    string id = 1;
+    string release_number = 2;
+    string contract_id = 3;
+    string contract_number = 4;
+    string purchase_order_id = 5;
+    string purchase_order_number = 6;
+    google.protobuf.Timestamp release_date = 7;
+    common.v1.Money value = 8;
+    repeated ReleaseOrderLine lines = 9;
+    common.v1.AuditInfo audit_info = 10;
+}
+
+message ReleaseOrderLine {
+    string id = 1;
+    string contract_item_id = 2;
+    int32 item_number = 3;
+    string product_id = 4;
+    string product_code = 5;
+    common.v1.Quantity quantity = 6;
+    common.v1.Money unit_price = 7;
+    common.v1.Money value = 8;
+}
+
+message ApprovalRecord {
+    int32 step = 1;
+    string approver_id = 2;
+    string approver_name = 3;
+    string role = 4;
+    ApprovalStatus status = 5;
+    google.protobuf.Timestamp decision_date = 6;
+    string comments = 7;
+}
+
+enum ApprovalStatus {
+    APPROVAL_STATUS_UNSPECIFIED = 0;
+    APPROVAL_STATUS_PENDING = 1;
+    APPROVAL_STATUS_APPROVED = 2;
+    APPROVAL_STATUS_REJECTED = 3;
+}
+
+message ContractDocument {
+    string id = 1;
+    string contract_id = 2;
+    string document_type = 3;
+    string title = 4;
+    string description = 5;
+    common.v1.Attachment attachment = 6;
+    common.v1.AuditInfo audit_info = 7;
+}
+
+message CreateContractRequest {
+    string name = 1;
+    string description = 2;
+    string company_code = 3;
+    string purchasing_organization = 4;
+    string purchasing_group = 5;
+    string vendor_id = 6;
+    ContractType contract_type = 7;
+    google.protobuf.Timestamp start_date = 8;
+    google.protobuf.Timestamp end_date = 9;
+    string currency = 10;
+    common.v1.Money target_value = 11;
+    string payment_terms = 12;
+    string incoterms = 13;
+    string incoterms_location = 14;
+    repeated ContractItemInput items = 15;
+    int32 renewal_period_months = 16;
+    bool auto_renewal = 17;
+    int32 notice_period_days = 18;
+}
+
+message ContractItemInput {
+    string product_id = 1;
+    string description = 2;
+    common.v1.Quantity target_quantity = 3;
+    common.v1.Money unit_price = 4;
+    string plant = 5;
+    string storage_location = 6;
+    PriceConditionType price_condition = 7;
+}
+
+message GetContractRequest {
+    string id = 1;
+}
+
+message UpdateContractRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    google.protobuf.Timestamp end_date = 4;
+    common.v1.Money target_value = 5;
+    string payment_terms = 6;
+    int32 renewal_period_months = 7;
+    bool auto_renewal = 8;
+    int32 notice_period_days = 9;
+}
+
+message DeleteContractRequest {
+    string id = 1;
+}
+
+message ListContractsRequest {
+    string company_code = 1;
+    string vendor_id = 2;
+    string purchasing_organization = 3;
+    ContractType contract_type = 4;
+    ContractStatus status = 5;
+    common.v1.DateRange date_range = 6;
+    string search = 7;
+    common.v1.Pagination pagination = 8;
+}
+
+message ListContractsResponse {
+    repeated Contract contracts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ActivateContractRequest {
+    string id = 1;
+}
+
+message SuspendContractRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message TerminateContractRequest {
+    string id = 1;
+    string reason = 2;
+    google.protobuf.Timestamp termination_date = 3;
+}
+
+message RenewContractRequest {
+    string id = 1;
+    google.protobuf.Timestamp new_end_date = 2;
+    common.v1.Money new_target_value = 3;
+}
+
+message CreateContractItemRequest {
+    string contract_id = 1;
+    ContractItemInput item = 2;
+}
+
+message UpdateContractItemRequest {
+    string id = 1;
+    common.v1.Quantity target_quantity = 2;
+    common.v1.Money unit_price = 3;
+}
+
+message DeleteContractItemRequest {
+    string id = 1;
+}
+
+message CreateReleaseOrderRequest {
+    string contract_id = 1;
+    repeated ReleaseOrderLineInput lines = 2;
+    google.protobuf.Timestamp delivery_date = 3;
+}
+
+message ReleaseOrderLineInput {
+    string contract_item_id = 1;
+    common.v1.Quantity quantity = 2;
+}
+
+message GetReleaseOrderRequest {
+    string id = 1;
+}
+
+message ListReleaseOrdersRequest {
+    string contract_id = 1;
+    common.v1.DateRange date_range = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListReleaseOrdersResponse {
+    repeated ReleaseOrder releases = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetContractUtilizationRequest {
+    string id = 1;
+}
+
+message GetContractUtilizationResponse {
+    string contract_id = 1;
+    string contract_number = 2;
+    common.v1.Money target_value = 3;
+    common.v1.Money released_value = 4;
+    common.v1.Money remaining_value = 5;
+    double utilization_percentage = 6;
+    repeated ContractItemUtilization items = 7;
+    int32 days_remaining = 8;
+    double projected_utilization = 9;
+}
+
+message ContractItemUtilization {
+    string item_id = 1;
+    string product_code = 2;
+    common.v1.Quantity target_quantity = 3;
+    common.v1.Quantity released_quantity = 4;
+    common.v1.Quantity remaining_quantity = 5;
+    double utilization_percentage = 6;
+}
+
+message GetExpiringContractsRequest {
+    string company_code = 1;
+    int32 days_until_expiration = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetExpiringContractsResponse {
+    repeated ExpiringContract contracts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ExpiringContract {
+    string id = 1;
+    string contract_number = 2;
+    string name = 3;
+    string vendor_name = 4;
+    google.protobuf.Timestamp end_date = 5;
+    int32 days_until_expiration = 6;
+    common.v1.Money remaining_value = 7;
+    double utilization_percentage = 8;
+    bool auto_renewal = 9;
+}
+
+message AddContractDocumentRequest {
+    string contract_id = 1;
+    string document_type = 2;
+    string title = 3;
+    string description = 4;
+    bytes content = 5;
+    string filename = 6;
+    string content_type = 7;
+}
+
+message ListContractDocumentsRequest {
+    string contract_id = 1;
+    string document_type = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListContractDocumentsResponse {
+    repeated ContractDocument documents = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// Auto-generated Response messages
+message CreateContractResponse {
+    Contract contract = 1;
+}
+
+message GetContractResponse {
+    Contract contract = 1;
+}
+
+message UpdateContractResponse {
+    Contract contract = 1;
+}
+
+message ActivateContractResponse {
+    Contract contract = 1;
+}
+
+message SuspendContractResponse {
+    Contract contract = 1;
+}
+
+message TerminateContractResponse {
+    Contract contract = 1;
+}
+
+message RenewContractResponse {
+    Contract contract = 1;
+}
+
+message CreateContractItemResponse {
+    ContractItem contract_item = 1;
+}
+
+message UpdateContractItemResponse {
+    ContractItem contract_item = 1;
+}
+
+message CreateReleaseOrderResponse {
+    ReleaseOrder release_order = 1;
+}
+
+message GetReleaseOrderResponse {
+    ReleaseOrder release_order = 1;
+}
+
+message AddContractDocumentResponse {
+    ContractDocument contract_document = 1;
+}

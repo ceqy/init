@@ -12,9 +12,9 @@ use crate::api::proto::rbac::{
     CheckPermissionsRequest, CheckPermissionsResponse, CreatePermissionRequest,
     CreatePermissionResponse, CreateRoleRequest, CreateRoleResponse, DeletePermissionRequest,
     DeletePermissionResponse, DeleteRoleRequest, DeleteRoleResponse, ExportRolesRequest,
-    GetPermissionRequest, GetPermissionResponse, GetRolePermissionsRequest,
+    ExportRolesResponse, GetPermissionRequest, GetPermissionResponse, GetRolePermissionsRequest,
     GetRolePermissionsResponse, GetRoleRequest, GetRoleResponse, GetUserPermissionsRequest,
-    GetUserPermissionsResponse, GetUserRolesRequest, GetUserRolesResponse, ImportRoleRequest,
+    GetUserPermissionsResponse, GetUserRolesRequest, GetUserRolesResponse, ImportRolesRequest,
     ImportRolesResponse, ListPermissionsRequest, ListPermissionsResponse, ListRolesRequest,
     ListRolesResponse, Permission as ProtoPermission, RemovePermissionsFromRoleRequest,
     RemovePermissionsFromRoleResponse, RemoveRolesFromUserRequest, RemoveRolesFromUserResponse,
@@ -723,7 +723,7 @@ where
     // ===== 导入导出 =====
 
     type ExportRolesStream =
-        std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProtoRole, Status>> + Send>>;
+        std::pin::Pin<Box<dyn futures::Stream<Item = Result<ExportRolesResponse, Status>> + Send>>;
 
     async fn export_roles(
         &self,
@@ -754,7 +754,7 @@ where
             result
                 .roles
                 .into_iter()
-                .map(|role| Ok(role_to_proto(&role))),
+                .map(|role| Ok(ExportRolesResponse { role: Some(role_to_proto(&role)) })),
         );
 
         Ok(Response::new(Box::pin(stream)))
@@ -762,7 +762,7 @@ where
 
     async fn import_roles(
         &self,
-        request: Request<tonic::Streaming<ImportRoleRequest>>,
+        request: Request<tonic::Streaming<ImportRolesRequest>>,
     ) -> Result<Response<ImportRolesResponse>, Status> {
         use futures::StreamExt;
 

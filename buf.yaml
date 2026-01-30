@@ -1,18 +1,95 @@
-version: v1
+version: v2
 breaking:
   use:
     - FILE
 lint:
   use:
-    - DEFAULT
+    - STANDARD
   except:
-    - UNARY_RPC
     - COMMENT_FIELD
     - SERVICE_SUFFIX
   enum_zero_value_suffix: _UNSPECIFIED
   rpc_allow_same_request_response: false
   rpc_allow_google_protobuf_empty_requests: true
   rpc_allow_google_protobuf_empty_responses: true
-build:
-  roots:
-    - protos
+modules:
+  - path: proto
+    # Proto模块包含以下服务定义:
+    #
+    # 基础设施 (Infrastructure):
+    # - common/v1/base.proto          - 通用类型和枚举
+    # - org/enterprise/v1             - 组织架构 (公司/工厂/销售组织/采购组织)
+    # - sys/nr/v1                     - 编号规则服务
+    # - sys/cfg/v1                    - 系统配置服务
+    # - sys/msg/v1                    - 消息通知服务
+    # - sys/job/v1                    - 定时任务服务
+    #
+    # 主数据管理 (Master Data Management):
+    # - mdm/material/v1               - 物料主数据
+    # - mdm/bp/v1                     - 业务伙伴 (客户+供应商)
+    #
+    # 身份与访问管理 (IAM):
+    # - iam/auth/v1                   - 认证服务
+    # - iam/user/v1                   - 用户管理
+    # - iam/rbac/v1                   - 基于角色的访问控制
+    # - iam/policy/v1                 - 策略管理
+    # - iam/authorization/v1          - 授权服务
+    # - iam/oauth/v1                  - OAuth服务
+    # - iam/audit/v1                  - 审计日志
+    #
+    # 财务 (Finance):
+    # - fi/gl/v1                      - 总账
+    # - fi/ap/v1                      - 应付账款
+    # - fi/ar/v1                      - 应收账款
+    # - fi/co/v1                      - 成本核算
+    # - fi/coa/v1                     - 会计科目表
+    # - fi/tr/v1                      - 资金管理
+    #
+    # 销售与分销 (Sales & Distribution):
+    # - sd/so/v1                      - 销售订单
+    # - sd/an/v1                      - 分析
+    # - sd/pe/v1                      - 定价引擎
+    # - sd/rr/v1                      - 退货
+    #
+    # 采购 (Procurement):
+    # - pm/po/v1                      - 采购订单
+    # - pm/ct/v1                      - 合同
+    # - pm/iv/v1                      - 发票校验
+    # - pm/sa/v1                      - 供应商评估
+    # - pm/se/v1                      - 采购申请
+    # - pm/vs/v1                      - 供应商选择
+    #
+    # 制造 (Manufacturing):
+    # - mf/eng/v1                     - 工程数据 (BOM + 工艺路线)
+    # - mf/pp/v1                      - 生产计划
+    # - mf/om/v1                      - 订单管理
+    # - mf/kb/v1                      - 看板
+    # - mf/qi/v1                      - 质量检验
+    # - mf/sf/v1                      - 车间控制
+    #
+    # 供应链 (Supply Chain):
+    # - sc/im/v1                      - 库存管理
+    # - sc/wm/v1                      - 仓库管理
+    # - sc/tp/v1                      - 运输计划
+    # - sc/df/v1                      - 需求预测
+    # - sc/bt/v1                      - 批次追溯
+    # - sc/vs/v1                      - 供应商协同
+    #
+    # 人力资源 (Human Resources):
+    # - hr/ex/v1                      - 费用管理
+    # - hr/ta/v1                      - 考勤管理
+    #
+    # 资产管理 (Asset Management):
+    # - am/ah/v1                      - 资产层级
+    # - am/eh/v1                      - 设备健康
+    # - am/gs/v1                      - 地理空间
+    # - am/pm/v1                      - 预防性维护
+    #
+    # 客户服务 (Customer Service):
+    # - cs/cb/v1                      - 回调
+    # - cs/fd/v1                      - 现场派工
+    # - cs/wc/v1                      - 工单
+    #
+    # 研发 (R&D):
+    # - rd/pl/v1                      - 产品生命周期
+    # - rd/ps/v1                      - 项目系统

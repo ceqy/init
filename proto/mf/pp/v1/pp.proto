@@ -1,0 +1,804 @@
+syntax = "proto3";
+
+package mf.pp.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service ProductionPlanningService {
+    rpc CreateBOM(CreateBOMRequest) returns (CreateBOMResponse);
+    rpc GetBOM(GetBOMRequest) returns (GetBOMResponse);
+    rpc UpdateBOM(UpdateBOMRequest) returns (UpdateBOMResponse);
+    rpc DeleteBOM(DeleteBOMRequest) returns (google.protobuf.Empty);
+    rpc ListBOMs(ListBOMsRequest) returns (ListBOMsResponse);
+    rpc ExplodeBOM(ExplodeBOMRequest) returns (ExplodeBOMResponse);
+
+    rpc CreateRouting(CreateRoutingRequest) returns (CreateRoutingResponse);
+    rpc GetRouting(GetRoutingRequest) returns (GetRoutingResponse);
+    rpc UpdateRouting(UpdateRoutingRequest) returns (UpdateRoutingResponse);
+    rpc DeleteRouting(DeleteRoutingRequest) returns (google.protobuf.Empty);
+    rpc ListRoutings(ListRoutingsRequest) returns (ListRoutingsResponse);
+
+    rpc RunMRP(RunMRPRequest) returns (RunMRPResponse);
+    rpc GetMRPRun(GetMRPRunRequest) returns (GetMRPRunResponse);
+    rpc ListMRPRuns(ListMRPRunsRequest) returns (ListMRPRunsResponse);
+    rpc GetMRPResults(GetMRPResultsRequest) returns (GetMRPResultsResponse);
+    rpc ConvertMRPToOrders(ConvertMRPToOrdersRequest) returns (ConvertMRPToOrdersResponse);
+
+    rpc CreateDemandForecast(CreateDemandForecastRequest) returns (CreateDemandForecastResponse);
+    rpc GetDemandForecast(GetDemandForecastRequest) returns (GetDemandForecastResponse);
+    rpc UpdateDemandForecast(UpdateDemandForecastRequest) returns (UpdateDemandForecastResponse);
+    rpc ListDemandForecasts(ListDemandForecastsRequest) returns (ListDemandForecastsResponse);
+
+    rpc CreateProductionPlan(CreateProductionPlanRequest) returns (CreateProductionPlanResponse);
+    rpc GetProductionPlan(GetProductionPlanRequest) returns (GetProductionPlanResponse);
+    rpc UpdateProductionPlan(UpdateProductionPlanRequest) returns (UpdateProductionPlanResponse);
+    rpc ListProductionPlans(ListProductionPlansRequest) returns (ListProductionPlansResponse);
+    rpc ApprovePlan(ApprovePlanRequest) returns (ApprovePlanResponse);
+
+    rpc ScheduleProduction(ScheduleProductionRequest) returns (ScheduleProductionResponse);
+    rpc GetCapacityRequirements(GetCapacityRequirementsRequest) returns (GetCapacityRequirementsResponse);
+}
+
+message BOM {
+    string id = 1;
+    string bom_number = 2;
+    string name = 3;
+    string description = 4;
+    string plant = 5;
+    string product_id = 6;
+    string product_code = 7;
+    string product_name = 8;
+    common.v1.Quantity base_quantity = 9;
+    string unit = 10;
+    BOMType type = 11;
+    BOMStatus status = 12;
+    google.protobuf.Timestamp valid_from = 13;
+    google.protobuf.Timestamp valid_to = 14;
+    repeated BOMComponent components = 15;
+    string version = 16;
+    bool is_default = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+enum BOMType {
+    BOM_TYPE_UNSPECIFIED = 0;
+    BOM_TYPE_PRODUCTION = 1;
+    BOM_TYPE_ENGINEERING = 2;
+    BOM_TYPE_SALES = 3;
+    BOM_TYPE_TEMPLATE = 4;
+}
+
+enum BOMStatus {
+    BOM_STATUS_UNSPECIFIED = 0;
+    BOM_STATUS_DRAFT = 1;
+    BOM_STATUS_ACTIVE = 2;
+    BOM_STATUS_INACTIVE = 3;
+    BOM_STATUS_OBSOLETE = 4;
+}
+
+message BOMComponent {
+    string id = 1;
+    int32 item_number = 2;
+    string component_id = 3;
+    string component_code = 4;
+    string component_name = 5;
+    common.v1.Quantity quantity = 6;
+    string unit = 7;
+    double scrap_percentage = 8;
+    string operation_id = 9;
+    bool is_phantom = 10;
+    bool is_critical = 11;
+    string alternative_group = 12;
+    int32 priority = 13;
+    google.protobuf.Timestamp valid_from = 14;
+    google.protobuf.Timestamp valid_to = 15;
+    string notes = 16;
+}
+
+message Routing {
+    string id = 1;
+    string routing_number = 2;
+    string name = 3;
+    string description = 4;
+    string plant = 5;
+    string product_id = 6;
+    string product_code = 7;
+    RoutingStatus status = 8;
+    google.protobuf.Timestamp valid_from = 9;
+    google.protobuf.Timestamp valid_to = 10;
+    common.v1.Quantity base_quantity = 11;
+    string unit = 12;
+    repeated RoutingOperation operations = 13;
+    string version = 14;
+    bool is_default = 15;
+    common.v1.AuditInfo audit_info = 16;
+}
+
+enum RoutingStatus {
+    ROUTING_STATUS_UNSPECIFIED = 0;
+    ROUTING_STATUS_DRAFT = 1;
+    ROUTING_STATUS_ACTIVE = 2;
+    ROUTING_STATUS_INACTIVE = 3;
+    ROUTING_STATUS_OBSOLETE = 4;
+}
+
+message RoutingOperation {
+    string id = 1;
+    int32 operation_number = 2;
+    string description = 3;
+    string work_center_id = 4;
+    string work_center_code = 5;
+    string control_key = 6;
+    double setup_time = 7;
+    double machine_time = 8;
+    double labor_time = 9;
+    string time_unit = 10;
+    int32 base_quantity = 11;
+    int32 minimum_send_ahead = 12;
+    int32 minimum_overlap = 13;
+    string predecessor = 14;
+    bool is_milestone = 15;
+    bool confirmation_required = 16;
+    bool external_processing = 17;
+    string vendor_id = 18;
+    string notes = 19;
+}
+
+message MRPRun {
+    string id = 1;
+    string run_number = 2;
+    string plant = 3;
+    google.protobuf.Timestamp run_date = 4;
+    google.protobuf.Timestamp planning_horizon_start = 5;
+    google.protobuf.Timestamp planning_horizon_end = 6;
+    MRPRunType type = 7;
+    MRPRunStatus status = 8;
+    repeated string product_ids = 9;
+    string mrp_controller = 10;
+    int32 items_processed = 11;
+    int32 planned_orders_created = 12;
+    int32 purchase_requisitions_created = 13;
+    int32 exceptions_count = 14;
+    google.protobuf.Timestamp started_at = 15;
+    google.protobuf.Timestamp completed_at = 16;
+    common.v1.AuditInfo audit_info = 17;
+}
+
+enum MRPRunType {
+    MRP_RUN_TYPE_UNSPECIFIED = 0;
+    MRP_RUN_TYPE_REGENERATIVE = 1;
+    MRP_RUN_TYPE_NET_CHANGE = 2;
+    MRP_RUN_TYPE_SELECTIVE = 3;
+}
+
+enum MRPRunStatus {
+    MRP_RUN_STATUS_UNSPECIFIED = 0;
+    MRP_RUN_STATUS_SCHEDULED = 1;
+    MRP_RUN_STATUS_RUNNING = 2;
+    MRP_RUN_STATUS_COMPLETED = 3;
+    MRP_RUN_STATUS_FAILED = 4;
+    MRP_RUN_STATUS_CANCELLED = 5;
+}
+
+message MRPResult {
+    string id = 1;
+    string mrp_run_id = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    string plant = 6;
+    repeated MRPElement elements = 7;
+    repeated PlannedOrder planned_orders = 8;
+    repeated MRPException exceptions = 9;
+}
+
+message MRPElement {
+    string id = 1;
+    MRPElementType type = 2;
+    google.protobuf.Timestamp date = 3;
+    common.v1.Quantity quantity = 4;
+    common.v1.Quantity available = 5;
+    string reference_document = 6;
+    string reference_type = 7;
+}
+
+enum MRPElementType {
+    MRP_ELEMENT_TYPE_UNSPECIFIED = 0;
+    MRP_ELEMENT_TYPE_STOCK = 1;
+    MRP_ELEMENT_TYPE_SAFETY_STOCK = 2;
+    MRP_ELEMENT_TYPE_REQUIREMENT = 3;
+    MRP_ELEMENT_TYPE_DEPENDENT_REQUIREMENT = 4;
+    MRP_ELEMENT_TYPE_PLANNED_ORDER = 5;
+    MRP_ELEMENT_TYPE_PRODUCTION_ORDER = 6;
+    MRP_ELEMENT_TYPE_PURCHASE_ORDER = 7;
+    MRP_ELEMENT_TYPE_PURCHASE_REQUISITION = 8;
+    MRP_ELEMENT_TYPE_SCHEDULED_RECEIPT = 9;
+}
+
+message PlannedOrder {
+    string id = 1;
+    string order_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string plant = 5;
+    common.v1.Quantity quantity = 6;
+    google.protobuf.Timestamp start_date = 7;
+    google.protobuf.Timestamp finish_date = 8;
+    PlannedOrderType type = 9;
+    PlannedOrderStatus status = 10;
+    string source = 11;
+    string vendor_id = 12;
+    bool firmed = 13;
+    string converted_to = 14;
+}
+
+enum PlannedOrderType {
+    PLANNED_ORDER_TYPE_UNSPECIFIED = 0;
+    PLANNED_ORDER_TYPE_PRODUCTION = 1;
+    PLANNED_ORDER_TYPE_PURCHASE = 2;
+    PLANNED_ORDER_TYPE_TRANSFER = 3;
+}
+
+enum PlannedOrderStatus {
+    PLANNED_ORDER_STATUS_UNSPECIFIED = 0;
+    PLANNED_ORDER_STATUS_PLANNED = 1;
+    PLANNED_ORDER_STATUS_FIRMED = 2;
+    PLANNED_ORDER_STATUS_CONVERTED = 3;
+    PLANNED_ORDER_STATUS_CANCELLED = 4;
+}
+
+message MRPException {
+    string id = 1;
+    string product_id = 2;
+    string product_code = 3;
+    MRPExceptionType type = 4;
+    string message = 5;
+    google.protobuf.Timestamp date = 6;
+    common.v1.Quantity quantity = 7;
+    string reference_document = 8;
+    MRPExceptionPriority priority = 9;
+}
+
+enum MRPExceptionType {
+    MRP_EXCEPTION_TYPE_UNSPECIFIED = 0;
+    MRP_EXCEPTION_TYPE_SHORTAGE = 1;
+    MRP_EXCEPTION_TYPE_RESCHEDULE_IN = 2;
+    MRP_EXCEPTION_TYPE_RESCHEDULE_OUT = 3;
+    MRP_EXCEPTION_TYPE_CANCEL = 4;
+    MRP_EXCEPTION_TYPE_EXPEDITE = 5;
+    MRP_EXCEPTION_TYPE_EXCESS = 6;
+}
+
+enum MRPExceptionPriority {
+    MRP_EXCEPTION_PRIORITY_UNSPECIFIED = 0;
+    MRP_EXCEPTION_PRIORITY_HIGH = 1;
+    MRP_EXCEPTION_PRIORITY_MEDIUM = 2;
+    MRP_EXCEPTION_PRIORITY_LOW = 3;
+}
+
+message DemandForecast {
+    string id = 1;
+    string forecast_number = 2;
+    string name = 3;
+    string plant = 4;
+    string product_id = 5;
+    string product_code = 6;
+    string customer_id = 7;
+    string region = 8;
+    ForecastType type = 9;
+    google.protobuf.Timestamp period_start = 10;
+    google.protobuf.Timestamp period_end = 11;
+    string granularity = 12;
+    repeated ForecastPeriod periods = 13;
+    ForecastStatus status = 14;
+    string version = 15;
+    common.v1.AuditInfo audit_info = 16;
+}
+
+enum ForecastType {
+    FORECAST_TYPE_UNSPECIFIED = 0;
+    FORECAST_TYPE_SALES = 1;
+    FORECAST_TYPE_PRODUCTION = 2;
+    FORECAST_TYPE_CONSUMPTION = 3;
+}
+
+enum ForecastStatus {
+    FORECAST_STATUS_UNSPECIFIED = 0;
+    FORECAST_STATUS_DRAFT = 1;
+    FORECAST_STATUS_ACTIVE = 2;
+    FORECAST_STATUS_SUPERSEDED = 3;
+}
+
+message ForecastPeriod {
+    google.protobuf.Timestamp period_start = 1;
+    google.protobuf.Timestamp period_end = 2;
+    common.v1.Quantity forecast_quantity = 3;
+    common.v1.Quantity consumed_quantity = 4;
+    common.v1.Quantity remaining_quantity = 5;
+    double confidence = 6;
+}
+
+message ProductionPlan {
+    string id = 1;
+    string plan_number = 2;
+    string name = 3;
+    string description = 4;
+    string plant = 5;
+    google.protobuf.Timestamp period_start = 6;
+    google.protobuf.Timestamp period_end = 7;
+    string granularity = 8;
+    repeated ProductionPlanItem items = 9;
+    ProductionPlanStatus status = 10;
+    string version = 11;
+    string approved_by = 12;
+    google.protobuf.Timestamp approved_at = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+enum ProductionPlanStatus {
+    PRODUCTION_PLAN_STATUS_UNSPECIFIED = 0;
+    PRODUCTION_PLAN_STATUS_DRAFT = 1;
+    PRODUCTION_PLAN_STATUS_SUBMITTED = 2;
+    PRODUCTION_PLAN_STATUS_APPROVED = 3;
+    PRODUCTION_PLAN_STATUS_ACTIVE = 4;
+    PRODUCTION_PLAN_STATUS_COMPLETED = 5;
+    PRODUCTION_PLAN_STATUS_CANCELLED = 6;
+}
+
+message ProductionPlanItem {
+    string id = 1;
+    string product_id = 2;
+    string product_code = 3;
+    string product_name = 4;
+    repeated PlanPeriodQuantity periods = 5;
+    common.v1.Quantity total_quantity = 6;
+}
+
+message PlanPeriodQuantity {
+    google.protobuf.Timestamp period_start = 1;
+    google.protobuf.Timestamp period_end = 2;
+    common.v1.Quantity planned_quantity = 3;
+    common.v1.Quantity actual_quantity = 4;
+}
+
+message CreateBOMRequest {
+    string name = 1;
+    string description = 2;
+    string plant = 3;
+    string product_id = 4;
+    common.v1.Quantity base_quantity = 5;
+    string unit = 6;
+    BOMType type = 7;
+    google.protobuf.Timestamp valid_from = 8;
+    google.protobuf.Timestamp valid_to = 9;
+    repeated BOMComponentInput components = 10;
+    bool is_default = 11;
+}
+
+message BOMComponentInput {
+    string component_id = 1;
+    common.v1.Quantity quantity = 2;
+    string unit = 3;
+    double scrap_percentage = 4;
+    string operation_id = 5;
+    bool is_phantom = 6;
+    bool is_critical = 7;
+    string alternative_group = 8;
+    int32 priority = 9;
+    string notes = 10;
+}
+
+message GetBOMRequest {
+    string id = 1;
+}
+
+message UpdateBOMRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    common.v1.Quantity base_quantity = 4;
+    google.protobuf.Timestamp valid_to = 5;
+    repeated BOMComponentInput components = 6;
+    BOMStatus status = 7;
+}
+
+message DeleteBOMRequest {
+    string id = 1;
+}
+
+message ListBOMsRequest {
+    string plant = 1;
+    string product_id = 2;
+    BOMType type = 3;
+    BOMStatus status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListBOMsResponse {
+    repeated BOM boms = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ExplodeBOMRequest {
+    string bom_id = 1;
+    common.v1.Quantity quantity = 2;
+    int32 levels = 3;
+    google.protobuf.Timestamp effective_date = 4;
+}
+
+message ExplodeBOMResponse {
+    repeated BOMExplosionItem items = 1;
+}
+
+message BOMExplosionItem {
+    int32 level = 1;
+    string product_id = 2;
+    string product_code = 3;
+    string product_name = 4;
+    common.v1.Quantity required_quantity = 5;
+    string unit = 6;
+    string parent_product_id = 7;
+    bool is_phantom = 8;
+    string procurement_type = 9;
+}
+
+message CreateRoutingRequest {
+    string name = 1;
+    string description = 2;
+    string plant = 3;
+    string product_id = 4;
+    common.v1.Quantity base_quantity = 5;
+    string unit = 6;
+    google.protobuf.Timestamp valid_from = 7;
+    google.protobuf.Timestamp valid_to = 8;
+    repeated RoutingOperationInput operations = 9;
+    bool is_default = 10;
+}
+
+message RoutingOperationInput {
+    int32 operation_number = 1;
+    string description = 2;
+    string work_center_id = 3;
+    string control_key = 4;
+    double setup_time = 5;
+    double machine_time = 6;
+    double labor_time = 7;
+    string time_unit = 8;
+    int32 base_quantity = 9;
+    string predecessor = 10;
+    bool is_milestone = 11;
+    bool confirmation_required = 12;
+    bool external_processing = 13;
+    string vendor_id = 14;
+    string notes = 15;
+}
+
+message GetRoutingRequest {
+    string id = 1;
+}
+
+message UpdateRoutingRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    google.protobuf.Timestamp valid_to = 4;
+    repeated RoutingOperationInput operations = 5;
+    RoutingStatus status = 6;
+}
+
+message DeleteRoutingRequest {
+    string id = 1;
+}
+
+message ListRoutingsRequest {
+    string plant = 1;
+    string product_id = 2;
+    RoutingStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListRoutingsResponse {
+    repeated Routing routings = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message RunMRPRequest {
+    string plant = 1;
+    MRPRunType type = 2;
+    google.protobuf.Timestamp planning_horizon_start = 3;
+    google.protobuf.Timestamp planning_horizon_end = 4;
+    repeated string product_ids = 5;
+    string mrp_controller = 6;
+    bool create_purchase_requisitions = 7;
+    bool create_planned_orders = 8;
+    bool schedule_planned_orders = 9;
+}
+
+message GetMRPRunRequest {
+    string id = 1;
+}
+
+message ListMRPRunsRequest {
+    string plant = 1;
+    MRPRunStatus status = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListMRPRunsResponse {
+    repeated MRPRun runs = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetMRPResultsRequest {
+    string mrp_run_id = 1;
+    string product_id = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetMRPResultsResponse {
+    repeated MRPResult results = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ConvertMRPToOrdersRequest {
+    string mrp_run_id = 1;
+    repeated string planned_order_ids = 2;
+    bool convert_to_production_orders = 3;
+    bool convert_to_purchase_requisitions = 4;
+}
+
+message ConvertMRPToOrdersResponse {
+    int32 production_orders_created = 1;
+    int32 purchase_requisitions_created = 2;
+    repeated string production_order_ids = 3;
+    repeated string purchase_requisition_ids = 4;
+    repeated common.v1.ErrorDetail errors = 5;
+}
+
+message CreateDemandForecastRequest {
+    string name = 1;
+    string plant = 2;
+    string product_id = 3;
+    string customer_id = 4;
+    string region = 5;
+    ForecastType type = 6;
+    google.protobuf.Timestamp period_start = 7;
+    google.protobuf.Timestamp period_end = 8;
+    string granularity = 9;
+    repeated ForecastPeriodInput periods = 10;
+}
+
+message ForecastPeriodInput {
+    google.protobuf.Timestamp period_start = 1;
+    google.protobuf.Timestamp period_end = 2;
+    common.v1.Quantity forecast_quantity = 3;
+    double confidence = 4;
+}
+
+message GetDemandForecastRequest {
+    string id = 1;
+}
+
+message UpdateDemandForecastRequest {
+    string id = 1;
+    string name = 2;
+    repeated ForecastPeriodInput periods = 3;
+    ForecastStatus status = 4;
+}
+
+message ListDemandForecastsRequest {
+    string plant = 1;
+    string product_id = 2;
+    ForecastType type = 3;
+    ForecastStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListDemandForecastsResponse {
+    repeated DemandForecast forecasts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateProductionPlanRequest {
+    string name = 1;
+    string description = 2;
+    string plant = 3;
+    google.protobuf.Timestamp period_start = 4;
+    google.protobuf.Timestamp period_end = 5;
+    string granularity = 6;
+    repeated ProductionPlanItemInput items = 7;
+}
+
+message ProductionPlanItemInput {
+    string product_id = 1;
+    repeated PlanPeriodQuantityInput periods = 2;
+}
+
+message PlanPeriodQuantityInput {
+    google.protobuf.Timestamp period_start = 1;
+    google.protobuf.Timestamp period_end = 2;
+    common.v1.Quantity planned_quantity = 3;
+}
+
+message GetProductionPlanRequest {
+    string id = 1;
+}
+
+message UpdateProductionPlanRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated ProductionPlanItemInput items = 4;
+    ProductionPlanStatus status = 5;
+}
+
+message ListProductionPlansRequest {
+    string plant = 1;
+    ProductionPlanStatus status = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListProductionPlansResponse {
+    repeated ProductionPlan plans = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ApprovePlanRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message ScheduleProductionRequest {
+    string plant = 1;
+    common.v1.DateRange date_range = 2;
+    repeated string production_order_ids = 3;
+    SchedulingStrategy strategy = 4;
+    bool consider_capacity = 5;
+    bool consider_material = 6;
+}
+
+enum SchedulingStrategy {
+    SCHEDULING_STRATEGY_UNSPECIFIED = 0;
+    SCHEDULING_STRATEGY_FORWARD = 1;
+    SCHEDULING_STRATEGY_BACKWARD = 2;
+    SCHEDULING_STRATEGY_BOTTLENECK = 3;
+}
+
+message ScheduleProductionResponse {
+    repeated ScheduledOperation operations = 1;
+    repeated SchedulingConflict conflicts = 2;
+    bool feasible = 3;
+}
+
+message ScheduledOperation {
+    string production_order_id = 1;
+    string operation_id = 2;
+    string work_center_id = 3;
+    google.protobuf.Timestamp scheduled_start = 4;
+    google.protobuf.Timestamp scheduled_end = 5;
+    double setup_time = 6;
+    double run_time = 7;
+}
+
+message SchedulingConflict {
+    string type = 1;
+    string description = 2;
+    string production_order_id = 3;
+    string operation_id = 4;
+    string work_center_id = 5;
+    google.protobuf.Timestamp conflict_date = 6;
+    string resolution_suggestion = 7;
+}
+
+message GetCapacityRequirementsRequest {
+    string plant = 1;
+    common.v1.DateRange date_range = 2;
+    repeated string work_center_ids = 3;
+    string granularity = 4;
+}
+
+message GetCapacityRequirementsResponse {
+    repeated WorkCenterCapacityRequirement requirements = 1;
+    CapacityRequirementSummary summary = 2;
+}
+
+message WorkCenterCapacityRequirement {
+    string work_center_id = 1;
+    string work_center_name = 2;
+    repeated CapacityPeriod periods = 3;
+}
+
+message CapacityPeriod {
+    google.protobuf.Timestamp period_start = 1;
+    google.protobuf.Timestamp period_end = 2;
+    double available_capacity = 3;
+    double required_capacity = 4;
+    double remaining_capacity = 5;
+    double utilization_percentage = 6;
+    bool overloaded = 7;
+    repeated CapacityRequirementDetail details = 8;
+}
+
+message CapacityRequirementDetail {
+    string production_order_id = 1;
+    string order_number = 2;
+    string product_code = 3;
+    string operation_id = 4;
+    double required_capacity = 5;
+}
+
+message CapacityRequirementSummary {
+    double total_available = 1;
+    double total_required = 2;
+    double average_utilization = 3;
+    int32 overloaded_periods = 4;
+    int32 underutilized_periods = 5;
+}
+
+// Auto-generated Response messages
+message CreateBOMResponse {
+    BOM b_o_m = 1;
+}
+
+message GetBOMResponse {
+    BOM b_o_m = 1;
+}
+
+message UpdateBOMResponse {
+    BOM b_o_m = 1;
+}
+
+message CreateRoutingResponse {
+    Routing routing = 1;
+}
+
+message GetRoutingResponse {
+    Routing routing = 1;
+}
+
+message UpdateRoutingResponse {
+    Routing routing = 1;
+}
+
+message RunMRPResponse {
+    MRPRun m_r_p_run = 1;
+}
+
+message GetMRPRunResponse {
+    MRPRun m_r_p_run = 1;
+}
+
+message CreateDemandForecastResponse {
+    DemandForecast demand_forecast = 1;
+}
+
+message GetDemandForecastResponse {
+    DemandForecast demand_forecast = 1;
+}
+
+message UpdateDemandForecastResponse {
+    DemandForecast demand_forecast = 1;
+}
+
+message CreateProductionPlanResponse {
+    ProductionPlan production_plan = 1;
+}
+
+message GetProductionPlanResponse {
+    ProductionPlan production_plan = 1;
+}
+
+message UpdateProductionPlanResponse {
+    ProductionPlan production_plan = 1;
+}
+
+message ApprovePlanResponse {
+    ProductionPlan production_plan = 1;
+}

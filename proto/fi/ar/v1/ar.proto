@@ -1,0 +1,443 @@
+syntax = "proto3";
+
+package fi.ar.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service AccountsReceivableService {
+    rpc CreateCustomerInvoice(CreateCustomerInvoiceRequest) returns (CreateCustomerInvoiceResponse);
+    rpc GetCustomerInvoice(GetCustomerInvoiceRequest) returns (GetCustomerInvoiceResponse);
+    rpc UpdateCustomerInvoice(UpdateCustomerInvoiceRequest) returns (UpdateCustomerInvoiceResponse);
+    rpc DeleteCustomerInvoice(DeleteCustomerInvoiceRequest) returns (google.protobuf.Empty);
+    rpc ListCustomerInvoices(ListCustomerInvoicesRequest) returns (ListCustomerInvoicesResponse);
+    rpc PostCustomerInvoice(PostCustomerInvoiceRequest) returns (PostCustomerInvoiceResponse);
+
+    rpc CreateCreditMemo(CreateCreditMemoRequest) returns (CreateCreditMemoResponse);
+    rpc GetCreditMemo(GetCreditMemoRequest) returns (GetCreditMemoResponse);
+    rpc ListCreditMemos(ListCreditMemosRequest) returns (ListCreditMemosResponse);
+
+    rpc CreateReceipt(CreateReceiptRequest) returns (CreateReceiptResponse);
+    rpc GetReceipt(GetReceiptRequest) returns (GetReceiptResponse);
+    rpc ListReceipts(ListReceiptsRequest) returns (ListReceiptsResponse);
+    rpc ProcessReceipt(ProcessReceiptRequest) returns (ProcessReceiptResponse);
+    rpc VoidReceipt(VoidReceiptRequest) returns (VoidReceiptResponse);
+
+    rpc GetCustomerBalance(GetCustomerBalanceRequest) returns (GetCustomerBalanceResponse);
+    rpc GetAgingReport(GetAgingReportRequest) returns (GetAgingReportResponse);
+    rpc GetOpenItems(GetOpenItemsRequest) returns (GetOpenItemsResponse);
+
+    rpc CreateDunningRun(CreateDunningRunRequest) returns (CreateDunningRunResponse);
+    rpc ExecuteDunningRun(ExecuteDunningRunRequest) returns (ExecuteDunningRunResponse);
+}
+
+message CustomerInvoice {
+    string id = 1;
+    string invoice_number = 2;
+    string company_code = 3;
+    string customer_id = 4;
+    string customer_name = 5;
+    google.protobuf.Timestamp invoice_date = 6;
+    google.protobuf.Timestamp posting_date = 7;
+    google.protobuf.Timestamp due_date = 8;
+    string payment_terms = 9;
+    string currency = 10;
+    common.v1.Money gross_amount = 11;
+    common.v1.Money tax_amount = 12;
+    common.v1.Money net_amount = 13;
+    common.v1.Money received_amount = 14;
+    common.v1.Money balance = 15;
+    repeated CustomerInvoiceLine lines = 16;
+    CustomerInvoiceStatus status = 17;
+    string sales_order_reference = 18;
+    string billing_address_id = 19;
+    string shipping_address_id = 20;
+    common.v1.AuditInfo audit_info = 21;
+}
+
+message CustomerInvoiceLine {
+    string id = 1;
+    int32 line_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string description = 5;
+    common.v1.Quantity quantity = 6;
+    common.v1.Money unit_price = 7;
+    common.v1.Money discount = 8;
+    common.v1.Money net_amount = 9;
+    string tax_code = 10;
+    common.v1.Money tax_amount = 11;
+    common.v1.Money gross_amount = 12;
+    string gl_account = 13;
+    string cost_center = 14;
+    string profit_center = 15;
+}
+
+enum CustomerInvoiceStatus {
+    CUSTOMER_INVOICE_STATUS_UNSPECIFIED = 0;
+    CUSTOMER_INVOICE_STATUS_DRAFT = 1;
+    CUSTOMER_INVOICE_STATUS_POSTED = 2;
+    CUSTOMER_INVOICE_STATUS_SENT = 3;
+    CUSTOMER_INVOICE_STATUS_PARTIALLY_PAID = 4;
+    CUSTOMER_INVOICE_STATUS_PAID = 5;
+    CUSTOMER_INVOICE_STATUS_OVERDUE = 6;
+    CUSTOMER_INVOICE_STATUS_CANCELLED = 7;
+}
+
+message CreditMemo {
+    string id = 1;
+    string memo_number = 2;
+    string company_code = 3;
+    string customer_id = 4;
+    string customer_name = 5;
+    google.protobuf.Timestamp memo_date = 6;
+    string currency = 7;
+    common.v1.Money amount = 8;
+    string reason = 9;
+    string invoice_reference = 10;
+    CreditMemoStatus status = 11;
+    repeated CreditMemoLine lines = 12;
+    common.v1.AuditInfo audit_info = 13;
+}
+
+message CreditMemoLine {
+    string id = 1;
+    int32 line_number = 2;
+    string description = 3;
+    common.v1.Money amount = 4;
+    string gl_account = 5;
+}
+
+enum CreditMemoStatus {
+    CREDIT_MEMO_STATUS_UNSPECIFIED = 0;
+    CREDIT_MEMO_STATUS_DRAFT = 1;
+    CREDIT_MEMO_STATUS_POSTED = 2;
+    CREDIT_MEMO_STATUS_APPLIED = 3;
+    CREDIT_MEMO_STATUS_CANCELLED = 4;
+}
+
+message Receipt {
+    string id = 1;
+    string receipt_number = 2;
+    string company_code = 3;
+    string customer_id = 4;
+    string customer_name = 5;
+    google.protobuf.Timestamp receipt_date = 6;
+    string payment_method = 7;
+    string bank_account = 8;
+    string currency = 9;
+    common.v1.Money amount = 10;
+    repeated ReceiptAllocation allocations = 11;
+    ReceiptStatus status = 12;
+    string reference = 13;
+    string bank_reference = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+message ReceiptAllocation {
+    string invoice_id = 1;
+    string invoice_number = 2;
+    common.v1.Money allocated_amount = 3;
+    common.v1.Money discount_given = 4;
+}
+
+enum ReceiptStatus {
+    RECEIPT_STATUS_UNSPECIFIED = 0;
+    RECEIPT_STATUS_DRAFT = 1;
+    RECEIPT_STATUS_PENDING = 2;
+    RECEIPT_STATUS_PROCESSED = 3;
+    RECEIPT_STATUS_CLEARED = 4;
+    RECEIPT_STATUS_VOIDED = 5;
+    RECEIPT_STATUS_BOUNCED = 6;
+}
+
+message DunningRun {
+    string id = 1;
+    string run_number = 2;
+    string company_code = 3;
+    google.protobuf.Timestamp run_date = 4;
+    string dunning_level = 5;
+    int32 customer_count = 6;
+    common.v1.Money total_overdue = 7;
+    DunningRunStatus status = 8;
+    repeated DunningNotice notices = 9;
+    common.v1.AuditInfo audit_info = 10;
+}
+
+message DunningNotice {
+    string id = 1;
+    string customer_id = 2;
+    string customer_name = 3;
+    string dunning_level = 4;
+    common.v1.Money overdue_amount = 5;
+    repeated string invoice_ids = 6;
+    string notice_text = 7;
+    bool sent = 8;
+    google.protobuf.Timestamp sent_at = 9;
+}
+
+enum DunningRunStatus {
+    DUNNING_RUN_STATUS_UNSPECIFIED = 0;
+    DUNNING_RUN_STATUS_DRAFT = 1;
+    DUNNING_RUN_STATUS_PROPOSAL = 2;
+    DUNNING_RUN_STATUS_APPROVED = 3;
+    DUNNING_RUN_STATUS_EXECUTED = 4;
+    DUNNING_RUN_STATUS_COMPLETED = 5;
+}
+
+message CreateCustomerInvoiceRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    google.protobuf.Timestamp invoice_date = 3;
+    google.protobuf.Timestamp due_date = 4;
+    string payment_terms = 5;
+    string currency = 6;
+    string sales_order_reference = 7;
+    string billing_address_id = 8;
+    string shipping_address_id = 9;
+    repeated CustomerInvoiceLineInput lines = 10;
+}
+
+message CustomerInvoiceLineInput {
+    string product_id = 1;
+    string description = 2;
+    common.v1.Quantity quantity = 3;
+    common.v1.Money unit_price = 4;
+    common.v1.Money discount = 5;
+    string tax_code = 6;
+    string gl_account = 7;
+    string cost_center = 8;
+    string profit_center = 9;
+}
+
+message GetCustomerInvoiceRequest {
+    string id = 1;
+}
+
+message UpdateCustomerInvoiceRequest {
+    string id = 1;
+    google.protobuf.Timestamp due_date = 2;
+    string payment_terms = 3;
+    repeated CustomerInvoiceLineInput lines = 4;
+}
+
+message DeleteCustomerInvoiceRequest {
+    string id = 1;
+}
+
+message ListCustomerInvoicesRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    CustomerInvoiceStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListCustomerInvoicesResponse {
+    repeated CustomerInvoice invoices = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message PostCustomerInvoiceRequest {
+    string id = 1;
+    google.protobuf.Timestamp posting_date = 2;
+}
+
+message CreateCreditMemoRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    google.protobuf.Timestamp memo_date = 3;
+    string currency = 4;
+    string reason = 5;
+    string invoice_reference = 6;
+    repeated CreditMemoLineInput lines = 7;
+}
+
+message CreditMemoLineInput {
+    string description = 1;
+    common.v1.Money amount = 2;
+    string gl_account = 3;
+}
+
+message GetCreditMemoRequest {
+    string id = 1;
+}
+
+message ListCreditMemosRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    CreditMemoStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListCreditMemosResponse {
+    repeated CreditMemo memos = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateReceiptRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    google.protobuf.Timestamp receipt_date = 3;
+    string payment_method = 4;
+    string bank_account = 5;
+    string currency = 6;
+    common.v1.Money amount = 7;
+    repeated ReceiptAllocationInput allocations = 8;
+    string reference = 9;
+}
+
+message ReceiptAllocationInput {
+    string invoice_id = 1;
+    common.v1.Money allocated_amount = 2;
+    common.v1.Money discount_given = 3;
+}
+
+message GetReceiptRequest {
+    string id = 1;
+}
+
+message ListReceiptsRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    ReceiptStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListReceiptsResponse {
+    repeated Receipt receipts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ProcessReceiptRequest {
+    string id = 1;
+}
+
+message VoidReceiptRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message GetCustomerBalanceRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    google.protobuf.Timestamp as_of_date = 3;
+}
+
+message GetCustomerBalanceResponse {
+    string customer_id = 1;
+    string customer_name = 2;
+    common.v1.Money credit_limit = 3;
+    common.v1.Money total_invoiced = 4;
+    common.v1.Money total_received = 5;
+    common.v1.Money balance = 6;
+    common.v1.Money available_credit = 7;
+    common.v1.Money overdue_amount = 8;
+}
+
+message GetAgingReportRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    google.protobuf.Timestamp as_of_date = 3;
+    repeated int32 aging_buckets = 4;
+}
+
+message GetAgingReportResponse {
+    repeated AgingBucket buckets = 1;
+    common.v1.Money total_outstanding = 2;
+}
+
+message AgingBucket {
+    string bucket_name = 1;
+    int32 days_from = 2;
+    int32 days_to = 3;
+    common.v1.Money amount = 4;
+    int32 invoice_count = 5;
+}
+
+message GetOpenItemsRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetOpenItemsResponse {
+    repeated OpenItem items = 1;
+    common.v1.PaginationResponse pagination = 2;
+    common.v1.Money total_open = 3;
+}
+
+message OpenItem {
+    string invoice_id = 1;
+    string invoice_number = 2;
+    google.protobuf.Timestamp invoice_date = 3;
+    google.protobuf.Timestamp due_date = 4;
+    common.v1.Money original_amount = 5;
+    common.v1.Money open_amount = 6;
+    int32 days_overdue = 7;
+}
+
+message CreateDunningRunRequest {
+    string company_code = 1;
+    google.protobuf.Timestamp run_date = 2;
+    string dunning_level = 3;
+    repeated string customer_ids = 4;
+}
+
+message ExecuteDunningRunRequest {
+    string id = 1;
+    bool send_notices = 2;
+}
+
+// Auto-generated Response messages
+message CreateCustomerInvoiceResponse {
+    CustomerInvoice customer_invoice = 1;
+}
+
+message GetCustomerInvoiceResponse {
+    CustomerInvoice customer_invoice = 1;
+}
+
+message UpdateCustomerInvoiceResponse {
+    CustomerInvoice customer_invoice = 1;
+}
+
+message PostCustomerInvoiceResponse {
+    CustomerInvoice customer_invoice = 1;
+}
+
+message CreateCreditMemoResponse {
+    CreditMemo credit_memo = 1;
+}
+
+message GetCreditMemoResponse {
+    CreditMemo credit_memo = 1;
+}
+
+message CreateReceiptResponse {
+    Receipt receipt = 1;
+}
+
+message GetReceiptResponse {
+    Receipt receipt = 1;
+}
+
+message ProcessReceiptResponse {
+    Receipt receipt = 1;
+}
+
+message VoidReceiptResponse {
+    Receipt receipt = 1;
+}
+
+message CreateDunningRunResponse {
+    DunningRun dunning_run = 1;
+}
+
+message ExecuteDunningRunResponse {
+    DunningRun dunning_run = 1;
+}

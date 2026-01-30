@@ -1,0 +1,652 @@
+syntax = "proto3";
+
+package pm.se.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service SourcingStrategyService {
+    rpc CreateSourcingProject(CreateSourcingProjectRequest) returns (CreateSourcingProjectResponse);
+    rpc GetSourcingProject(GetSourcingProjectRequest) returns (GetSourcingProjectResponse);
+    rpc UpdateSourcingProject(UpdateSourcingProjectRequest) returns (UpdateSourcingProjectResponse);
+    rpc DeleteSourcingProject(DeleteSourcingProjectRequest) returns (google.protobuf.Empty);
+    rpc ListSourcingProjects(ListSourcingProjectsRequest) returns (ListSourcingProjectsResponse);
+
+    rpc CreateRFQ(CreateRFQRequest) returns (CreateRFQResponse);
+    rpc GetRFQ(GetRFQRequest) returns (GetRFQResponse);
+    rpc UpdateRFQ(UpdateRFQRequest) returns (UpdateRFQResponse);
+    rpc PublishRFQ(PublishRFQRequest) returns (PublishRFQResponse);
+    rpc CloseRFQ(CloseRFQRequest) returns (CloseRFQResponse);
+    rpc ListRFQs(ListRFQsRequest) returns (ListRFQsResponse);
+
+    rpc SubmitQuotation(SubmitQuotationRequest) returns (SubmitQuotationResponse);
+    rpc GetQuotation(GetQuotationRequest) returns (GetQuotationResponse);
+    rpc ListQuotations(ListQuotationsRequest) returns (ListQuotationsResponse);
+
+    rpc EvaluateQuotations(EvaluateQuotationsRequest) returns (EvaluateQuotationsResponse);
+    rpc AwardBid(AwardBidRequest) returns (AwardBidResponse);
+
+    rpc CreateAuction(CreateAuctionRequest) returns (CreateAuctionResponse);
+    rpc GetAuction(GetAuctionRequest) returns (GetAuctionResponse);
+    rpc StartAuction(StartAuctionRequest) returns (StartAuctionResponse);
+    rpc PlaceBid(PlaceBidRequest) returns (PlaceBidResponse);
+    rpc EndAuction(EndAuctionRequest) returns (EndAuctionResponse);
+
+    rpc GetSourceList(GetSourceListRequest) returns (GetSourceListResponse);
+    rpc UpdateSourceList(UpdateSourceListRequest) returns (UpdateSourceListResponse);
+}
+
+message SourcingProject {
+    string id = 1;
+    string project_number = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    string category = 6;
+    string owner_id = 7;
+    string owner_name = 8;
+    google.protobuf.Timestamp start_date = 9;
+    google.protobuf.Timestamp target_end_date = 10;
+    common.v1.Money estimated_value = 11;
+    common.v1.Money target_savings = 12;
+    SourcingProjectStatus status = 13;
+    SourcingStrategy strategy = 14;
+    repeated SourcingProjectItem items = 15;
+    repeated string team_members = 16;
+    common.v1.AuditInfo audit_info = 17;
+}
+
+enum SourcingProjectStatus {
+    SOURCING_PROJECT_STATUS_UNSPECIFIED = 0;
+    SOURCING_PROJECT_STATUS_DRAFT = 1;
+    SOURCING_PROJECT_STATUS_IN_PROGRESS = 2;
+    SOURCING_PROJECT_STATUS_RFQ_PHASE = 3;
+    SOURCING_PROJECT_STATUS_EVALUATION = 4;
+    SOURCING_PROJECT_STATUS_NEGOTIATION = 5;
+    SOURCING_PROJECT_STATUS_AWARDED = 6;
+    SOURCING_PROJECT_STATUS_COMPLETED = 7;
+    SOURCING_PROJECT_STATUS_CANCELLED = 8;
+}
+
+enum SourcingStrategy {
+    SOURCING_STRATEGY_UNSPECIFIED = 0;
+    SOURCING_STRATEGY_SINGLE_SOURCE = 1;
+    SOURCING_STRATEGY_MULTI_SOURCE = 2;
+    SOURCING_STRATEGY_COMPETITIVE_BID = 3;
+    SOURCING_STRATEGY_REVERSE_AUCTION = 4;
+    SOURCING_STRATEGY_STRATEGIC_PARTNERSHIP = 5;
+}
+
+message SourcingProjectItem {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string description = 5;
+    common.v1.Quantity quantity = 6;
+    common.v1.Money estimated_unit_price = 7;
+    string specifications = 8;
+}
+
+message RFQ {
+    string id = 1;
+    string rfq_number = 2;
+    string title = 3;
+    string description = 4;
+    string company_code = 5;
+    string sourcing_project_id = 6;
+    google.protobuf.Timestamp publish_date = 7;
+    google.protobuf.Timestamp response_deadline = 8;
+    google.protobuf.Timestamp validity_date = 9;
+    string currency = 10;
+    repeated RFQItem items = 11;
+    repeated string invited_vendors = 12;
+    repeated EvaluationCriterion evaluation_criteria = 13;
+    RFQStatus status = 14;
+    RFQType rfq_type = 15;
+    bool sealed_bid = 16;
+    repeated common.v1.Attachment attachments = 17;
+    string terms_and_conditions = 18;
+    common.v1.AuditInfo audit_info = 19;
+}
+
+message RFQItem {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string description = 5;
+    common.v1.Quantity quantity = 6;
+    string unit = 7;
+    string specifications = 8;
+    google.protobuf.Timestamp required_date = 9;
+    string delivery_location = 10;
+}
+
+enum RFQStatus {
+    RFQ_STATUS_UNSPECIFIED = 0;
+    RFQ_STATUS_DRAFT = 1;
+    RFQ_STATUS_PUBLISHED = 2;
+    RFQ_STATUS_IN_PROGRESS = 3;
+    RFQ_STATUS_CLOSED = 4;
+    RFQ_STATUS_EVALUATION = 5;
+    RFQ_STATUS_AWARDED = 6;
+    RFQ_STATUS_CANCELLED = 7;
+}
+
+enum RFQType {
+    RFQ_TYPE_UNSPECIFIED = 0;
+    RFQ_TYPE_OPEN = 1;
+    RFQ_TYPE_INVITED = 2;
+    RFQ_TYPE_RESTRICTED = 3;
+}
+
+message EvaluationCriterion {
+    string name = 1;
+    string description = 2;
+    double weight = 3;
+    EvaluationType evaluation_type = 4;
+}
+
+enum EvaluationType {
+    EVALUATION_TYPE_UNSPECIFIED = 0;
+    EVALUATION_TYPE_SCORE = 1;
+    EVALUATION_TYPE_PASS_FAIL = 2;
+    EVALUATION_TYPE_RANKING = 3;
+}
+
+message VendorQuotation {
+    string id = 1;
+    string quotation_number = 2;
+    string rfq_id = 3;
+    string vendor_id = 4;
+    string vendor_name = 5;
+    google.protobuf.Timestamp submission_date = 6;
+    google.protobuf.Timestamp validity_date = 7;
+    string currency = 8;
+    common.v1.Money total_value = 9;
+    repeated QuotationItem items = 10;
+    string payment_terms = 11;
+    string delivery_terms = 12;
+    int32 lead_time_days = 13;
+    string notes = 14;
+    repeated common.v1.Attachment attachments = 15;
+    QuotationStatus status = 16;
+    QuotationEvaluation evaluation = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+message QuotationItem {
+    string id = 1;
+    string rfq_item_id = 2;
+    int32 item_number = 3;
+    string product_id = 4;
+    string description = 5;
+    common.v1.Quantity quantity = 6;
+    common.v1.Money unit_price = 7;
+    common.v1.Money total_price = 8;
+    int32 lead_time_days = 9;
+    string notes = 10;
+}
+
+enum QuotationStatus {
+    QUOTATION_STATUS_UNSPECIFIED = 0;
+    QUOTATION_STATUS_DRAFT = 1;
+    QUOTATION_STATUS_SUBMITTED = 2;
+    QUOTATION_STATUS_UNDER_EVALUATION = 3;
+    QUOTATION_STATUS_SHORTLISTED = 4;
+    QUOTATION_STATUS_AWARDED = 5;
+    QUOTATION_STATUS_REJECTED = 6;
+    QUOTATION_STATUS_WITHDRAWN = 7;
+}
+
+message QuotationEvaluation {
+    double total_score = 1;
+    int32 rank = 2;
+    repeated CriterionScore criterion_scores = 3;
+    string evaluator_comments = 4;
+    google.protobuf.Timestamp evaluated_at = 5;
+}
+
+message CriterionScore {
+    string criterion_name = 1;
+    double weight = 2;
+    double score = 3;
+    double weighted_score = 4;
+    string comments = 5;
+}
+
+message BidAward {
+    string id = 1;
+    string award_number = 2;
+    string rfq_id = 3;
+    string quotation_id = 4;
+    string vendor_id = 5;
+    string vendor_name = 6;
+    google.protobuf.Timestamp award_date = 7;
+    common.v1.Money award_value = 8;
+    repeated AwardItem items = 9;
+    string justification = 10;
+    string purchase_order_id = 11;
+    string contract_id = 12;
+    common.v1.AuditInfo audit_info = 13;
+}
+
+message AwardItem {
+    string rfq_item_id = 1;
+    string quotation_item_id = 2;
+    common.v1.Quantity quantity = 3;
+    common.v1.Money unit_price = 4;
+    common.v1.Money total_price = 5;
+}
+
+message Auction {
+    string id = 1;
+    string auction_number = 2;
+    string title = 3;
+    string description = 4;
+    string company_code = 5;
+    string sourcing_project_id = 6;
+    AuctionType auction_type = 7;
+    google.protobuf.Timestamp start_time = 8;
+    google.protobuf.Timestamp end_time = 9;
+    string currency = 10;
+    common.v1.Money starting_price = 11;
+    common.v1.Money reserve_price = 12;
+    common.v1.Money current_price = 13;
+    common.v1.Money bid_decrement = 14;
+    int32 extension_minutes = 15;
+    repeated AuctionItem items = 16;
+    repeated string invited_vendors = 17;
+    AuctionStatus status = 18;
+    string winning_vendor_id = 19;
+    common.v1.Money winning_bid = 20;
+    repeated AuctionBid bid_history = 21;
+    common.v1.AuditInfo audit_info = 22;
+}
+
+enum AuctionType {
+    AUCTION_TYPE_UNSPECIFIED = 0;
+    AUCTION_TYPE_REVERSE = 1;
+    AUCTION_TYPE_FORWARD = 2;
+    AUCTION_TYPE_DUTCH = 3;
+    AUCTION_TYPE_JAPANESE = 4;
+}
+
+enum AuctionStatus {
+    AUCTION_STATUS_UNSPECIFIED = 0;
+    AUCTION_STATUS_DRAFT = 1;
+    AUCTION_STATUS_SCHEDULED = 2;
+    AUCTION_STATUS_LIVE = 3;
+    AUCTION_STATUS_EXTENDED = 4;
+    AUCTION_STATUS_ENDED = 5;
+    AUCTION_STATUS_AWARDED = 6;
+    AUCTION_STATUS_CANCELLED = 7;
+}
+
+message AuctionItem {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string description = 4;
+    common.v1.Quantity quantity = 5;
+    string specifications = 6;
+}
+
+message AuctionBid {
+    string id = 1;
+    string auction_id = 2;
+    string vendor_id = 3;
+    string vendor_name = 4;
+    common.v1.Money bid_amount = 5;
+    google.protobuf.Timestamp bid_time = 6;
+    int32 rank = 7;
+    bool is_winning = 8;
+}
+
+message SourceListEntry {
+    string id = 1;
+    string product_id = 2;
+    string product_code = 3;
+    string vendor_id = 4;
+    string vendor_name = 5;
+    string plant = 6;
+    string purchasing_organization = 7;
+    google.protobuf.Timestamp valid_from = 8;
+    google.protobuf.Timestamp valid_to = 9;
+    bool is_fixed = 10;
+    bool is_blocked = 11;
+    int32 priority = 12;
+    string contract_id = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+message CreateSourcingProjectRequest {
+    string name = 1;
+    string description = 2;
+    string company_code = 3;
+    string category = 4;
+    google.protobuf.Timestamp target_end_date = 5;
+    common.v1.Money estimated_value = 6;
+    common.v1.Money target_savings = 7;
+    SourcingStrategy strategy = 8;
+    repeated SourcingProjectItemInput items = 9;
+    repeated string team_members = 10;
+}
+
+message SourcingProjectItemInput {
+    string product_id = 1;
+    string description = 2;
+    common.v1.Quantity quantity = 3;
+    common.v1.Money estimated_unit_price = 4;
+    string specifications = 5;
+}
+
+message GetSourcingProjectRequest {
+    string id = 1;
+}
+
+message UpdateSourcingProjectRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    google.protobuf.Timestamp target_end_date = 4;
+    common.v1.Money target_savings = 5;
+    SourcingStrategy strategy = 6;
+    SourcingProjectStatus status = 7;
+}
+
+message DeleteSourcingProjectRequest {
+    string id = 1;
+}
+
+message ListSourcingProjectsRequest {
+    string company_code = 1;
+    string category = 2;
+    SourcingProjectStatus status = 3;
+    string owner_id = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListSourcingProjectsResponse {
+    repeated SourcingProject projects = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateRFQRequest {
+    string title = 1;
+    string description = 2;
+    string company_code = 3;
+    string sourcing_project_id = 4;
+    google.protobuf.Timestamp response_deadline = 5;
+    google.protobuf.Timestamp validity_date = 6;
+    string currency = 7;
+    repeated RFQItemInput items = 8;
+    repeated string invited_vendors = 9;
+    repeated EvaluationCriterion evaluation_criteria = 10;
+    RFQType rfq_type = 11;
+    bool sealed_bid = 12;
+    string terms_and_conditions = 13;
+}
+
+message RFQItemInput {
+    string product_id = 1;
+    string description = 2;
+    common.v1.Quantity quantity = 3;
+    string unit = 4;
+    string specifications = 5;
+    google.protobuf.Timestamp required_date = 6;
+    string delivery_location = 7;
+}
+
+message GetRFQRequest {
+    string id = 1;
+}
+
+message UpdateRFQRequest {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    google.protobuf.Timestamp response_deadline = 4;
+    repeated RFQItemInput items = 5;
+    repeated string invited_vendors = 6;
+}
+
+message PublishRFQRequest {
+    string id = 1;
+}
+
+message CloseRFQRequest {
+    string id = 1;
+}
+
+message ListRFQsRequest {
+    string company_code = 1;
+    string sourcing_project_id = 2;
+    RFQStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListRFQsResponse {
+    repeated RFQ rfqs = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message SubmitQuotationRequest {
+    string rfq_id = 1;
+    string vendor_id = 2;
+    google.protobuf.Timestamp validity_date = 3;
+    string currency = 4;
+    repeated QuotationItemInput items = 5;
+    string payment_terms = 6;
+    string delivery_terms = 7;
+    int32 lead_time_days = 8;
+    string notes = 9;
+}
+
+message QuotationItemInput {
+    string rfq_item_id = 1;
+    common.v1.Quantity quantity = 2;
+    common.v1.Money unit_price = 3;
+    int32 lead_time_days = 4;
+    string notes = 5;
+}
+
+message GetQuotationRequest {
+    string id = 1;
+}
+
+message ListQuotationsRequest {
+    string rfq_id = 1;
+    string vendor_id = 2;
+    QuotationStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListQuotationsResponse {
+    repeated VendorQuotation quotations = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message EvaluateQuotationsRequest {
+    string rfq_id = 1;
+    repeated QuotationEvaluationInput evaluations = 2;
+}
+
+message QuotationEvaluationInput {
+    string quotation_id = 1;
+    repeated CriterionScoreInput criterion_scores = 2;
+    string comments = 3;
+}
+
+message CriterionScoreInput {
+    string criterion_name = 1;
+    double score = 2;
+    string comments = 3;
+}
+
+message EvaluateQuotationsResponse {
+    repeated QuotationRanking rankings = 1;
+}
+
+message QuotationRanking {
+    string quotation_id = 1;
+    string vendor_id = 2;
+    string vendor_name = 3;
+    double total_score = 4;
+    int32 rank = 5;
+    common.v1.Money total_value = 6;
+}
+
+message AwardBidRequest {
+    string rfq_id = 1;
+    string quotation_id = 2;
+    repeated AwardItemInput items = 3;
+    string justification = 4;
+    bool create_purchase_order = 5;
+    bool create_contract = 6;
+}
+
+message AwardItemInput {
+    string rfq_item_id = 1;
+    string quotation_item_id = 2;
+    common.v1.Quantity quantity = 3;
+}
+
+message CreateAuctionRequest {
+    string title = 1;
+    string description = 2;
+    string company_code = 3;
+    string sourcing_project_id = 4;
+    AuctionType auction_type = 5;
+    google.protobuf.Timestamp start_time = 6;
+    google.protobuf.Timestamp end_time = 7;
+    string currency = 8;
+    common.v1.Money starting_price = 9;
+    common.v1.Money reserve_price = 10;
+    common.v1.Money bid_decrement = 11;
+    int32 extension_minutes = 12;
+    repeated AuctionItemInput items = 13;
+    repeated string invited_vendors = 14;
+}
+
+message AuctionItemInput {
+    string product_id = 1;
+    string description = 2;
+    common.v1.Quantity quantity = 3;
+    string specifications = 4;
+}
+
+message GetAuctionRequest {
+    string id = 1;
+}
+
+message StartAuctionRequest {
+    string id = 1;
+}
+
+message PlaceBidRequest {
+    string auction_id = 1;
+    string vendor_id = 2;
+    common.v1.Money bid_amount = 3;
+}
+
+message EndAuctionRequest {
+    string id = 1;
+}
+
+message GetSourceListRequest {
+    string product_id = 1;
+    string plant = 2;
+    string purchasing_organization = 3;
+    google.protobuf.Timestamp effective_date = 4;
+}
+
+message GetSourceListResponse {
+    repeated SourceListEntry entries = 1;
+}
+
+message UpdateSourceListRequest {
+    string product_id = 1;
+    string vendor_id = 2;
+    string plant = 3;
+    string purchasing_organization = 4;
+    google.protobuf.Timestamp valid_from = 5;
+    google.protobuf.Timestamp valid_to = 6;
+    bool is_fixed = 7;
+    bool is_blocked = 8;
+    int32 priority = 9;
+    string contract_id = 10;
+}
+
+// Auto-generated Response messages
+message CreateSourcingProjectResponse {
+    SourcingProject sourcing_project = 1;
+}
+
+message GetSourcingProjectResponse {
+    SourcingProject sourcing_project = 1;
+}
+
+message UpdateSourcingProjectResponse {
+    SourcingProject sourcing_project = 1;
+}
+
+message CreateRFQResponse {
+    RFQ r_f_q = 1;
+}
+
+message GetRFQResponse {
+    RFQ r_f_q = 1;
+}
+
+message UpdateRFQResponse {
+    RFQ r_f_q = 1;
+}
+
+message PublishRFQResponse {
+    RFQ r_f_q = 1;
+}
+
+message CloseRFQResponse {
+    RFQ r_f_q = 1;
+}
+
+message SubmitQuotationResponse {
+    VendorQuotation vendor_quotation = 1;
+}
+
+message GetQuotationResponse {
+    VendorQuotation vendor_quotation = 1;
+}
+
+message AwardBidResponse {
+    BidAward bid_award = 1;
+}
+
+message CreateAuctionResponse {
+    Auction auction = 1;
+}
+
+message GetAuctionResponse {
+    Auction auction = 1;
+}
+
+message StartAuctionResponse {
+    Auction auction = 1;
+}
+
+message PlaceBidResponse {
+    AuctionBid auction_bid = 1;
+}
+
+message EndAuctionResponse {
+    Auction auction = 1;
+}
+
+message UpdateSourceListResponse {
+    SourceListEntry source_list_entry = 1;
+}

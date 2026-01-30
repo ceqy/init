@@ -1,15 +1,15 @@
 //! gRPC 客户端
 
 pub mod auth {
-    tonic::include_proto!("cuba.iam.auth.v1");
+    tonic::include_proto!("iam.auth.v1");
 }
 
 pub mod user {
-    tonic::include_proto!("cuba.iam.user.v1");
+    tonic::include_proto!("iam.user.v1");
 }
 
 pub mod audit {
-    tonic::include_proto!("cuba.iam.audit.v1");
+    tonic::include_proto!("iam.audit.v1");
 }
 
 use audit::audit_service_client::AuditServiceClient;

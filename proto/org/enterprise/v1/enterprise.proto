@@ -1,0 +1,779 @@
+syntax = "proto3";
+
+package org.enterprise.v1;
+
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+// ============================================================================
+// 组织架构服务 - 企业组织单元管理
+// ============================================================================
+service EnterpriseService {
+    // 公司代码管理
+    rpc CreateCompanyCode(CreateCompanyCodeRequest) returns (CreateCompanyCodeResponse);
+    rpc GetCompanyCode(GetCompanyCodeRequest) returns (GetCompanyCodeResponse);
+    rpc UpdateCompanyCode(UpdateCompanyCodeRequest) returns (UpdateCompanyCodeResponse);
+    rpc DeleteCompanyCode(DeleteCompanyCodeRequest) returns (google.protobuf.Empty);
+    rpc ListCompanyCodes(ListCompanyCodesRequest) returns (ListCompanyCodesResponse);
+
+    // 工厂管理
+    rpc CreatePlant(CreatePlantRequest) returns (CreatePlantResponse);
+    rpc GetPlant(GetPlantRequest) returns (GetPlantResponse);
+    rpc UpdatePlant(UpdatePlantRequest) returns (UpdatePlantResponse);
+    rpc DeletePlant(DeletePlantRequest) returns (google.protobuf.Empty);
+    rpc ListPlants(ListPlantsRequest) returns (ListPlantsResponse);
+
+    // 存储位置管理
+    rpc CreateStorageLocation(CreateStorageLocationRequest) returns (CreateStorageLocationResponse);
+    rpc GetStorageLocation(GetStorageLocationRequest) returns (GetStorageLocationResponse);
+    rpc UpdateStorageLocation(UpdateStorageLocationRequest) returns (UpdateStorageLocationResponse);
+    rpc DeleteStorageLocation(DeleteStorageLocationRequest) returns (google.protobuf.Empty);
+    rpc ListStorageLocations(ListStorageLocationsRequest) returns (ListStorageLocationsResponse);
+
+    // 销售组织管理
+    rpc CreateSalesOrganization(CreateSalesOrganizationRequest) returns (CreateSalesOrganizationResponse);
+    rpc GetSalesOrganization(GetSalesOrganizationRequest) returns (GetSalesOrganizationResponse);
+    rpc UpdateSalesOrganization(UpdateSalesOrganizationRequest) returns (UpdateSalesOrganizationResponse);
+    rpc DeleteSalesOrganization(DeleteSalesOrganizationRequest) returns (google.protobuf.Empty);
+    rpc ListSalesOrganizations(ListSalesOrganizationsRequest) returns (ListSalesOrganizationsResponse);
+
+    // 分销渠道管理
+    rpc CreateDistributionChannel(CreateDistributionChannelRequest) returns (CreateDistributionChannelResponse);
+    rpc GetDistributionChannel(GetDistributionChannelRequest) returns (GetDistributionChannelResponse);
+    rpc UpdateDistributionChannel(UpdateDistributionChannelRequest) returns (UpdateDistributionChannelResponse);
+    rpc DeleteDistributionChannel(DeleteDistributionChannelRequest) returns (google.protobuf.Empty);
+    rpc ListDistributionChannels(ListDistributionChannelsRequest) returns (ListDistributionChannelsResponse);
+
+    // 产品组管理
+    rpc CreateDivision(CreateDivisionRequest) returns (CreateDivisionResponse);
+    rpc GetDivision(GetDivisionRequest) returns (GetDivisionResponse);
+    rpc UpdateDivision(UpdateDivisionRequest) returns (UpdateDivisionResponse);
+    rpc DeleteDivision(DeleteDivisionRequest) returns (google.protobuf.Empty);
+    rpc ListDivisions(ListDivisionsRequest) returns (ListDivisionsResponse);
+
+    // 采购组织管理
+    rpc CreatePurchaseOrganization(CreatePurchaseOrganizationRequest) returns (CreatePurchaseOrganizationResponse);
+    rpc GetPurchaseOrganization(GetPurchaseOrganizationRequest) returns (GetPurchaseOrganizationResponse);
+    rpc UpdatePurchaseOrganization(UpdatePurchaseOrganizationRequest) returns (UpdatePurchaseOrganizationResponse);
+    rpc DeletePurchaseOrganization(DeletePurchaseOrganizationRequest) returns (google.protobuf.Empty);
+    rpc ListPurchaseOrganizations(ListPurchaseOrganizationsRequest) returns (ListPurchaseOrganizationsResponse);
+
+    // 采购组管理
+    rpc CreatePurchaseGroup(CreatePurchaseGroupRequest) returns (CreatePurchaseGroupResponse);
+    rpc GetPurchaseGroup(GetPurchaseGroupRequest) returns (GetPurchaseGroupResponse);
+    rpc UpdatePurchaseGroup(UpdatePurchaseGroupRequest) returns (UpdatePurchaseGroupResponse);
+    rpc DeletePurchaseGroup(DeletePurchaseGroupRequest) returns (google.protobuf.Empty);
+    rpc ListPurchaseGroups(ListPurchaseGroupsRequest) returns (ListPurchaseGroupsResponse);
+
+    // 组织关系管理
+    rpc AssignPlantToCompany(AssignPlantToCompanyRequest) returns (google.protobuf.Empty);
+    rpc AssignSalesOrgToCompany(AssignSalesOrgToCompanyRequest) returns (google.protobuf.Empty);
+    rpc AssignPurchaseOrgToCompany(AssignPurchaseOrgToCompanyRequest) returns (google.protobuf.Empty);
+    rpc GetOrganizationHierarchy(GetOrganizationHierarchyRequest) returns (GetOrganizationHierarchyResponse);
+}
+
+// ============================================================================
+// 核心实体
+// ============================================================================
+
+// 公司代码 (Company Code)
+message CompanyCode {
+    string id = 1;                                  // 公司ID (UUID)
+    string code = 2;                                // 公司代码 (4位, 如: 1000)
+    string name = 3;                                // 公司名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+
+    // 地址信息
+    Address address = 5;                            // 公司地址
+
+    // 货币和语言
+    string currency = 6;                            // 本位币 (如: CNY, USD)
+    string language = 7;                            // 语言 (如: zh_CN, en_US)
+    string country = 8;                             // 国家代码 (如: CN, US)
+
+    // 会计相关
+    string chart_of_accounts = 9;                   // 会计科目表
+    string fiscal_year_variant = 10;                // 会计年度变式
+
+    // 税务信息
+    string tax_number = 11;                         // 税号
+    string vat_registration_number = 12;            // 增值税登记号
+
+    // 状态
+    common.v1.DataStatus status = 13;          // 状态
+
+    // 审计
+    common.v1.AuditInfo audit_info = 14;
+}
+
+// 工厂 (Plant)
+message Plant {
+    string id = 1;                                  // 工厂ID (UUID)
+    string code = 2;                                // 工厂代码 (4位, 如: 1001)
+    string name = 3;                                // 工厂名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+
+    // 所属公司
+    string company_code = 5;                        // 公司代码
+    string company_name = 6;                        // 公司名称
+
+    // 地址信息
+    Address address = 7;                            // 工厂地址
+
+    // 工厂类型
+    PlantType plant_type = 8;                       // 工厂类型
+
+    // 评估范围
+    string valuation_area = 9;                      // 评估范围 (通常等于工厂代码)
+
+    // 工厂参数
+    string factory_calendar = 10;                   // 工厂日历
+    string country = 11;                            // 国家代码
+    string region = 12;                             // 地区
+    string time_zone = 13;                          // 时区
+
+    // 状态
+    common.v1.DataStatus status = 14;          // 状态
+
+    // 审计
+    common.v1.AuditInfo audit_info = 15;
+}
+
+// 存储位置 (Storage Location)
+message StorageLocation {
+    string id = 1;                                  // 存储位置ID (UUID)
+    string code = 2;                                // 存储位置代码 (4位, 如: 0001)
+    string name = 3;                                // 存储位置名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+
+    // 所属工厂
+    string plant_code = 5;                          // 工厂代码
+    string plant_name = 6;                          // 工厂名称
+
+    // 地址信息
+    Address address = 7;                            // 存储位置地址
+
+    // 仓库信息
+    string warehouse_number = 8;                    // 仓库编号
+    string warehouse_type = 9;                      // 仓库类型
+
+    // 状态
+    common.v1.DataStatus status = 10;          // 状态
+
+    // 审计
+    common.v1.AuditInfo audit_info = 11;
+}
+
+// 销售组织 (Sales Organization)
+message SalesOrganization {
+    string id = 1;                                  // 销售组织ID (UUID)
+    string code = 2;                                // 销售组织代码 (4位, 如: 1000)
+    string name = 3;                                // 销售组织名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+
+    // 所属公司
+    string company_code = 5;                        // 公司代码
+    string company_name = 6;                        // 公司名称
+
+    // 地址信息
+    Address address = 7;                            // 销售组织地址
+
+    // 货币
+    string currency = 8;                            // 货币
+
+    // 状态
+    common.v1.DataStatus status = 9;           // 状态
+
+    // 审计
+    common.v1.AuditInfo audit_info = 10;
+}
+
+// 分销渠道 (Distribution Channel)
+message DistributionChannel {
+    string id = 1;                                  // 分销渠道ID (UUID)
+    string code = 2;                                // 分销渠道代码 (2位, 如: 10)
+    string name = 3;                                // 分销渠道名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+
+    // 状态
+    common.v1.DataStatus status = 5;           // 状态
+
+    // 审计
+    common.v1.AuditInfo audit_info = 6;
+}
+
+// 产品组 (Division)
+message Division {
+    string id = 1;                                  // 产品组ID (UUID)
+    string code = 2;                                // 产品组代码 (2位, 如: 00)
+    string name = 3;                                // 产品组名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+
+    // 状态
+    common.v1.DataStatus status = 5;           // 状态
+
+    // 审计
+    common.v1.AuditInfo audit_info = 6;
+}
+
+// 采购组织 (Purchase Organization)
+message PurchaseOrganization {
+    string id = 1;                                  // 采购组织ID (UUID)
+    string code = 2;                                // 采购组织代码 (4位, 如: 1000)
+    string name = 3;                                // 采购组织名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+
+    // 所属公司
+    string company_code = 5;                        // 公司代码
+    string company_name = 6;                        // 公司名称
+
+    // 地址信息
+    Address address = 7;                            // 采购组织地址
+
+    // 货币
+    string currency = 8;                            // 货币
+
+    // 状态
+    common.v1.DataStatus status = 9;           // 状态
+
+    // 审计
+    common.v1.AuditInfo audit_info = 10;
+}
+
+// 采购组 (Purchase Group)
+message PurchaseGroup {
+    string id = 1;                                  // 采购组ID (UUID)
+    string code = 2;                                // 采购组代码 (3位, 如: 001)
+    string name = 3;                                // 采购组名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+
+    // 所属采购组织
+    string purchase_org_code = 5;                   // 采购组织代码
+    string purchase_org_name = 6;                   // 采购组织名称
+
+    // 联系信息
+    string phone = 7;                               // 电话
+    string email = 8;                               // 邮箱
+    string fax = 9;                                 // 传真
+
+    // 状态
+    common.v1.DataStatus status = 10;          // 状态
+
+    // 审计
+    common.v1.AuditInfo audit_info = 11;
+}
+
+// 地址
+message Address {
+    string street = 1;                              // 街道
+    string city = 2;                                // 城市
+    string district = 3;                            // 区/县
+    string state = 4;                               // 省/州
+    string postal_code = 5;                         // 邮编
+    string country = 6;                             // 国家代码
+    string phone = 7;                               // 电话
+    string fax = 8;                                 // 传真
+    string email = 9;                               // 邮箱
+}
+
+// 组织层级结构
+message OrganizationHierarchy {
+    CompanyCode company = 1;                        // 公司
+    repeated Plant plants = 2;                      // 工厂列表
+    repeated SalesOrganization sales_orgs = 3;      // 销售组织列表
+    repeated PurchaseOrganization purchase_orgs = 4; // 采购组织列表
+}
+
+// ============================================================================
+// 枚举
+// ============================================================================
+
+enum PlantType {
+    PLANT_TYPE_UNSPECIFIED = 0;
+    PLANT_TYPE_PRODUCTION = 1;                      // 生产工厂
+    PLANT_TYPE_WAREHOUSE = 2;                       // 仓库
+    PLANT_TYPE_DISTRIBUTION_CENTER = 3;             // 配送中心
+    PLANT_TYPE_RETAIL = 4;                          // 零售店
+    PLANT_TYPE_SERVICE_CENTER = 5;                  // 服务中心
+}
+
+// ============================================================================
+// 请求/响应消息 - 公司代码
+// ============================================================================
+
+message CreateCompanyCodeRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    Address address = 4;
+    string currency = 5;
+    string language = 6;
+    string country = 7;
+    string chart_of_accounts = 8;
+    string fiscal_year_variant = 9;
+    string tax_number = 10;
+    string vat_registration_number = 11;
+}
+
+message CreateCompanyCodeResponse {
+    CompanyCode company_code = 1;
+}
+
+message GetCompanyCodeRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetCompanyCodeResponse {
+    CompanyCode company_code = 1;
+}
+
+message UpdateCompanyCodeRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    Address address = 4;
+    string currency = 5;
+    string language = 6;
+    string tax_number = 7;
+    string vat_registration_number = 8;
+}
+
+message UpdateCompanyCodeResponse {
+    CompanyCode company_code = 1;
+}
+
+message DeleteCompanyCodeRequest {
+    string id = 1;
+}
+
+message ListCompanyCodesRequest {
+    common.v1.DataStatus status = 1;
+    string country = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListCompanyCodesResponse {
+    repeated CompanyCode company_codes = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 工厂
+// ============================================================================
+
+message CreatePlantRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string company_code = 4;
+    Address address = 5;
+    PlantType plant_type = 6;
+    string valuation_area = 7;
+    string factory_calendar = 8;
+    string country = 9;
+    string region = 10;
+    string time_zone = 11;
+}
+
+message CreatePlantResponse {
+    Plant plant = 1;
+}
+
+message GetPlantRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetPlantResponse {
+    Plant plant = 1;
+}
+
+message UpdatePlantRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    Address address = 4;
+    PlantType plant_type = 5;
+    string factory_calendar = 6;
+    string time_zone = 7;
+}
+
+message UpdatePlantResponse {
+    Plant plant = 1;
+}
+
+message DeletePlantRequest {
+    string id = 1;
+}
+
+message ListPlantsRequest {
+    string company_code = 1;
+    PlantType plant_type = 2;
+    common.v1.DataStatus status = 3;
+    string country = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListPlantsResponse {
+    repeated Plant plants = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 存储位置
+// ============================================================================
+
+message CreateStorageLocationRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string plant_code = 4;
+    Address address = 5;
+    string warehouse_number = 6;
+    string warehouse_type = 7;
+}
+
+message CreateStorageLocationResponse {
+    StorageLocation storage_location = 1;
+}
+
+message GetStorageLocationRequest {
+    oneof identifier {
+        string id = 1;
+        StorageLocationKey key = 2;
+    }
+}
+
+message StorageLocationKey {
+    string plant_code = 1;
+    string storage_location_code = 2;
+}
+
+message GetStorageLocationResponse {
+    StorageLocation storage_location = 1;
+}
+
+message UpdateStorageLocationRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    Address address = 4;
+    string warehouse_number = 5;
+    string warehouse_type = 6;
+}
+
+message UpdateStorageLocationResponse {
+    StorageLocation storage_location = 1;
+}
+
+message DeleteStorageLocationRequest {
+    string id = 1;
+}
+
+message ListStorageLocationsRequest {
+    string plant_code = 1;
+    common.v1.DataStatus status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListStorageLocationsResponse {
+    repeated StorageLocation storage_locations = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 销售组织
+// ============================================================================
+
+message CreateSalesOrganizationRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string company_code = 4;
+    Address address = 5;
+    string currency = 6;
+}
+
+message CreateSalesOrganizationResponse {
+    SalesOrganization sales_organization = 1;
+}
+
+message GetSalesOrganizationRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetSalesOrganizationResponse {
+    SalesOrganization sales_organization = 1;
+}
+
+message UpdateSalesOrganizationRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    Address address = 4;
+    string currency = 5;
+}
+
+message UpdateSalesOrganizationResponse {
+    SalesOrganization sales_organization = 1;
+}
+
+message DeleteSalesOrganizationRequest {
+    string id = 1;
+}
+
+message ListSalesOrganizationsRequest {
+    string company_code = 1;
+    common.v1.DataStatus status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListSalesOrganizationsResponse {
+    repeated SalesOrganization sales_organizations = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 分销渠道
+// ============================================================================
+
+message CreateDistributionChannelRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+}
+
+message CreateDistributionChannelResponse {
+    DistributionChannel distribution_channel = 1;
+}
+
+message GetDistributionChannelRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetDistributionChannelResponse {
+    DistributionChannel distribution_channel = 1;
+}
+
+message UpdateDistributionChannelRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+}
+
+message UpdateDistributionChannelResponse {
+    DistributionChannel distribution_channel = 1;
+}
+
+message DeleteDistributionChannelRequest {
+    string id = 1;
+}
+
+message ListDistributionChannelsRequest {
+    common.v1.DataStatus status = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message ListDistributionChannelsResponse {
+    repeated DistributionChannel distribution_channels = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 产品组
+// ============================================================================
+
+message CreateDivisionRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+}
+
+message CreateDivisionResponse {
+    Division division = 1;
+}
+
+message GetDivisionRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetDivisionResponse {
+    Division division = 1;
+}
+
+message UpdateDivisionRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+}
+
+message UpdateDivisionResponse {
+    Division division = 1;
+}
+
+message DeleteDivisionRequest {
+    string id = 1;
+}
+
+message ListDivisionsRequest {
+    common.v1.DataStatus status = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message ListDivisionsResponse {
+    repeated Division divisions = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 采购组织
+// ============================================================================
+
+message CreatePurchaseOrganizationRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string company_code = 4;
+    Address address = 5;
+    string currency = 6;
+}
+
+message CreatePurchaseOrganizationResponse {
+    PurchaseOrganization purchase_organization = 1;
+}
+
+message GetPurchaseOrganizationRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetPurchaseOrganizationResponse {
+    PurchaseOrganization purchase_organization = 1;
+}
+
+message UpdatePurchaseOrganizationRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    Address address = 4;
+    string currency = 5;
+}
+
+message UpdatePurchaseOrganizationResponse {
+    PurchaseOrganization purchase_organization = 1;
+}
+
+message DeletePurchaseOrganizationRequest {
+    string id = 1;
+}
+
+message ListPurchaseOrganizationsRequest {
+    string company_code = 1;
+    common.v1.DataStatus status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListPurchaseOrganizationsResponse {
+    repeated PurchaseOrganization purchase_organizations = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 采购组
+// ============================================================================
+
+message CreatePurchaseGroupRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string purchase_org_code = 4;
+    string phone = 5;
+    string email = 6;
+    string fax = 7;
+}
+
+message CreatePurchaseGroupResponse {
+    PurchaseGroup purchase_group = 1;
+}
+
+message GetPurchaseGroupRequest {
+    oneof identifier {
+        string id = 1;
+        string code = 2;
+    }
+}
+
+message GetPurchaseGroupResponse {
+    PurchaseGroup purchase_group = 1;
+}
+
+message UpdatePurchaseGroupRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string phone = 4;
+    string email = 5;
+    string fax = 6;
+}
+
+message UpdatePurchaseGroupResponse {
+    PurchaseGroup purchase_group = 1;
+}
+
+message DeletePurchaseGroupRequest {
+    string id = 1;
+}
+
+message ListPurchaseGroupsRequest {
+    string purchase_org_code = 1;
+    common.v1.DataStatus status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListPurchaseGroupsResponse {
+    repeated PurchaseGroup purchase_groups = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 组织关系
+// ============================================================================
+
+message AssignPlantToCompanyRequest {
+    string plant_code = 1;
+    string company_code = 2;
+}
+
+message AssignSalesOrgToCompanyRequest {
+    string sales_org_code = 1;
+    string company_code = 2;
+}
+
+message AssignPurchaseOrgToCompanyRequest {
+    string purchase_org_code = 1;
+    string company_code = 2;
+}
+
+message GetOrganizationHierarchyRequest {
+    string company_code = 1;
+}
+
+message GetOrganizationHierarchyResponse {
+    OrganizationHierarchy hierarchy = 1;
+}

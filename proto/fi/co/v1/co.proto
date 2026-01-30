@@ -1,0 +1,566 @@
+syntax = "proto3";
+
+package fi.co.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service CostControlService {
+    rpc CreateCostCenter(CreateCostCenterRequest) returns (CreateCostCenterResponse);
+    rpc GetCostCenter(GetCostCenterRequest) returns (GetCostCenterResponse);
+    rpc UpdateCostCenter(UpdateCostCenterRequest) returns (UpdateCostCenterResponse);
+    rpc DeleteCostCenter(DeleteCostCenterRequest) returns (google.protobuf.Empty);
+    rpc ListCostCenters(ListCostCentersRequest) returns (ListCostCentersResponse);
+
+    rpc CreateProfitCenter(CreateProfitCenterRequest) returns (CreateProfitCenterResponse);
+    rpc GetProfitCenter(GetProfitCenterRequest) returns (GetProfitCenterResponse);
+    rpc UpdateProfitCenter(UpdateProfitCenterRequest) returns (UpdateProfitCenterResponse);
+    rpc DeleteProfitCenter(DeleteProfitCenterRequest) returns (google.protobuf.Empty);
+    rpc ListProfitCenters(ListProfitCentersRequest) returns (ListProfitCentersResponse);
+
+    rpc CreateCostElement(CreateCostElementRequest) returns (CreateCostElementResponse);
+    rpc GetCostElement(GetCostElementRequest) returns (GetCostElementResponse);
+    rpc UpdateCostElement(UpdateCostElementRequest) returns (UpdateCostElementResponse);
+    rpc DeleteCostElement(DeleteCostElementRequest) returns (google.protobuf.Empty);
+    rpc ListCostElements(ListCostElementsRequest) returns (ListCostElementsResponse);
+
+    rpc CreateInternalOrder(CreateInternalOrderRequest) returns (CreateInternalOrderResponse);
+    rpc GetInternalOrder(GetInternalOrderRequest) returns (GetInternalOrderResponse);
+    rpc UpdateInternalOrder(UpdateInternalOrderRequest) returns (UpdateInternalOrderResponse);
+    rpc CloseInternalOrder(CloseInternalOrderRequest) returns (CloseInternalOrderResponse);
+    rpc ListInternalOrders(ListInternalOrdersRequest) returns (ListInternalOrdersResponse);
+
+    rpc CreateBudget(CreateBudgetRequest) returns (CreateBudgetResponse);
+    rpc GetBudget(GetBudgetRequest) returns (GetBudgetResponse);
+    rpc UpdateBudget(UpdateBudgetRequest) returns (UpdateBudgetResponse);
+    rpc ListBudgets(ListBudgetsRequest) returns (ListBudgetsResponse);
+    rpc GetBudgetVsActual(GetBudgetVsActualRequest) returns (GetBudgetVsActualResponse);
+
+    rpc PerformCostAllocation(PerformCostAllocationRequest) returns (PerformCostAllocationResponse);
+    rpc GetCostCenterReport(GetCostCenterReportRequest) returns (GetCostCenterReportResponse);
+    rpc GetProfitCenterReport(GetProfitCenterReportRequest) returns (GetProfitCenterReportResponse);
+    rpc GetProfitabilityAnalysis(GetProfitabilityAnalysisRequest) returns (GetProfitabilityAnalysisResponse);
+}
+
+message CostCenter {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    string controlling_area = 6;
+    string parent_id = 7;
+    string manager_id = 8;
+    string cost_center_category = 9;
+    string hierarchy_area = 10;
+    google.protobuf.Timestamp valid_from = 11;
+    google.protobuf.Timestamp valid_to = 12;
+    common.v1.Status status = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+message ProfitCenter {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    string controlling_area = 6;
+    string parent_id = 7;
+    string manager_id = 8;
+    string segment = 9;
+    google.protobuf.Timestamp valid_from = 10;
+    google.protobuf.Timestamp valid_to = 11;
+    common.v1.Status status = 12;
+    common.v1.AuditInfo audit_info = 13;
+}
+
+message CostElement {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string controlling_area = 5;
+    CostElementType type = 6;
+    string gl_account = 7;
+    google.protobuf.Timestamp valid_from = 8;
+    google.protobuf.Timestamp valid_to = 9;
+    common.v1.Status status = 10;
+    common.v1.AuditInfo audit_info = 11;
+}
+
+enum CostElementType {
+    COST_ELEMENT_TYPE_UNSPECIFIED = 0;
+    COST_ELEMENT_TYPE_PRIMARY = 1;
+    COST_ELEMENT_TYPE_SECONDARY = 2;
+    COST_ELEMENT_TYPE_REVENUE = 3;
+}
+
+message InternalOrder {
+    string id = 1;
+    string order_number = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    string controlling_area = 6;
+    InternalOrderType order_type = 7;
+    string responsible_cost_center = 8;
+    string requester = 9;
+    common.v1.Money budget = 10;
+    common.v1.Money actual_cost = 11;
+    common.v1.Money committed_cost = 12;
+    google.protobuf.Timestamp start_date = 13;
+    google.protobuf.Timestamp end_date = 14;
+    InternalOrderStatus status = 15;
+    string settlement_rule = 16;
+    common.v1.AuditInfo audit_info = 17;
+}
+
+enum InternalOrderType {
+    INTERNAL_ORDER_TYPE_UNSPECIFIED = 0;
+    INTERNAL_ORDER_TYPE_OVERHEAD = 1;
+    INTERNAL_ORDER_TYPE_INVESTMENT = 2;
+    INTERNAL_ORDER_TYPE_ACCRUAL = 3;
+    INTERNAL_ORDER_TYPE_REVENUE = 4;
+}
+
+enum InternalOrderStatus {
+    INTERNAL_ORDER_STATUS_UNSPECIFIED = 0;
+    INTERNAL_ORDER_STATUS_CREATED = 1;
+    INTERNAL_ORDER_STATUS_RELEASED = 2;
+    INTERNAL_ORDER_STATUS_TECHNICALLY_COMPLETED = 3;
+    INTERNAL_ORDER_STATUS_CLOSED = 4;
+}
+
+message Budget {
+    string id = 1;
+    string company_code = 2;
+    string controlling_area = 3;
+    string fiscal_year = 4;
+    string cost_center = 5;
+    string profit_center = 6;
+    string internal_order = 7;
+    repeated BudgetLine lines = 8;
+    common.v1.Money total_budget = 9;
+    BudgetStatus status = 10;
+    string version = 11;
+    common.v1.AuditInfo audit_info = 12;
+}
+
+message BudgetLine {
+    string id = 1;
+    string cost_element = 2;
+    string period = 3;
+    common.v1.Money amount = 4;
+    string notes = 5;
+}
+
+enum BudgetStatus {
+    BUDGET_STATUS_UNSPECIFIED = 0;
+    BUDGET_STATUS_DRAFT = 1;
+    BUDGET_STATUS_SUBMITTED = 2;
+    BUDGET_STATUS_APPROVED = 3;
+    BUDGET_STATUS_ACTIVE = 4;
+    BUDGET_STATUS_FROZEN = 5;
+}
+
+message CostAllocationResult {
+    string id = 1;
+    string run_id = 2;
+    google.protobuf.Timestamp executed_at = 3;
+    string allocation_type = 4;
+    string sender_cost_center = 5;
+    repeated AllocationEntry entries = 6;
+    common.v1.Money total_allocated = 7;
+}
+
+message AllocationEntry {
+    string receiver_cost_center = 1;
+    double allocation_percentage = 2;
+    common.v1.Money allocated_amount = 3;
+}
+
+message CreateCostCenterRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string company_code = 4;
+    string controlling_area = 5;
+    string parent_id = 6;
+    string manager_id = 7;
+    string cost_center_category = 8;
+    google.protobuf.Timestamp valid_from = 9;
+    google.protobuf.Timestamp valid_to = 10;
+}
+
+message GetCostCenterRequest {
+    string id = 1;
+}
+
+message UpdateCostCenterRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string manager_id = 4;
+    common.v1.Status status = 5;
+}
+
+message DeleteCostCenterRequest {
+    string id = 1;
+}
+
+message ListCostCentersRequest {
+    string company_code = 1;
+    string controlling_area = 2;
+    string parent_id = 3;
+    common.v1.Status status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListCostCentersResponse {
+    repeated CostCenter cost_centers = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateProfitCenterRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string company_code = 4;
+    string controlling_area = 5;
+    string parent_id = 6;
+    string manager_id = 7;
+    string segment = 8;
+    google.protobuf.Timestamp valid_from = 9;
+    google.protobuf.Timestamp valid_to = 10;
+}
+
+message GetProfitCenterRequest {
+    string id = 1;
+}
+
+message UpdateProfitCenterRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string manager_id = 4;
+    common.v1.Status status = 5;
+}
+
+message DeleteProfitCenterRequest {
+    string id = 1;
+}
+
+message ListProfitCentersRequest {
+    string company_code = 1;
+    string controlling_area = 2;
+    string parent_id = 3;
+    common.v1.Status status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListProfitCentersResponse {
+    repeated ProfitCenter profit_centers = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateCostElementRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string controlling_area = 4;
+    CostElementType type = 5;
+    string gl_account = 6;
+    google.protobuf.Timestamp valid_from = 7;
+    google.protobuf.Timestamp valid_to = 8;
+}
+
+message GetCostElementRequest {
+    string id = 1;
+}
+
+message UpdateCostElementRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    common.v1.Status status = 4;
+}
+
+message DeleteCostElementRequest {
+    string id = 1;
+}
+
+message ListCostElementsRequest {
+    string controlling_area = 1;
+    CostElementType type = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListCostElementsResponse {
+    repeated CostElement cost_elements = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateInternalOrderRequest {
+    string name = 1;
+    string description = 2;
+    string company_code = 3;
+    string controlling_area = 4;
+    InternalOrderType order_type = 5;
+    string responsible_cost_center = 6;
+    string requester = 7;
+    common.v1.Money budget = 8;
+    google.protobuf.Timestamp start_date = 9;
+    google.protobuf.Timestamp end_date = 10;
+}
+
+message GetInternalOrderRequest {
+    string id = 1;
+}
+
+message UpdateInternalOrderRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    common.v1.Money budget = 4;
+    google.protobuf.Timestamp end_date = 5;
+}
+
+message CloseInternalOrderRequest {
+    string id = 1;
+}
+
+message ListInternalOrdersRequest {
+    string company_code = 1;
+    string controlling_area = 2;
+    InternalOrderType order_type = 3;
+    InternalOrderStatus status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListInternalOrdersResponse {
+    repeated InternalOrder orders = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateBudgetRequest {
+    string company_code = 1;
+    string controlling_area = 2;
+    string fiscal_year = 3;
+    string cost_center = 4;
+    string profit_center = 5;
+    string internal_order = 6;
+    repeated BudgetLineInput lines = 7;
+    string version = 8;
+}
+
+message BudgetLineInput {
+    string cost_element = 1;
+    string period = 2;
+    common.v1.Money amount = 3;
+    string notes = 4;
+}
+
+message GetBudgetRequest {
+    string id = 1;
+}
+
+message UpdateBudgetRequest {
+    string id = 1;
+    repeated BudgetLineInput lines = 2;
+    BudgetStatus status = 3;
+}
+
+message ListBudgetsRequest {
+    string company_code = 1;
+    string fiscal_year = 2;
+    string cost_center = 3;
+    BudgetStatus status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListBudgetsResponse {
+    repeated Budget budgets = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetBudgetVsActualRequest {
+    string company_code = 1;
+    string fiscal_year = 2;
+    string cost_center = 3;
+    string profit_center = 4;
+    string period = 5;
+}
+
+message GetBudgetVsActualResponse {
+    repeated BudgetVsActualLine lines = 1;
+    common.v1.Money total_budget = 2;
+    common.v1.Money total_actual = 3;
+    common.v1.Money total_variance = 4;
+    double variance_percentage = 5;
+}
+
+message BudgetVsActualLine {
+    string cost_element = 1;
+    string cost_element_name = 2;
+    common.v1.Money budget = 3;
+    common.v1.Money actual = 4;
+    common.v1.Money committed = 5;
+    common.v1.Money available = 6;
+    common.v1.Money variance = 7;
+    double variance_percentage = 8;
+}
+
+message PerformCostAllocationRequest {
+    string controlling_area = 1;
+    string fiscal_year = 2;
+    string period = 3;
+    string allocation_cycle = 4;
+    string sender_cost_center = 5;
+}
+
+message GetCostCenterReportRequest {
+    string company_code = 1;
+    string cost_center = 2;
+    string fiscal_year = 3;
+    string period_from = 4;
+    string period_to = 5;
+}
+
+message GetCostCenterReportResponse {
+    string cost_center = 1;
+    string cost_center_name = 2;
+    repeated CostCenterReportLine lines = 3;
+    common.v1.Money total_costs = 4;
+}
+
+message CostCenterReportLine {
+    string cost_element = 1;
+    string cost_element_name = 2;
+    common.v1.Money plan_amount = 3;
+    common.v1.Money actual_amount = 4;
+    common.v1.Money variance = 5;
+}
+
+message GetProfitCenterReportRequest {
+    string company_code = 1;
+    string profit_center = 2;
+    string fiscal_year = 3;
+    string period_from = 4;
+    string period_to = 5;
+}
+
+message GetProfitCenterReportResponse {
+    string profit_center = 1;
+    string profit_center_name = 2;
+    common.v1.Money revenue = 3;
+    common.v1.Money costs = 4;
+    common.v1.Money gross_profit = 5;
+    common.v1.Money operating_profit = 6;
+    repeated ProfitCenterReportLine lines = 7;
+}
+
+message ProfitCenterReportLine {
+    string account = 1;
+    string account_name = 2;
+    common.v1.Money plan_amount = 3;
+    common.v1.Money actual_amount = 4;
+    common.v1.Money variance = 5;
+}
+
+message GetProfitabilityAnalysisRequest {
+    string company_code = 1;
+    string fiscal_year = 2;
+    string period = 3;
+    repeated string dimensions = 4;
+    repeated string measures = 5;
+}
+
+message GetProfitabilityAnalysisResponse {
+    repeated ProfitabilitySegment segments = 1;
+    common.v1.Money total_revenue = 2;
+    common.v1.Money total_cost = 3;
+    common.v1.Money total_margin = 4;
+    double margin_percentage = 5;
+}
+
+message ProfitabilitySegment {
+    map<string, string> dimensions = 1;
+    common.v1.Money revenue = 2;
+    common.v1.Money variable_cost = 3;
+    common.v1.Money contribution_margin = 4;
+    common.v1.Money fixed_cost = 5;
+    common.v1.Money operating_profit = 6;
+    double margin_percentage = 7;
+}
+
+// Auto-generated Response messages
+message CreateCostCenterResponse {
+    CostCenter cost_center = 1;
+}
+
+message GetCostCenterResponse {
+    CostCenter cost_center = 1;
+}
+
+message UpdateCostCenterResponse {
+    CostCenter cost_center = 1;
+}
+
+message CreateProfitCenterResponse {
+    ProfitCenter profit_center = 1;
+}
+
+message GetProfitCenterResponse {
+    ProfitCenter profit_center = 1;
+}
+
+message UpdateProfitCenterResponse {
+    ProfitCenter profit_center = 1;
+}
+
+message CreateCostElementResponse {
+    CostElement cost_element = 1;
+}
+
+message GetCostElementResponse {
+    CostElement cost_element = 1;
+}
+
+message UpdateCostElementResponse {
+    CostElement cost_element = 1;
+}
+
+message CreateInternalOrderResponse {
+    InternalOrder internal_order = 1;
+}
+
+message GetInternalOrderResponse {
+    InternalOrder internal_order = 1;
+}
+
+message UpdateInternalOrderResponse {
+    InternalOrder internal_order = 1;
+}
+
+message CloseInternalOrderResponse {
+    InternalOrder internal_order = 1;
+}
+
+message CreateBudgetResponse {
+    Budget budget = 1;
+}
+
+message GetBudgetResponse {
+    Budget budget = 1;
+}
+
+message UpdateBudgetResponse {
+    Budget budget = 1;
+}
+
+message PerformCostAllocationResponse {
+    CostAllocationResult cost_allocation_result = 1;
+}

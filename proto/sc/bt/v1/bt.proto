@@ -1,0 +1,596 @@
+syntax = "proto3";
+
+package sc.bt.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/base.proto";
+
+service BatchTrackingService {
+    rpc CreateBatch(CreateBatchRequest) returns (CreateBatchResponse);
+    rpc GetBatch(GetBatchRequest) returns (GetBatchResponse);
+    rpc UpdateBatch(UpdateBatchRequest) returns (UpdateBatchResponse);
+    rpc ListBatches(ListBatchesRequest) returns (ListBatchesResponse);
+
+    rpc GetBatchStock(GetBatchStockRequest) returns (GetBatchStockResponse);
+    rpc GetBatchHistory(GetBatchHistoryRequest) returns (GetBatchHistoryResponse);
+
+    rpc TraceBatchForward(TraceBatchForwardRequest) returns (TraceBatchForwardResponse);
+    rpc TraceBatchBackward(TraceBatchBackwardRequest) returns (TraceBatchBackwardResponse);
+    rpc GetFullTraceability(GetFullTraceabilityRequest) returns (GetFullTraceabilityResponse);
+
+    rpc CreateSerialNumber(CreateSerialNumberRequest) returns (CreateSerialNumberResponse);
+    rpc GetSerialNumber(GetSerialNumberRequest) returns (GetSerialNumberResponse);
+    rpc UpdateSerialNumber(UpdateSerialNumberRequest) returns (UpdateSerialNumberResponse);
+    rpc ListSerialNumbers(ListSerialNumbersRequest) returns (ListSerialNumbersResponse);
+    rpc TraceSerialNumber(TraceSerialNumberRequest) returns (TraceSerialNumberResponse);
+
+    rpc InitiateRecall(InitiateRecallRequest) returns (InitiateRecallResponse);
+    rpc GetRecall(GetRecallRequest) returns (GetRecallResponse);
+    rpc UpdateRecallStatus(UpdateRecallStatusRequest) returns (UpdateRecallStatusResponse);
+    rpc ListRecalls(ListRecallsRequest) returns (ListRecallsResponse);
+    rpc GetRecallImpact(GetRecallImpactRequest) returns (GetRecallImpactResponse);
+
+    rpc GetExpiringBatches(GetExpiringBatchesRequest) returns (GetExpiringBatchesResponse);
+    rpc GetBatchQualityStatus(GetBatchQualityStatusRequest) returns (GetBatchQualityStatusResponse);
+}
+
+message Batch {
+    string id = 1;
+    string batch_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    string plant = 6;
+    google.protobuf.Timestamp production_date = 7;
+    google.protobuf.Timestamp expiration_date = 8;
+    google.protobuf.Timestamp shelf_life_expiration = 9;
+    string vendor_batch = 10;
+    string vendor_id = 11;
+    string country_of_origin = 12;
+    common.v1.Quantity original_quantity = 13;
+    common.v1.Quantity current_quantity = 14;
+    string unit = 15;
+    BatchStatus status = 16;
+    BatchQualityStatus quality_status = 17;
+    string quality_certificate = 18;
+    repeated BatchAttribute attributes = 19;
+    string production_order_id = 20;
+    string purchase_order_id = 21;
+    string notes = 22;
+    common.v1.AuditInfo audit_info = 23;
+}
+
+enum BatchStatus {
+    BATCH_STATUS_UNSPECIFIED = 0;
+    BATCH_STATUS_ACTIVE = 1;
+    BATCH_STATUS_RESTRICTED = 2;
+    BATCH_STATUS_BLOCKED = 3;
+    BATCH_STATUS_EXPIRED = 4;
+    BATCH_STATUS_RECALLED = 5;
+    BATCH_STATUS_CONSUMED = 6;
+}
+
+enum BatchQualityStatus {
+    BATCH_QUALITY_STATUS_UNSPECIFIED = 0;
+    BATCH_QUALITY_STATUS_PENDING_INSPECTION = 1;
+    BATCH_QUALITY_STATUS_APPROVED = 2;
+    BATCH_QUALITY_STATUS_REJECTED = 3;
+    BATCH_QUALITY_STATUS_CONDITIONAL = 4;
+}
+
+message BatchAttribute {
+    string name = 1;
+    string value = 2;
+    string unit = 3;
+    string data_type = 4;
+}
+
+message BatchStock {
+    string batch_number = 1;
+    string plant = 2;
+    string storage_location = 3;
+    common.v1.Quantity unrestricted = 4;
+    common.v1.Quantity quality_inspection = 5;
+    common.v1.Quantity blocked = 6;
+    common.v1.Quantity reserved = 7;
+    common.v1.Quantity available = 8;
+    string unit = 9;
+    google.protobuf.Timestamp expiration_date = 10;
+    int32 days_to_expiration = 11;
+}
+
+message BatchMovement {
+    string document_number = 1;
+    string document_type = 2;
+    google.protobuf.Timestamp posting_date = 3;
+    string movement_type = 4;
+    common.v1.Quantity quantity = 5;
+    string unit = 6;
+    string plant = 7;
+    string storage_location = 8;
+    string reference_document = 9;
+    string partner_id = 10;
+    string partner_name = 11;
+}
+
+message SerialNumber {
+    string id = 1;
+    string serial_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    string batch_number = 6;
+    string plant = 7;
+    string storage_location = 8;
+    SerialNumberStatus status = 9;
+    google.protobuf.Timestamp manufacture_date = 10;
+    google.protobuf.Timestamp warranty_start = 11;
+    google.protobuf.Timestamp warranty_end = 12;
+    string current_owner = 13;
+    string current_location = 14;
+    repeated SerialNumberAttribute attributes = 15;
+    string production_order_id = 16;
+    string sales_order_id = 17;
+    string notes = 18;
+    common.v1.AuditInfo audit_info = 19;
+}
+
+enum SerialNumberStatus {
+    SERIAL_NUMBER_STATUS_UNSPECIFIED = 0;
+    SERIAL_NUMBER_STATUS_IN_STOCK = 1;
+    SERIAL_NUMBER_STATUS_SOLD = 2;
+    SERIAL_NUMBER_STATUS_IN_SERVICE = 3;
+    SERIAL_NUMBER_STATUS_RETURNED = 4;
+    SERIAL_NUMBER_STATUS_SCRAPPED = 5;
+    SERIAL_NUMBER_STATUS_RECALLED = 6;
+}
+
+message SerialNumberAttribute {
+    string name = 1;
+    string value = 2;
+}
+
+message SerialNumberEvent {
+    google.protobuf.Timestamp event_time = 1;
+    string event_type = 2;
+    string description = 3;
+    string document_number = 4;
+    string document_type = 5;
+    string location = 6;
+    string party = 7;
+}
+
+message TraceabilityNode {
+    string node_type = 1;
+    string document_number = 2;
+    string document_type = 3;
+    google.protobuf.Timestamp date = 4;
+    string product_id = 5;
+    string product_code = 6;
+    string batch_number = 7;
+    common.v1.Quantity quantity = 8;
+    string unit = 9;
+    string plant = 10;
+    string partner_id = 11;
+    string partner_name = 12;
+    repeated TraceabilityNode children = 13;
+}
+
+message Recall {
+    string id = 1;
+    string recall_number = 2;
+    string company_code = 3;
+    string title = 4;
+    string description = 5;
+    RecallType type = 6;
+    RecallSeverity severity = 7;
+    string reason = 8;
+    repeated string batch_numbers = 9;
+    repeated string serial_numbers = 10;
+    repeated string product_ids = 11;
+    google.protobuf.Timestamp initiated_date = 12;
+    google.protobuf.Timestamp effective_date = 13;
+    google.protobuf.Timestamp closed_date = 14;
+    RecallStatus status = 15;
+    string initiated_by = 16;
+    string regulatory_reference = 17;
+    RecallImpact impact = 18;
+    repeated RecallAction actions = 19;
+    common.v1.AuditInfo audit_info = 20;
+}
+
+enum RecallType {
+    RECALL_TYPE_UNSPECIFIED = 0;
+    RECALL_TYPE_VOLUNTARY = 1;
+    RECALL_TYPE_MANDATORY = 2;
+    RECALL_TYPE_MARKET_WITHDRAWAL = 3;
+}
+
+enum RecallSeverity {
+    RECALL_SEVERITY_UNSPECIFIED = 0;
+    RECALL_SEVERITY_CLASS_I = 1;
+    RECALL_SEVERITY_CLASS_II = 2;
+    RECALL_SEVERITY_CLASS_III = 3;
+}
+
+enum RecallStatus {
+    RECALL_STATUS_UNSPECIFIED = 0;
+    RECALL_STATUS_INITIATED = 1;
+    RECALL_STATUS_IN_PROGRESS = 2;
+    RECALL_STATUS_COMPLETED = 3;
+    RECALL_STATUS_CLOSED = 4;
+    RECALL_STATUS_CANCELLED = 5;
+}
+
+message RecallImpact {
+    int32 affected_batches = 1;
+    common.v1.Quantity affected_quantity = 2;
+    int32 affected_customers = 3;
+    int32 affected_locations = 4;
+    common.v1.Money estimated_cost = 5;
+}
+
+message RecallAction {
+    string id = 1;
+    string action_type = 2;
+    string description = 3;
+    string assigned_to = 4;
+    google.protobuf.Timestamp due_date = 5;
+    google.protobuf.Timestamp completed_date = 6;
+    string status = 7;
+    string notes = 8;
+}
+
+message CreateBatchRequest {
+    string product_id = 1;
+    string batch_number = 2;
+    string plant = 3;
+    google.protobuf.Timestamp production_date = 4;
+    google.protobuf.Timestamp expiration_date = 5;
+    string vendor_batch = 6;
+    string vendor_id = 7;
+    string country_of_origin = 8;
+    common.v1.Quantity quantity = 9;
+    string unit = 10;
+    repeated BatchAttribute attributes = 11;
+    string production_order_id = 12;
+    string purchase_order_id = 13;
+    string notes = 14;
+}
+
+message GetBatchRequest {
+    string batch_number = 1;
+    string product_id = 2;
+}
+
+message UpdateBatchRequest {
+    string id = 1;
+    google.protobuf.Timestamp expiration_date = 2;
+    BatchStatus status = 3;
+    BatchQualityStatus quality_status = 4;
+    repeated BatchAttribute attributes = 5;
+    string notes = 6;
+}
+
+message ListBatchesRequest {
+    string product_id = 1;
+    string plant = 2;
+    BatchStatus status = 3;
+    BatchQualityStatus quality_status = 4;
+    common.v1.DateRange production_date_range = 5;
+    common.v1.DateRange expiration_date_range = 6;
+    common.v1.Pagination pagination = 7;
+}
+
+message ListBatchesResponse {
+    repeated Batch batches = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetBatchStockRequest {
+    string batch_number = 1;
+    string product_id = 2;
+    string plant = 3;
+}
+
+message GetBatchStockResponse {
+    Batch batch = 1;
+    repeated BatchStock stock = 2;
+    common.v1.Quantity total_stock = 3;
+}
+
+message GetBatchHistoryRequest {
+    string batch_number = 1;
+    string product_id = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message GetBatchHistoryResponse {
+    Batch batch = 1;
+    repeated BatchMovement movements = 2;
+    common.v1.PaginationResponse pagination = 3;
+}
+
+message TraceBatchForwardRequest {
+    string batch_number = 1;
+    string product_id = 2;
+    int32 max_levels = 3;
+}
+
+message TraceBatchForwardResponse {
+    Batch source_batch = 1;
+    repeated TraceabilityNode downstream = 2;
+    repeated AffectedCustomer affected_customers = 3;
+}
+
+message AffectedCustomer {
+    string customer_id = 1;
+    string customer_name = 2;
+    string sales_order_number = 3;
+    string delivery_number = 4;
+    google.protobuf.Timestamp delivery_date = 5;
+    common.v1.Quantity quantity = 6;
+}
+
+message TraceBatchBackwardRequest {
+    string batch_number = 1;
+    string product_id = 2;
+    int32 max_levels = 3;
+}
+
+message TraceBatchBackwardResponse {
+    Batch target_batch = 1;
+    repeated TraceabilityNode upstream = 2;
+    repeated SourceBatch source_batches = 3;
+}
+
+message SourceBatch {
+    string batch_number = 1;
+    string product_id = 2;
+    string product_code = 3;
+    string vendor_id = 4;
+    string vendor_name = 5;
+    string vendor_batch = 6;
+    common.v1.Quantity quantity = 7;
+}
+
+message GetFullTraceabilityRequest {
+    string batch_number = 1;
+    string product_id = 2;
+}
+
+message GetFullTraceabilityResponse {
+    Batch batch = 1;
+    repeated TraceabilityNode upstream = 2;
+    repeated TraceabilityNode downstream = 3;
+    TraceabilitySummary summary = 4;
+}
+
+message TraceabilitySummary {
+    int32 upstream_levels = 1;
+    int32 downstream_levels = 2;
+    int32 source_batches = 3;
+    int32 derived_batches = 4;
+    int32 affected_customers = 5;
+    int32 affected_vendors = 6;
+}
+
+message CreateSerialNumberRequest {
+    string product_id = 1;
+    string serial_number = 2;
+    string batch_number = 3;
+    string plant = 4;
+    google.protobuf.Timestamp manufacture_date = 5;
+    google.protobuf.Timestamp warranty_start = 6;
+    google.protobuf.Timestamp warranty_end = 7;
+    repeated SerialNumberAttribute attributes = 8;
+    string production_order_id = 9;
+    string notes = 10;
+}
+
+message GetSerialNumberRequest {
+    string serial_number = 1;
+    string product_id = 2;
+}
+
+message UpdateSerialNumberRequest {
+    string id = 1;
+    SerialNumberStatus status = 2;
+    string current_owner = 3;
+    string current_location = 4;
+    repeated SerialNumberAttribute attributes = 5;
+    string notes = 6;
+}
+
+message ListSerialNumbersRequest {
+    string product_id = 1;
+    string batch_number = 2;
+    SerialNumberStatus status = 3;
+    string current_owner = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListSerialNumbersResponse {
+    repeated SerialNumber serial_numbers = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message TraceSerialNumberRequest {
+    string serial_number = 1;
+    string product_id = 2;
+}
+
+message TraceSerialNumberResponse {
+    SerialNumber serial_number = 1;
+    repeated SerialNumberEvent events = 2;
+    Batch batch = 3;
+}
+
+message InitiateRecallRequest {
+    string company_code = 1;
+    string title = 2;
+    string description = 3;
+    RecallType type = 4;
+    RecallSeverity severity = 5;
+    string reason = 6;
+    repeated string batch_numbers = 7;
+    repeated string serial_numbers = 8;
+    repeated string product_ids = 9;
+    google.protobuf.Timestamp effective_date = 10;
+    string regulatory_reference = 11;
+}
+
+message GetRecallRequest {
+    string id = 1;
+}
+
+message UpdateRecallStatusRequest {
+    string id = 1;
+    RecallStatus status = 2;
+    string notes = 3;
+    repeated RecallActionInput actions = 4;
+}
+
+message RecallActionInput {
+    string action_type = 1;
+    string description = 2;
+    string assigned_to = 3;
+    google.protobuf.Timestamp due_date = 4;
+}
+
+message ListRecallsRequest {
+    string company_code = 1;
+    RecallType type = 2;
+    RecallStatus status = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListRecallsResponse {
+    repeated Recall recalls = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetRecallImpactRequest {
+    string id = 1;
+}
+
+message GetRecallImpactResponse {
+    Recall recall = 1;
+    RecallImpact impact = 2;
+    repeated AffectedBatch affected_batches = 3;
+    repeated AffectedCustomer affected_customers = 4;
+    repeated AffectedLocation affected_locations = 5;
+}
+
+message AffectedBatch {
+    string batch_number = 1;
+    string product_id = 2;
+    string product_code = 3;
+    common.v1.Quantity total_quantity = 4;
+    common.v1.Quantity in_stock = 5;
+    common.v1.Quantity shipped = 6;
+    string status = 7;
+}
+
+message AffectedLocation {
+    string location_id = 1;
+    string location_name = 2;
+    string location_type = 3;
+    common.v1.Quantity quantity = 4;
+    string contact_name = 5;
+    string contact_phone = 6;
+}
+
+message GetExpiringBatchesRequest {
+    string company_code = 1;
+    string plant = 2;
+    int32 days_until_expiration = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message GetExpiringBatchesResponse {
+    repeated ExpiringBatch batches = 1;
+    common.v1.PaginationResponse pagination = 2;
+    ExpirationSummary summary = 3;
+}
+
+message ExpiringBatch {
+    string batch_number = 1;
+    string product_id = 2;
+    string product_code = 3;
+    string product_name = 4;
+    string plant = 5;
+    google.protobuf.Timestamp expiration_date = 6;
+    int32 days_to_expiration = 7;
+    common.v1.Quantity quantity = 8;
+    common.v1.Money value = 9;
+}
+
+message ExpirationSummary {
+    int32 expiring_within_30_days = 1;
+    int32 expiring_within_60_days = 2;
+    int32 expiring_within_90_days = 3;
+    common.v1.Money total_value_at_risk = 4;
+}
+
+message GetBatchQualityStatusRequest {
+    string batch_number = 1;
+    string product_id = 2;
+}
+
+message GetBatchQualityStatusResponse {
+    Batch batch = 1;
+    BatchQualityStatus quality_status = 2;
+    string inspection_lot_id = 3;
+    string inspection_result = 4;
+    repeated QualityCharacteristic characteristics = 5;
+    string quality_certificate_url = 6;
+}
+
+message QualityCharacteristic {
+    string name = 1;
+    string target_value = 2;
+    string actual_value = 3;
+    string unit = 4;
+    bool within_spec = 5;
+}
+
+// Auto-generated Response messages
+message CreateBatchResponse {
+    Batch batch = 1;
+}
+
+message GetBatchResponse {
+    Batch batch = 1;
+}
+
+message UpdateBatchResponse {
+    Batch batch = 1;
+}
+
+message CreateSerialNumberResponse {
+    SerialNumber serial_number = 1;
+}
+
+message GetSerialNumberResponse {
+    SerialNumber serial_number = 1;
+}
+
+message UpdateSerialNumberResponse {
+    SerialNumber serial_number = 1;
+}
+
+message InitiateRecallResponse {
+    Recall recall = 1;
+}
+
+message GetRecallResponse {
+    Recall recall = 1;
+}
+
+message UpdateRecallStatusResponse {
+    Recall recall = 1;
+}

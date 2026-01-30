@@ -1,0 +1,698 @@
+syntax = "proto3";
+
+package rd.pl.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service ProductLifecycleService {
+    rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+    rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+    rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+    rpc DeleteProduct(DeleteProductRequest) returns (google.protobuf.Empty);
+    rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+
+    rpc CreateProductVersion(CreateProductVersionRequest) returns (CreateProductVersionResponse);
+    rpc GetProductVersion(GetProductVersionRequest) returns (GetProductVersionResponse);
+    rpc UpdateProductVersion(UpdateProductVersionRequest) returns (UpdateProductVersionResponse);
+    rpc ListProductVersions(ListProductVersionsRequest) returns (ListProductVersionsResponse);
+    rpc ReleaseProductVersion(ReleaseProductVersionRequest) returns (ReleaseProductVersionResponse);
+    rpc ObsoleteProductVersion(ObsoleteProductVersionRequest) returns (ObsoleteProductVersionResponse);
+
+    rpc CreateChangeRequest(CreateChangeRequestRequest) returns (CreateChangeRequestResponse);
+    rpc GetChangeRequest(GetChangeRequestRequest) returns (GetChangeRequestResponse);
+    rpc UpdateChangeRequest(UpdateChangeRequestRequest) returns (UpdateChangeRequestResponse);
+    rpc ListChangeRequests(ListChangeRequestsRequest) returns (ListChangeRequestsResponse);
+    rpc SubmitChangeRequest(SubmitChangeRequestRequest) returns (SubmitChangeRequestResponse);
+    rpc ApproveChangeRequest(ApproveChangeRequestRequest) returns (ApproveChangeRequestResponse);
+    rpc RejectChangeRequest(RejectChangeRequestRequest) returns (RejectChangeRequestResponse);
+    rpc ImplementChangeRequest(ImplementChangeRequestRequest) returns (ImplementChangeRequestResponse);
+
+    rpc CreateChangeOrder(CreateChangeOrderRequest) returns (CreateChangeOrderResponse);
+    rpc GetChangeOrder(GetChangeOrderRequest) returns (GetChangeOrderResponse);
+    rpc UpdateChangeOrder(UpdateChangeOrderRequest) returns (UpdateChangeOrderResponse);
+    rpc ListChangeOrders(ListChangeOrdersRequest) returns (ListChangeOrdersResponse);
+    rpc ReleaseChangeOrder(ReleaseChangeOrderRequest) returns (ReleaseChangeOrderResponse);
+    rpc CloseChangeOrder(CloseChangeOrderRequest) returns (CloseChangeOrderResponse);
+
+    rpc GetProductStructure(GetProductStructureRequest) returns (GetProductStructureResponse);
+    rpc CompareVersions(CompareVersionsRequest) returns (CompareVersionsResponse);
+    rpc GetProductHistory(GetProductHistoryRequest) returns (GetProductHistoryResponse);
+
+    rpc GetLifecycleMetrics(GetLifecycleMetricsRequest) returns (GetLifecycleMetricsResponse);
+}
+
+message Product {
+    string id = 1;
+    string product_number = 2;
+    string name = 3;
+    string description = 4;
+    string company_code = 5;
+    ProductType type = 6;
+    string category = 7;
+    string product_family = 8;
+    string product_line = 9;
+    ProductLifecyclePhase phase = 10;
+    string current_version_id = 11;
+    string current_version = 12;
+    string owner_id = 13;
+    string owner_name = 14;
+    repeated ProductAttribute attributes = 15;
+    repeated string tags = 16;
+    google.protobuf.Timestamp introduction_date = 17;
+    google.protobuf.Timestamp end_of_life_date = 18;
+    common.v1.Status status = 19;
+    common.v1.AuditInfo audit_info = 20;
+}
+
+enum ProductType {
+    PRODUCT_TYPE_UNSPECIFIED = 0;
+    PRODUCT_TYPE_FINISHED_GOOD = 1;
+    PRODUCT_TYPE_SEMI_FINISHED = 2;
+    PRODUCT_TYPE_RAW_MATERIAL = 3;
+    PRODUCT_TYPE_COMPONENT = 4;
+    PRODUCT_TYPE_SERVICE = 5;
+    PRODUCT_TYPE_KIT = 6;
+}
+
+enum ProductLifecyclePhase {
+    PRODUCT_LIFECYCLE_PHASE_UNSPECIFIED = 0;
+    PRODUCT_LIFECYCLE_PHASE_CONCEPT = 1;
+    PRODUCT_LIFECYCLE_PHASE_DESIGN = 2;
+    PRODUCT_LIFECYCLE_PHASE_DEVELOPMENT = 3;
+    PRODUCT_LIFECYCLE_PHASE_TESTING = 4;
+    PRODUCT_LIFECYCLE_PHASE_LAUNCH = 5;
+    PRODUCT_LIFECYCLE_PHASE_GROWTH = 6;
+    PRODUCT_LIFECYCLE_PHASE_MATURITY = 7;
+    PRODUCT_LIFECYCLE_PHASE_DECLINE = 8;
+    PRODUCT_LIFECYCLE_PHASE_END_OF_LIFE = 9;
+    PRODUCT_LIFECYCLE_PHASE_OBSOLETE = 10;
+}
+
+message ProductAttribute {
+    string name = 1;
+    string value = 2;
+    string unit = 3;
+    string data_type = 4;
+    bool is_specification = 5;
+}
+
+message ProductVersion {
+    string id = 1;
+    string product_id = 2;
+    string version_number = 3;
+    string name = 4;
+    string description = 5;
+    VersionStatus status = 6;
+    google.protobuf.Timestamp effective_date = 7;
+    google.protobuf.Timestamp obsolete_date = 8;
+    string bom_id = 9;
+    string routing_id = 10;
+    repeated ProductDocument documents = 11;
+    repeated ProductSpecification specifications = 12;
+    string change_order_id = 13;
+    string previous_version_id = 14;
+    string release_notes = 15;
+    string released_by = 16;
+    google.protobuf.Timestamp released_at = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+enum VersionStatus {
+    VERSION_STATUS_UNSPECIFIED = 0;
+    VERSION_STATUS_DRAFT = 1;
+    VERSION_STATUS_IN_REVIEW = 2;
+    VERSION_STATUS_APPROVED = 3;
+    VERSION_STATUS_RELEASED = 4;
+    VERSION_STATUS_SUPERSEDED = 5;
+    VERSION_STATUS_OBSOLETE = 6;
+}
+
+message ProductDocument {
+    string id = 1;
+    string document_type = 2;
+    string title = 3;
+    string description = 4;
+    string version = 5;
+    common.v1.Attachment attachment = 6;
+    common.v1.AuditInfo audit_info = 7;
+}
+
+message ProductSpecification {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string target_value = 4;
+    string min_value = 5;
+    string max_value = 6;
+    string unit = 7;
+    string test_method = 8;
+    bool is_critical = 9;
+}
+
+message ChangeRequest {
+    string id = 1;
+    string request_number = 2;
+    string title = 3;
+    string description = 4;
+    string company_code = 5;
+    ChangeRequestType type = 6;
+    ChangeRequestPriority priority = 7;
+    string product_id = 8;
+    string product_number = 9;
+    string affected_version_id = 10;
+    string reason = 11;
+    string justification = 12;
+    string impact_analysis = 13;
+    string requester_id = 14;
+    string requester_name = 15;
+    ChangeRequestStatus status = 16;
+    repeated ChangeRequestApproval approvals = 17;
+    string change_order_id = 18;
+    google.protobuf.Timestamp requested_date = 19;
+    google.protobuf.Timestamp required_date = 20;
+    common.v1.Money estimated_cost = 21;
+    repeated common.v1.Attachment attachments = 22;
+    common.v1.AuditInfo audit_info = 23;
+}
+
+enum ChangeRequestType {
+    CHANGE_REQUEST_TYPE_UNSPECIFIED = 0;
+    CHANGE_REQUEST_TYPE_DESIGN = 1;
+    CHANGE_REQUEST_TYPE_PROCESS = 2;
+    CHANGE_REQUEST_TYPE_MATERIAL = 3;
+    CHANGE_REQUEST_TYPE_DOCUMENTATION = 4;
+    CHANGE_REQUEST_TYPE_QUALITY = 5;
+    CHANGE_REQUEST_TYPE_COST_REDUCTION = 6;
+    CHANGE_REQUEST_TYPE_REGULATORY = 7;
+}
+
+enum ChangeRequestPriority {
+    CHANGE_REQUEST_PRIORITY_UNSPECIFIED = 0;
+    CHANGE_REQUEST_PRIORITY_LOW = 1;
+    CHANGE_REQUEST_PRIORITY_MEDIUM = 2;
+    CHANGE_REQUEST_PRIORITY_HIGH = 3;
+    CHANGE_REQUEST_PRIORITY_CRITICAL = 4;
+}
+
+enum ChangeRequestStatus {
+    CHANGE_REQUEST_STATUS_UNSPECIFIED = 0;
+    CHANGE_REQUEST_STATUS_DRAFT = 1;
+    CHANGE_REQUEST_STATUS_SUBMITTED = 2;
+    CHANGE_REQUEST_STATUS_UNDER_REVIEW = 3;
+    CHANGE_REQUEST_STATUS_APPROVED = 4;
+    CHANGE_REQUEST_STATUS_REJECTED = 5;
+    CHANGE_REQUEST_STATUS_IMPLEMENTED = 6;
+    CHANGE_REQUEST_STATUS_CLOSED = 7;
+    CHANGE_REQUEST_STATUS_CANCELLED = 8;
+}
+
+message ChangeRequestApproval {
+    string approver_id = 1;
+    string approver_name = 2;
+    string role = 3;
+    string status = 4;
+    google.protobuf.Timestamp decision_date = 5;
+    string comments = 6;
+}
+
+message ChangeOrder {
+    string id = 1;
+    string order_number = 2;
+    string title = 3;
+    string description = 4;
+    string company_code = 5;
+    string change_request_id = 6;
+    string change_request_number = 7;
+    string product_id = 8;
+    string product_number = 9;
+    string from_version_id = 10;
+    string from_version = 11;
+    string to_version_id = 12;
+    string to_version = 13;
+    ChangeOrderStatus status = 14;
+    google.protobuf.Timestamp effective_date = 15;
+    repeated ChangeOrderTask tasks = 16;
+    repeated AffectedItem affected_items = 17;
+    string owner_id = 18;
+    string owner_name = 19;
+    common.v1.Money actual_cost = 20;
+    google.protobuf.Timestamp released_at = 21;
+    string released_by = 22;
+    google.protobuf.Timestamp closed_at = 23;
+    common.v1.AuditInfo audit_info = 24;
+}
+
+enum ChangeOrderStatus {
+    CHANGE_ORDER_STATUS_UNSPECIFIED = 0;
+    CHANGE_ORDER_STATUS_DRAFT = 1;
+    CHANGE_ORDER_STATUS_IN_PROGRESS = 2;
+    CHANGE_ORDER_STATUS_PENDING_RELEASE = 3;
+    CHANGE_ORDER_STATUS_RELEASED = 4;
+    CHANGE_ORDER_STATUS_IMPLEMENTED = 5;
+    CHANGE_ORDER_STATUS_CLOSED = 6;
+    CHANGE_ORDER_STATUS_CANCELLED = 7;
+}
+
+message ChangeOrderTask {
+    string id = 1;
+    int32 sequence = 2;
+    string description = 3;
+    string assigned_to = 4;
+    string assigned_to_name = 5;
+    google.protobuf.Timestamp due_date = 6;
+    google.protobuf.Timestamp completed_date = 7;
+    string status = 8;
+    string notes = 9;
+}
+
+message AffectedItem {
+    string id = 1;
+    string item_type = 2;
+    string item_id = 3;
+    string item_number = 4;
+    string item_name = 5;
+    string change_type = 6;
+    string old_value = 7;
+    string new_value = 8;
+}
+
+message ProductStructureNode {
+    string product_id = 1;
+    string product_number = 2;
+    string product_name = 3;
+    string version = 4;
+    common.v1.Quantity quantity = 5;
+    string unit = 6;
+    int32 level = 7;
+    repeated ProductStructureNode children = 8;
+}
+
+message VersionComparison {
+    string attribute = 1;
+    string old_value = 2;
+    string new_value = 3;
+    string change_type = 4;
+}
+
+message ProductHistoryEntry {
+    string id = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    string event_type = 3;
+    string description = 4;
+    string version = 5;
+    string change_request_id = 6;
+    string change_order_id = 7;
+    string user_id = 8;
+    string user_name = 9;
+}
+
+message CreateProductRequest {
+    string product_number = 1;
+    string name = 2;
+    string description = 3;
+    string company_code = 4;
+    ProductType type = 5;
+    string category = 6;
+    string product_family = 7;
+    string product_line = 8;
+    string owner_id = 9;
+    repeated ProductAttribute attributes = 10;
+    repeated string tags = 11;
+}
+
+message GetProductRequest {
+    string id = 1;
+}
+
+message UpdateProductRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string category = 4;
+    ProductLifecyclePhase phase = 5;
+    repeated ProductAttribute attributes = 6;
+    repeated string tags = 7;
+}
+
+message DeleteProductRequest {
+    string id = 1;
+}
+
+message ListProductsRequest {
+    string company_code = 1;
+    ProductType type = 2;
+    string category = 3;
+    string product_family = 4;
+    ProductLifecyclePhase phase = 5;
+    string search = 6;
+    common.v1.Status status = 7;
+    common.v1.Pagination pagination = 8;
+}
+
+message ListProductsResponse {
+    repeated Product products = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateProductVersionRequest {
+    string product_id = 1;
+    string version_number = 2;
+    string name = 3;
+    string description = 4;
+    string bom_id = 5;
+    string routing_id = 6;
+    repeated ProductSpecificationInput specifications = 7;
+    string previous_version_id = 8;
+}
+
+message ProductSpecificationInput {
+    string name = 1;
+    string description = 2;
+    string target_value = 3;
+    string min_value = 4;
+    string max_value = 5;
+    string unit = 6;
+    string test_method = 7;
+    bool is_critical = 8;
+}
+
+message GetProductVersionRequest {
+    string id = 1;
+}
+
+message UpdateProductVersionRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string bom_id = 4;
+    string routing_id = 5;
+    repeated ProductSpecificationInput specifications = 6;
+}
+
+message ListProductVersionsRequest {
+    string product_id = 1;
+    VersionStatus status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListProductVersionsResponse {
+    repeated ProductVersion versions = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ReleaseProductVersionRequest {
+    string id = 1;
+    google.protobuf.Timestamp effective_date = 2;
+    string release_notes = 3;
+}
+
+message ObsoleteProductVersionRequest {
+    string id = 1;
+    google.protobuf.Timestamp obsolete_date = 2;
+    string reason = 3;
+}
+
+message CreateChangeRequestRequest {
+    string title = 1;
+    string description = 2;
+    string company_code = 3;
+    ChangeRequestType type = 4;
+    ChangeRequestPriority priority = 5;
+    string product_id = 6;
+    string affected_version_id = 7;
+    string reason = 8;
+    string justification = 9;
+    string impact_analysis = 10;
+    google.protobuf.Timestamp required_date = 11;
+    common.v1.Money estimated_cost = 12;
+}
+
+message GetChangeRequestRequest {
+    string id = 1;
+}
+
+message UpdateChangeRequestRequest {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    ChangeRequestPriority priority = 4;
+    string reason = 5;
+    string justification = 6;
+    string impact_analysis = 7;
+    google.protobuf.Timestamp required_date = 8;
+    common.v1.Money estimated_cost = 9;
+}
+
+message ListChangeRequestsRequest {
+    string company_code = 1;
+    string product_id = 2;
+    ChangeRequestType type = 3;
+    ChangeRequestStatus status = 4;
+    string requester_id = 5;
+    common.v1.DateRange date_range = 6;
+    common.v1.Pagination pagination = 7;
+}
+
+message ListChangeRequestsResponse {
+    repeated ChangeRequest requests = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message SubmitChangeRequestRequest {
+    string id = 1;
+    string comments = 2;
+}
+
+message ApproveChangeRequestRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message RejectChangeRequestRequest {
+    string id = 1;
+    string approver_id = 2;
+    string reason = 3;
+}
+
+message ImplementChangeRequestRequest {
+    string id = 1;
+    string change_order_id = 2;
+}
+
+message CreateChangeOrderRequest {
+    string title = 1;
+    string description = 2;
+    string company_code = 3;
+    string change_request_id = 4;
+    string product_id = 5;
+    string from_version_id = 6;
+    google.protobuf.Timestamp effective_date = 7;
+    repeated ChangeOrderTaskInput tasks = 8;
+    repeated AffectedItemInput affected_items = 9;
+}
+
+message ChangeOrderTaskInput {
+    string description = 1;
+    string assigned_to = 2;
+    google.protobuf.Timestamp due_date = 3;
+}
+
+message AffectedItemInput {
+    string item_type = 1;
+    string item_id = 2;
+    string change_type = 3;
+    string old_value = 4;
+    string new_value = 5;
+}
+
+message GetChangeOrderRequest {
+    string id = 1;
+}
+
+message UpdateChangeOrderRequest {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    google.protobuf.Timestamp effective_date = 4;
+    repeated ChangeOrderTaskInput tasks = 5;
+}
+
+message ListChangeOrdersRequest {
+    string company_code = 1;
+    string product_id = 2;
+    ChangeOrderStatus status = 3;
+    string owner_id = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListChangeOrdersResponse {
+    repeated ChangeOrder orders = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ReleaseChangeOrderRequest {
+    string id = 1;
+    string to_version_id = 2;
+}
+
+message CloseChangeOrderRequest {
+    string id = 1;
+    string notes = 2;
+}
+
+message GetProductStructureRequest {
+    string product_id = 1;
+    string version_id = 2;
+    int32 max_levels = 3;
+}
+
+message GetProductStructureResponse {
+    ProductStructureNode root = 1;
+}
+
+message CompareVersionsRequest {
+    string version_id_1 = 1;
+    string version_id_2 = 2;
+}
+
+message CompareVersionsResponse {
+    ProductVersion version_1 = 1;
+    ProductVersion version_2 = 2;
+    repeated VersionComparison differences = 3;
+    repeated BOMComparison bom_differences = 4;
+}
+
+message BOMComparison {
+    string component_id = 1;
+    string component_code = 2;
+    string component_name = 3;
+    string change_type = 4;
+    string old_quantity = 5;
+    string new_quantity = 6;
+}
+
+message GetProductHistoryRequest {
+    string product_id = 1;
+    common.v1.DateRange date_range = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetProductHistoryResponse {
+    repeated ProductHistoryEntry entries = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetLifecycleMetricsRequest {
+    string company_code = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetLifecycleMetricsResponse {
+    LifecycleMetrics metrics = 1;
+    repeated LifecycleMetricsTrend trend = 2;
+}
+
+message LifecycleMetrics {
+    int32 total_products = 1;
+    int32 active_products = 2;
+    int32 products_in_development = 3;
+    int32 products_end_of_life = 4;
+    int32 total_change_requests = 5;
+    int32 pending_change_requests = 6;
+    int32 approved_change_requests = 7;
+    double average_change_cycle_days = 8;
+    int32 total_versions_released = 9;
+}
+
+message LifecycleMetricsTrend {
+    string period = 1;
+    int32 new_products = 2;
+    int32 change_requests = 3;
+    int32 versions_released = 4;
+}
+
+// Auto-generated Response messages
+message CreateProductResponse {
+    Product product = 1;
+}
+
+message GetProductResponse {
+    Product product = 1;
+}
+
+message UpdateProductResponse {
+    Product product = 1;
+}
+
+message CreateProductVersionResponse {
+    ProductVersion product_version = 1;
+}
+
+message GetProductVersionResponse {
+    ProductVersion product_version = 1;
+}
+
+message UpdateProductVersionResponse {
+    ProductVersion product_version = 1;
+}
+
+message ReleaseProductVersionResponse {
+    ProductVersion product_version = 1;
+}
+
+message ObsoleteProductVersionResponse {
+    ProductVersion product_version = 1;
+}
+
+message CreateChangeRequestResponse {
+    ChangeRequest change_request = 1;
+}
+
+message GetChangeRequestResponse {
+    ChangeRequest change_request = 1;
+}
+
+message UpdateChangeRequestResponse {
+    ChangeRequest change_request = 1;
+}
+
+message SubmitChangeRequestResponse {
+    ChangeRequest change_request = 1;
+}
+
+message ApproveChangeRequestResponse {
+    ChangeRequest change_request = 1;
+}
+
+message RejectChangeRequestResponse {
+    ChangeRequest change_request = 1;
+}
+
+message ImplementChangeRequestResponse {
+    ChangeRequest change_request = 1;
+}
+
+message CreateChangeOrderResponse {
+    ChangeOrder change_order = 1;
+}
+
+message GetChangeOrderResponse {
+    ChangeOrder change_order = 1;
+}
+
+message UpdateChangeOrderResponse {
+    ChangeOrder change_order = 1;
+}
+
+message ReleaseChangeOrderResponse {
+    ChangeOrder change_order = 1;
+}
+
+message CloseChangeOrderResponse {
+    ChangeOrder change_order = 1;
+}

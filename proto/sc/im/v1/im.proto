@@ -1,0 +1,658 @@
+syntax = "proto3";
+
+package sc.im.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service InventoryManagementService {
+    rpc GetStock(GetStockRequest) returns (GetStockResponse);
+    rpc GetStockOverview(GetStockOverviewRequest) returns (GetStockOverviewResponse);
+    rpc GetStockByLocation(GetStockByLocationRequest) returns (GetStockByLocationResponse);
+    rpc GetStockHistory(GetStockHistoryRequest) returns (GetStockHistoryResponse);
+
+    rpc PostGoodsReceipt(PostGoodsReceiptRequest) returns (PostGoodsReceiptResponse);
+    rpc PostGoodsIssue(PostGoodsIssueRequest) returns (PostGoodsIssueResponse);
+    rpc PostTransfer(PostTransferRequest) returns (PostTransferResponse);
+    rpc PostAdjustment(PostAdjustmentRequest) returns (PostAdjustmentResponse);
+    rpc ReverseDocument(ReverseDocumentRequest) returns (ReverseDocumentResponse);
+
+    rpc GetMaterialDocument(GetMaterialDocumentRequest) returns (GetMaterialDocumentResponse);
+    rpc ListMaterialDocuments(ListMaterialDocumentsRequest) returns (ListMaterialDocumentsResponse);
+
+    rpc CreateReservation(CreateReservationRequest) returns (CreateReservationResponse);
+    rpc GetReservation(GetReservationRequest) returns (GetReservationResponse);
+    rpc UpdateReservation(UpdateReservationRequest) returns (UpdateReservationResponse);
+    rpc CancelReservation(CancelReservationRequest) returns (google.protobuf.Empty);
+    rpc ListReservations(ListReservationsRequest) returns (ListReservationsResponse);
+
+    rpc CreatePhysicalInventory(CreatePhysicalInventoryRequest) returns (CreatePhysicalInventoryResponse);
+    rpc GetPhysicalInventory(GetPhysicalInventoryRequest) returns (GetPhysicalInventoryResponse);
+    rpc EnterCount(EnterCountRequest) returns (EnterCountResponse);
+    rpc PostDifferences(PostDifferencesRequest) returns (PostDifferencesResponse);
+    rpc ListPhysicalInventories(ListPhysicalInventoriesRequest) returns (ListPhysicalInventoriesResponse);
+
+    rpc GetInventoryValuation(GetInventoryValuationRequest) returns (GetInventoryValuationResponse);
+    rpc GetSlowMovingItems(GetSlowMovingItemsRequest) returns (GetSlowMovingItemsResponse);
+    rpc GetStockAgingReport(GetStockAgingReportRequest) returns (GetStockAgingReportResponse);
+}
+
+message Stock {
+    string product_id = 1;
+    string product_code = 2;
+    string product_name = 3;
+    string plant = 4;
+    string storage_location = 5;
+    string batch_number = 6;
+    common.v1.Quantity unrestricted = 7;
+    common.v1.Quantity quality_inspection = 8;
+    common.v1.Quantity blocked = 9;
+    common.v1.Quantity reserved = 10;
+    common.v1.Quantity available = 11;
+    common.v1.Quantity in_transit = 12;
+    common.v1.Quantity total = 13;
+    string unit = 14;
+    common.v1.Money value = 15;
+    google.protobuf.Timestamp last_movement_date = 16;
+}
+
+message MaterialDocument {
+    string id = 1;
+    string document_number = 2;
+    string company_code = 3;
+    string plant = 4;
+    google.protobuf.Timestamp document_date = 5;
+    google.protobuf.Timestamp posting_date = 6;
+    MovementType movement_type = 7;
+    string reference_document = 8;
+    string reference_type = 9;
+    string header_text = 10;
+    repeated MaterialDocumentItem items = 11;
+    MaterialDocumentStatus status = 12;
+    bool reversed = 13;
+    string reversal_document = 14;
+    common.v1.AuditInfo audit_info = 15;
+}
+
+message MaterialDocumentItem {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    common.v1.Quantity quantity = 6;
+    string unit = 7;
+    string plant = 8;
+    string storage_location = 9;
+    string batch_number = 10;
+    string serial_number = 11;
+    string stock_type = 12;
+    string receiving_plant = 13;
+    string receiving_storage_location = 14;
+    common.v1.Money value = 15;
+    string gl_account = 16;
+    string cost_center = 17;
+    string internal_order = 18;
+    string item_text = 19;
+}
+
+enum MovementType {
+    MOVEMENT_TYPE_UNSPECIFIED = 0;
+    MOVEMENT_TYPE_GOODS_RECEIPT_PO = 1;
+    MOVEMENT_TYPE_GOODS_RECEIPT_PRODUCTION = 2;
+    MOVEMENT_TYPE_GOODS_RECEIPT_OTHER = 3;
+    MOVEMENT_TYPE_GOODS_ISSUE_PRODUCTION = 4;
+    MOVEMENT_TYPE_GOODS_ISSUE_COST_CENTER = 5;
+    MOVEMENT_TYPE_GOODS_ISSUE_SALES = 6;
+    MOVEMENT_TYPE_GOODS_ISSUE_SCRAP = 7;
+    MOVEMENT_TYPE_TRANSFER_POSTING = 8;
+    MOVEMENT_TYPE_STOCK_TRANSFER = 9;
+    MOVEMENT_TYPE_INVENTORY_ADJUSTMENT_PLUS = 10;
+    MOVEMENT_TYPE_INVENTORY_ADJUSTMENT_MINUS = 11;
+    MOVEMENT_TYPE_RETURN_TO_VENDOR = 12;
+    MOVEMENT_TYPE_RETURN_FROM_CUSTOMER = 13;
+}
+
+enum MaterialDocumentStatus {
+    MATERIAL_DOCUMENT_STATUS_UNSPECIFIED = 0;
+    MATERIAL_DOCUMENT_STATUS_POSTED = 1;
+    MATERIAL_DOCUMENT_STATUS_REVERSED = 2;
+    MATERIAL_DOCUMENT_STATUS_CANCELLED = 3;
+}
+
+message Reservation {
+    string id = 1;
+    string reservation_number = 2;
+    string company_code = 3;
+    string plant = 4;
+    ReservationType type = 5;
+    string reference_document = 6;
+    string reference_type = 7;
+    google.protobuf.Timestamp requirement_date = 8;
+    repeated ReservationItem items = 9;
+    ReservationStatus status = 10;
+    string requester_id = 11;
+    string cost_center = 12;
+    common.v1.AuditInfo audit_info = 13;
+}
+
+message ReservationItem {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    common.v1.Quantity required_quantity = 5;
+    common.v1.Quantity withdrawn_quantity = 6;
+    string unit = 7;
+    string plant = 8;
+    string storage_location = 9;
+    string batch_number = 10;
+    google.protobuf.Timestamp requirement_date = 11;
+    ReservationItemStatus status = 12;
+}
+
+enum ReservationType {
+    RESERVATION_TYPE_UNSPECIFIED = 0;
+    RESERVATION_TYPE_MANUAL = 1;
+    RESERVATION_TYPE_PRODUCTION_ORDER = 2;
+    RESERVATION_TYPE_SALES_ORDER = 3;
+    RESERVATION_TYPE_MAINTENANCE_ORDER = 4;
+    RESERVATION_TYPE_PROJECT = 5;
+}
+
+enum ReservationStatus {
+    RESERVATION_STATUS_UNSPECIFIED = 0;
+    RESERVATION_STATUS_OPEN = 1;
+    RESERVATION_STATUS_PARTIALLY_ISSUED = 2;
+    RESERVATION_STATUS_COMPLETED = 3;
+    RESERVATION_STATUS_CANCELLED = 4;
+}
+
+enum ReservationItemStatus {
+    RESERVATION_ITEM_STATUS_UNSPECIFIED = 0;
+    RESERVATION_ITEM_STATUS_OPEN = 1;
+    RESERVATION_ITEM_STATUS_PARTIALLY_ISSUED = 2;
+    RESERVATION_ITEM_STATUS_COMPLETED = 3;
+    RESERVATION_ITEM_STATUS_CANCELLED = 4;
+}
+
+message PhysicalInventory {
+    string id = 1;
+    string document_number = 2;
+    string company_code = 3;
+    string plant = 4;
+    string storage_location = 5;
+    google.protobuf.Timestamp planned_date = 6;
+    google.protobuf.Timestamp count_date = 7;
+    google.protobuf.Timestamp posting_date = 8;
+    PhysicalInventoryType type = 9;
+    repeated PhysicalInventoryItem items = 10;
+    PhysicalInventoryStatus status = 11;
+    string counter_id = 12;
+    string counter_name = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+message PhysicalInventoryItem {
+    string id = 1;
+    int32 item_number = 2;
+    string product_id = 3;
+    string product_code = 4;
+    string product_name = 5;
+    string batch_number = 6;
+    common.v1.Quantity book_quantity = 7;
+    common.v1.Quantity count_quantity = 8;
+    common.v1.Quantity difference = 9;
+    string unit = 10;
+    common.v1.Money book_value = 11;
+    common.v1.Money count_value = 12;
+    common.v1.Money difference_value = 13;
+    bool zero_count = 14;
+    bool counted = 15;
+    bool posted = 16;
+    string reason_code = 17;
+}
+
+enum PhysicalInventoryType {
+    PHYSICAL_INVENTORY_TYPE_UNSPECIFIED = 0;
+    PHYSICAL_INVENTORY_TYPE_PERIODIC = 1;
+    PHYSICAL_INVENTORY_TYPE_CONTINUOUS = 2;
+    PHYSICAL_INVENTORY_TYPE_CYCLE_COUNT = 3;
+    PHYSICAL_INVENTORY_TYPE_ANNUAL = 4;
+}
+
+enum PhysicalInventoryStatus {
+    PHYSICAL_INVENTORY_STATUS_UNSPECIFIED = 0;
+    PHYSICAL_INVENTORY_STATUS_CREATED = 1;
+    PHYSICAL_INVENTORY_STATUS_COUNTING = 2;
+    PHYSICAL_INVENTORY_STATUS_COUNTED = 3;
+    PHYSICAL_INVENTORY_STATUS_RECOUNTING = 4;
+    PHYSICAL_INVENTORY_STATUS_POSTED = 5;
+    PHYSICAL_INVENTORY_STATUS_CANCELLED = 6;
+}
+
+message GetStockRequest {
+    string product_id = 1;
+    string plant = 2;
+    string storage_location = 3;
+    string batch_number = 4;
+}
+
+message GetStockOverviewRequest {
+    string plant = 1;
+    string storage_location = 2;
+    string product_group = 3;
+    bool include_zero_stock = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetStockOverviewResponse {
+    repeated Stock stocks = 1;
+    common.v1.PaginationResponse pagination = 2;
+    StockSummary summary = 3;
+}
+
+message StockSummary {
+    int32 total_products = 1;
+    common.v1.Money total_value = 2;
+    int32 below_safety_stock = 3;
+    int32 zero_stock = 4;
+}
+
+message GetStockByLocationRequest {
+    string product_id = 1;
+    string plant = 2;
+}
+
+message GetStockByLocationResponse {
+    string product_id = 1;
+    string product_code = 2;
+    repeated LocationStock locations = 3;
+    common.v1.Quantity total_stock = 4;
+}
+
+message LocationStock {
+    string plant = 1;
+    string plant_name = 2;
+    string storage_location = 3;
+    string storage_location_name = 4;
+    common.v1.Quantity unrestricted = 5;
+    common.v1.Quantity quality_inspection = 6;
+    common.v1.Quantity blocked = 7;
+    common.v1.Quantity available = 8;
+}
+
+message GetStockHistoryRequest {
+    string product_id = 1;
+    string plant = 2;
+    string storage_location = 3;
+    common.v1.DateRange date_range = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetStockHistoryResponse {
+    repeated StockMovement movements = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message StockMovement {
+    string document_number = 1;
+    int32 item_number = 2;
+    google.protobuf.Timestamp posting_date = 3;
+    MovementType movement_type = 4;
+    common.v1.Quantity quantity = 5;
+    string unit = 6;
+    common.v1.Quantity stock_before = 7;
+    common.v1.Quantity stock_after = 8;
+    string reference_document = 9;
+    string batch_number = 10;
+    string user_id = 11;
+}
+
+message PostGoodsReceiptRequest {
+    string company_code = 1;
+    string plant = 2;
+    google.protobuf.Timestamp posting_date = 3;
+    string reference_document = 4;
+    string reference_type = 5;
+    string header_text = 6;
+    repeated GoodsReceiptItemInput items = 7;
+}
+
+message GoodsReceiptItemInput {
+    string product_id = 1;
+    common.v1.Quantity quantity = 2;
+    string unit = 3;
+    string storage_location = 4;
+    string batch_number = 5;
+    string serial_number = 6;
+    string stock_type = 7;
+    string item_text = 8;
+}
+
+message PostGoodsIssueRequest {
+    string company_code = 1;
+    string plant = 2;
+    google.protobuf.Timestamp posting_date = 3;
+    MovementType movement_type = 4;
+    string reference_document = 5;
+    string reference_type = 6;
+    string cost_center = 7;
+    string internal_order = 8;
+    string header_text = 9;
+    repeated GoodsIssueItemInput items = 10;
+}
+
+message GoodsIssueItemInput {
+    string product_id = 1;
+    common.v1.Quantity quantity = 2;
+    string unit = 3;
+    string storage_location = 4;
+    string batch_number = 5;
+    string serial_number = 6;
+    string item_text = 7;
+}
+
+message PostTransferRequest {
+    string company_code = 1;
+    google.protobuf.Timestamp posting_date = 2;
+    string header_text = 3;
+    repeated TransferItemInput items = 4;
+}
+
+message TransferItemInput {
+    string product_id = 1;
+    common.v1.Quantity quantity = 2;
+    string unit = 3;
+    string from_plant = 4;
+    string from_storage_location = 5;
+    string to_plant = 6;
+    string to_storage_location = 7;
+    string batch_number = 8;
+    string item_text = 9;
+}
+
+message PostAdjustmentRequest {
+    string company_code = 1;
+    string plant = 2;
+    google.protobuf.Timestamp posting_date = 3;
+    string reason_code = 4;
+    string header_text = 5;
+    repeated AdjustmentItemInput items = 6;
+}
+
+message AdjustmentItemInput {
+    string product_id = 1;
+    common.v1.Quantity quantity = 2;
+    string unit = 3;
+    string storage_location = 4;
+    string batch_number = 5;
+    bool is_increase = 6;
+    string reason_code = 7;
+    string item_text = 8;
+}
+
+message ReverseDocumentRequest {
+    string document_number = 1;
+    google.protobuf.Timestamp posting_date = 2;
+    string reason = 3;
+}
+
+message GetMaterialDocumentRequest {
+    string document_number = 1;
+}
+
+message ListMaterialDocumentsRequest {
+    string company_code = 1;
+    string plant = 2;
+    string product_id = 3;
+    MovementType movement_type = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListMaterialDocumentsResponse {
+    repeated MaterialDocument documents = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateReservationRequest {
+    string company_code = 1;
+    string plant = 2;
+    ReservationType type = 3;
+    string reference_document = 4;
+    string reference_type = 5;
+    google.protobuf.Timestamp requirement_date = 6;
+    string cost_center = 7;
+    repeated ReservationItemInput items = 8;
+}
+
+message ReservationItemInput {
+    string product_id = 1;
+    common.v1.Quantity quantity = 2;
+    string unit = 3;
+    string storage_location = 4;
+    string batch_number = 5;
+    google.protobuf.Timestamp requirement_date = 6;
+}
+
+message GetReservationRequest {
+    string id = 1;
+}
+
+message UpdateReservationRequest {
+    string id = 1;
+    google.protobuf.Timestamp requirement_date = 2;
+    repeated ReservationItemInput items = 3;
+}
+
+message CancelReservationRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message ListReservationsRequest {
+    string company_code = 1;
+    string plant = 2;
+    string product_id = 3;
+    ReservationType type = 4;
+    ReservationStatus status = 5;
+    common.v1.DateRange date_range = 6;
+    common.v1.Pagination pagination = 7;
+}
+
+message ListReservationsResponse {
+    repeated Reservation reservations = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreatePhysicalInventoryRequest {
+    string company_code = 1;
+    string plant = 2;
+    string storage_location = 3;
+    google.protobuf.Timestamp planned_date = 4;
+    PhysicalInventoryType type = 5;
+    repeated string product_ids = 6;
+}
+
+message GetPhysicalInventoryRequest {
+    string id = 1;
+}
+
+message EnterCountRequest {
+    string id = 1;
+    repeated CountInput counts = 2;
+    string counter_id = 3;
+}
+
+message CountInput {
+    string item_id = 1;
+    common.v1.Quantity count_quantity = 2;
+    bool zero_count = 3;
+}
+
+message PostDifferencesRequest {
+    string id = 1;
+    google.protobuf.Timestamp posting_date = 2;
+}
+
+message ListPhysicalInventoriesRequest {
+    string company_code = 1;
+    string plant = 2;
+    PhysicalInventoryType type = 3;
+    PhysicalInventoryStatus status = 4;
+    common.v1.DateRange date_range = 5;
+    common.v1.Pagination pagination = 6;
+}
+
+message ListPhysicalInventoriesResponse {
+    repeated PhysicalInventory inventories = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetInventoryValuationRequest {
+    string company_code = 1;
+    string plant = 2;
+    google.protobuf.Timestamp as_of_date = 3;
+    string valuation_class = 4;
+}
+
+message GetInventoryValuationResponse {
+    repeated InventoryValuationItem items = 1;
+    common.v1.Money total_value = 2;
+    google.protobuf.Timestamp valuation_date = 3;
+}
+
+message InventoryValuationItem {
+    string product_id = 1;
+    string product_code = 2;
+    string product_name = 3;
+    string valuation_class = 4;
+    common.v1.Quantity quantity = 5;
+    string unit = 6;
+    common.v1.Money unit_price = 7;
+    common.v1.Money total_value = 8;
+    string valuation_method = 9;
+}
+
+message GetSlowMovingItemsRequest {
+    string company_code = 1;
+    string plant = 2;
+    int32 days_threshold = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message GetSlowMovingItemsResponse {
+    repeated SlowMovingItem items = 1;
+    common.v1.PaginationResponse pagination = 2;
+    common.v1.Money total_value = 3;
+}
+
+message SlowMovingItem {
+    string product_id = 1;
+    string product_code = 2;
+    string product_name = 3;
+    string plant = 4;
+    common.v1.Quantity quantity = 5;
+    common.v1.Money value = 6;
+    int32 days_since_last_movement = 7;
+    google.protobuf.Timestamp last_movement_date = 8;
+}
+
+message GetStockAgingReportRequest {
+    string company_code = 1;
+    string plant = 2;
+    repeated int32 aging_buckets = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message GetStockAgingReportResponse {
+    repeated StockAgingItem items = 1;
+    common.v1.PaginationResponse pagination = 2;
+    StockAgingSummary summary = 3;
+}
+
+message StockAgingItem {
+    string product_id = 1;
+    string product_code = 2;
+    string product_name = 3;
+    string batch_number = 4;
+    google.protobuf.Timestamp receipt_date = 5;
+    int32 age_days = 6;
+    common.v1.Quantity quantity = 7;
+    common.v1.Money value = 8;
+    string aging_bucket = 9;
+}
+
+message StockAgingSummary {
+    repeated AgingBucket buckets = 1;
+    common.v1.Money total_value = 2;
+}
+
+message AgingBucket {
+    string bucket_name = 1;
+    int32 from_days = 2;
+    int32 to_days = 3;
+    common.v1.Quantity quantity = 4;
+    common.v1.Money value = 5;
+    double percentage = 6;
+}
+
+// Auto-generated Response messages
+message GetStockResponse {
+    Stock stock = 1;
+}
+
+message PostGoodsReceiptResponse {
+    MaterialDocument material_document = 1;
+}
+
+message PostGoodsIssueResponse {
+    MaterialDocument material_document = 1;
+}
+
+message PostTransferResponse {
+    MaterialDocument material_document = 1;
+}
+
+message PostAdjustmentResponse {
+    MaterialDocument material_document = 1;
+}
+
+message ReverseDocumentResponse {
+    MaterialDocument material_document = 1;
+}
+
+message GetMaterialDocumentResponse {
+    MaterialDocument material_document = 1;
+}
+
+message CreateReservationResponse {
+    Reservation reservation = 1;
+}
+
+message GetReservationResponse {
+    Reservation reservation = 1;
+}
+
+message UpdateReservationResponse {
+    Reservation reservation = 1;
+}
+
+message CreatePhysicalInventoryResponse {
+    PhysicalInventory physical_inventory = 1;
+}
+
+message GetPhysicalInventoryResponse {
+    PhysicalInventory physical_inventory = 1;
+}
+
+message EnterCountResponse {
+    PhysicalInventory physical_inventory = 1;
+}
+
+message PostDifferencesResponse {
+    PhysicalInventory physical_inventory = 1;
+}

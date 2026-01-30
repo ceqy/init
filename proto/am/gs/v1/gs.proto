@@ -1,0 +1,630 @@
+syntax = "proto3";
+
+package am.gs.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/base.proto";
+
+service GeneralAssetService {
+    // 资产评估
+    rpc CreateAssetValuation(CreateAssetValuationRequest) returns (CreateAssetValuationResponse);
+    rpc GetAssetValuation(GetAssetValuationRequest) returns (GetAssetValuationResponse);
+    rpc UpdateAssetValuation(UpdateAssetValuationRequest) returns (UpdateAssetValuationResponse);
+    rpc ListAssetValuations(ListAssetValuationsRequest) returns (ListAssetValuationsResponse);
+    rpc ApproveValuation(ApproveValuationRequest) returns (ApproveValuationResponse);
+
+    // 资产转移
+    rpc CreateAssetTransfer(CreateAssetTransferRequest) returns (CreateAssetTransferResponse);
+    rpc GetAssetTransfer(GetAssetTransferRequest) returns (GetAssetTransferResponse);
+    rpc ApproveTransfer(ApproveTransferRequest) returns (ApproveTransferResponse);
+    rpc RejectTransfer(RejectTransferRequest) returns (RejectTransferResponse);
+    rpc CompleteTransfer(CompleteTransferRequest) returns (CompleteTransferResponse);
+    rpc ListAssetTransfers(ListAssetTransfersRequest) returns (ListAssetTransfersResponse);
+
+    // 资产处置
+    rpc CreateDisposal(CreateDisposalRequest) returns (CreateDisposalResponse);
+    rpc GetDisposal(GetDisposalRequest) returns (GetDisposalResponse);
+    rpc UpdateDisposal(UpdateDisposalRequest) returns (UpdateDisposalResponse);
+    rpc ApproveDisposal(ApproveDisposalRequest) returns (ApproveDisposalResponse);
+    rpc CompleteDisposal(CompleteDisposalRequest) returns (CompleteDisposalResponse);
+    rpc ListDisposals(ListDisposalsRequest) returns (ListDisposalsResponse);
+
+    // 资产报废
+    rpc CreateRetirement(CreateRetirementRequest) returns (CreateRetirementResponse);
+    rpc GetRetirement(GetRetirementRequest) returns (GetRetirementResponse);
+    rpc ApproveRetirement(ApproveRetirementRequest) returns (ApproveRetirementResponse);
+    rpc CompleteRetirement(CompleteRetirementRequest) returns (CompleteRetirementResponse);
+    rpc ListRetirements(ListRetirementsRequest) returns (ListRetirementsResponse);
+
+    // 资产保险
+    rpc CreateInsurancePolicy(CreateInsurancePolicyRequest) returns (CreateInsurancePolicyResponse);
+    rpc GetInsurancePolicy(GetInsurancePolicyRequest) returns (GetInsurancePolicyResponse);
+    rpc UpdateInsurancePolicy(UpdateInsurancePolicyRequest) returns (UpdateInsurancePolicyResponse);
+    rpc ListInsurancePolicies(ListInsurancePoliciesRequest) returns (ListInsurancePoliciesResponse);
+    rpc RenewInsurancePolicy(RenewInsurancePolicyRequest) returns (RenewInsurancePolicyResponse);
+
+    // 资产评估报告
+    rpc GetAssetValuationReport(GetAssetValuationReportRequest) returns (GetAssetValuationReportResponse);
+    rpc GetDisposalReport(GetDisposalReportRequest) returns (GetDisposalReportResponse);
+    rpc GetAssetMovementReport(GetAssetMovementReportRequest) returns (GetAssetMovementReportResponse);
+}
+
+message AssetValuation {
+    string id = 1;
+    string valuation_number = 2;
+    string asset_id = 3;
+    string asset_number = 4;
+    string asset_name = 5;
+    google.protobuf.Timestamp valuation_date = 6;
+    ValuationMethod method = 7;
+    common.v1.Money book_value = 8;
+    common.v1.Money fair_value = 9;
+    common.v1.Money market_value = 10;
+    common.v1.Money replacement_cost = 11;
+    common.v1.Money salvage_value = 12;
+    string valuation_reason = 13;
+    string valuator_id = 14;
+    string valuator_name = 15;
+    ValuationStatus status = 16;
+    string approver_id = 17;
+    google.protobuf.Timestamp approved_at = 18;
+    string notes = 19;
+    common.v1.AuditInfo audit_info = 20;
+}
+
+enum ValuationMethod {
+    VALUATION_METHOD_UNSPECIFIED = 0;
+    VALUATION_METHOD_COST = 1;
+    VALUATION_METHOD_MARKET = 2;
+    VALUATION_METHOD_INCOME = 3;
+    VALUATION_METHOD_REPLACEMENT = 4;
+    VALUATION_METHOD_DEPRECIATED_REPLACEMENT = 5;
+}
+
+enum ValuationStatus {
+    VALUATION_STATUS_UNSPECIFIED = 0;
+    VALUATION_STATUS_DRAFT = 1;
+    VALUATION_STATUS_SUBMITTED = 2;
+    VALUATION_STATUS_APPROVED = 3;
+    VALUATION_STATUS_REJECTED = 4;
+    VALUATION_STATUS_POSTED = 5;
+}
+
+message AssetTransfer {
+    string id = 1;
+    string transfer_number = 2;
+    string asset_id = 3;
+    string asset_number = 4;
+    string asset_name = 5;
+    string from_department = 6;
+    string to_department = 7;
+    string from_cost_center = 8;
+    string to_cost_center = 9;
+    string from_responsible = 10;
+    string to_responsible = 11;
+    google.protobuf.Timestamp transfer_date = 12;
+    string reason = 13;
+    TransferType transfer_type = 14;
+    TransferStatus status = 15;
+    string approver_id = 16;
+    google.protobuf.Timestamp approved_at = 17;
+    string notes = 18;
+    common.v1.AuditInfo audit_info = 19;
+}
+
+enum TransferType {
+    TRANSFER_TYPE_UNSPECIFIED = 0;
+    TRANSFER_TYPE_INTERNAL = 1;
+    TRANSFER_TYPE_INTER_COMPANY = 2;
+    TRANSFER_TYPE_INTER_PLANT = 3;
+}
+
+enum TransferStatus {
+    TRANSFER_STATUS_UNSPECIFIED = 0;
+    TRANSFER_STATUS_DRAFT = 1;
+    TRANSFER_STATUS_PENDING = 2;
+    TRANSFER_STATUS_APPROVED = 3;
+    TRANSFER_STATUS_REJECTED = 4;
+    TRANSFER_STATUS_COMPLETED = 5;
+}
+
+message AssetDisposal {
+    string id = 1;
+    string disposal_number = 2;
+    string asset_id = 3;
+    string asset_number = 4;
+    string asset_name = 5;
+    google.protobuf.Timestamp disposal_date = 6;
+    DisposalMethod method = 7;
+    string buyer_id = 8;
+    string buyer_name = 9;
+    common.v1.Money disposal_price = 10;
+    common.v1.Money book_value = 11;
+    common.v1.Money gain_loss = 12;
+    string disposal_reason = 13;
+    DisposalStatus status = 14;
+    string approver_id = 15;
+    google.protobuf.Timestamp approved_at = 16;
+    string gl_account = 17;
+    string cost_center = 18;
+    repeated common.v1.Attachment documents = 19;
+    string notes = 20;
+    common.v1.AuditInfo audit_info = 21;
+}
+
+enum DisposalMethod {
+    DISPOSAL_METHOD_UNSPECIFIED = 0;
+    DISPOSAL_METHOD_SALE = 1;
+    DISPOSAL_METHOD_SCRAP = 2;
+    DISPOSAL_METHOD_DONATION = 3;
+    DISPOSAL_METHOD_TRADE_IN = 4;
+    DISPOSAL_METHOD_AUCTION = 5;
+}
+
+enum DisposalStatus {
+    DISPOSAL_STATUS_UNSPECIFIED = 0;
+    DISPOSAL_STATUS_DRAFT = 1;
+    DISPOSAL_STATUS_PENDING = 2;
+    DISPOSAL_STATUS_APPROVED = 3;
+    DISPOSAL_STATUS_REJECTED = 4;
+    DISPOSAL_STATUS_COMPLETED = 5;
+    DISPOSAL_STATUS_POSTED = 6;
+}
+
+message AssetRetirement {
+    string id = 1;
+    string retirement_number = 2;
+    string asset_id = 3;
+    string asset_number = 4;
+    string asset_name = 5;
+    google.protobuf.Timestamp retirement_date = 6;
+    RetirementReason reason = 7;
+    string reason_description = 8;
+    common.v1.Money book_value = 9;
+    common.v1.Money salvage_value = 10;
+    common.v1.Money loss = 11;
+    RetirementStatus status = 12;
+    string approver_id = 13;
+    google.protobuf.Timestamp approved_at = 14;
+    string gl_account = 15;
+    string cost_center = 16;
+    string notes = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+enum RetirementReason {
+    RETIREMENT_REASON_UNSPECIFIED = 0;
+    RETIREMENT_REASON_END_OF_LIFE = 1;
+    RETIREMENT_REASON_OBSOLETE = 2;
+    RETIREMENT_REASON_DAMAGED = 3;
+    RETIREMENT_REASON_LOST = 4;
+    RETIREMENT_REASON_STOLEN = 5;
+    RETIREMENT_REASON_POLICY_CHANGE = 6;
+}
+
+enum RetirementStatus {
+    RETIREMENT_STATUS_UNSPECIFIED = 0;
+    RETIREMENT_STATUS_DRAFT = 1;
+    RETIREMENT_STATUS_PENDING = 2;
+    RETIREMENT_STATUS_APPROVED = 3;
+    RETIREMENT_STATUS_REJECTED = 4;
+    RETIREMENT_STATUS_COMPLETED = 5;
+    RETIREMENT_STATUS_POSTED = 6;
+}
+
+message InsurancePolicy {
+    string id = 1;
+    string policy_number = 2;
+    string asset_id = 3;
+    string asset_number = 4;
+    string asset_name = 5;
+    string insurer_id = 6;
+    string insurer_name = 7;
+    InsuranceType type = 8;
+    google.protobuf.Timestamp start_date = 9;
+    google.protobuf.Timestamp end_date = 10;
+    common.v1.Money coverage_amount = 11;
+    common.v1.Money premium = 12;
+    string payment_frequency = 13;
+    google.protobuf.Timestamp last_payment_date = 14;
+    google.protobuf.Timestamp next_payment_date = 15;
+    InsurancePolicyStatus status = 16;
+    string policy_document_url = 17;
+    string notes = 18;
+    common.v1.AuditInfo audit_info = 19;
+}
+
+enum InsuranceType {
+    INSURANCE_TYPE_UNSPECIFIED = 0;
+    INSURANCE_TYPE_PROPERTY = 1;
+    INSURANCE_TYPE_LIABILITY = 2;
+    INSURANCE_TYPE_EQUIPMENT = 3;
+    INSURANCE_TYPE_COMPREHENSIVE = 4;
+}
+
+enum InsurancePolicyStatus {
+    INSURANCE_POLICY_STATUS_UNSPECIFIED = 0;
+    INSURANCE_POLICY_STATUS_ACTIVE = 1;
+    INSURANCE_POLICY_STATUS_EXPIRED = 2;
+    INSURANCE_POLICY_STATUS_CANCELLED = 3;
+    INSURANCE_POLICY_STATUS_RENEWED = 4;
+}
+
+message AssetValuationReport {
+    string report_id = 1;
+    google.protobuf.Timestamp report_date = 2;
+    string company_code = 3;
+    repeated AssetValuationItem items = 4;
+    common.v1.Money total_book_value = 5;
+    common.v1.Money total_fair_value = 6;
+    common.v1.Money total_market_value = 7;
+    common.v1.Money total_replacement_cost = 8;
+}
+
+message AssetValuationItem {
+    string asset_id = 1;
+    string asset_number = 2;
+    string asset_name = 3;
+    common.v1.Money book_value = 4;
+    common.v1.Money fair_value = 5;
+    common.v1.Money market_value = 6;
+    common.v1.Money replacement_cost = 7;
+    double variance_percentage = 8;
+}
+
+message DisposalReport {
+    string report_id = 1;
+    google.protobuf.Timestamp report_date = 2;
+    string company_code = 3;
+    common.v1.DateRange period = 4;
+    repeated DisposalItem items = 5;
+    common.v1.Money total_disposal_price = 6;
+    common.v1.Money total_book_value = 7;
+    common.v1.Money total_gain_loss = 8;
+}
+
+message DisposalItem {
+    string asset_number = 1;
+    string asset_name = 2;
+    DisposalMethod method = 3;
+    google.protobuf.Timestamp disposal_date = 4;
+    common.v1.Money disposal_price = 5;
+    common.v1.Money book_value = 6;
+    common.v1.Money gain_loss = 7;
+}
+
+message AssetMovementReport {
+    string report_id = 1;
+    google.protobuf.Timestamp report_date = 2;
+    string company_code = 3;
+    common.v1.DateRange period = 4;
+    int32 transferred = 5;
+    int32 disposed = 6;
+    int32 retired = 7;
+    repeated MovementDetail details = 8;
+}
+
+message MovementDetail {
+    string asset_number = 1;
+    string asset_name = 2;
+    string movement_type = 3;
+    google.protobuf.Timestamp movement_date = 4;
+    string from_location = 5;
+    string to_location = 6;
+}
+
+// Request/Response 消息
+message CreateAssetValuationRequest {
+    string asset_id = 1;
+    google.protobuf.Timestamp valuation_date = 2;
+    ValuationMethod method = 3;
+    common.v1.Money fair_value = 4;
+    common.v1.Money market_value = 5;
+    common.v1.Money replacement_cost = 6;
+    string valuation_reason = 7;
+    string notes = 8;
+}
+
+message GetAssetValuationRequest {
+    string id = 1;
+}
+
+message UpdateAssetValuationRequest {
+    string id = 1;
+    common.v1.Money fair_value = 2;
+    common.v1.Money market_value = 3;
+    common.v1.Money replacement_cost = 4;
+    string notes = 5;
+}
+
+message ListAssetValuationsRequest {
+    string asset_id = 1;
+    ValuationStatus status = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListAssetValuationsResponse {
+    repeated AssetValuation valuations = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message ApproveValuationRequest {
+    string id = 1;
+    string approver_id = 2;
+    string comments = 3;
+}
+
+message CreateAssetTransferRequest {
+    string asset_id = 1;
+    string to_department = 2;
+    string to_cost_center = 3;
+    string to_responsible = 4;
+    google.protobuf.Timestamp transfer_date = 5;
+    string reason = 6;
+    TransferType transfer_type = 7;
+}
+
+message GetAssetTransferRequest {
+    string id = 1;
+}
+
+message ApproveTransferRequest {
+    string id = 1;
+    string approver_id = 2;
+}
+
+message RejectTransferRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message CompleteTransferRequest {
+    string id = 1;
+}
+
+message ListAssetTransfersRequest {
+    string asset_id = 1;
+    TransferStatus status = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListAssetTransfersResponse {
+    repeated AssetTransfer transfers = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateDisposalRequest {
+    string asset_id = 1;
+    google.protobuf.Timestamp disposal_date = 2;
+    DisposalMethod method = 3;
+    string buyer_id = 4;
+    common.v1.Money disposal_price = 5;
+    string disposal_reason = 6;
+}
+
+message GetDisposalRequest {
+    string id = 1;
+}
+
+message UpdateDisposalRequest {
+    string id = 1;
+    DisposalMethod method = 2;
+    string buyer_id = 3;
+    common.v1.Money disposal_price = 4;
+}
+
+message ApproveDisposalRequest {
+    string id = 1;
+    string approver_id = 2;
+}
+
+message CompleteDisposalRequest {
+    string id = 1;
+    string gl_account = 2;
+    string cost_center = 3;
+}
+
+message ListDisposalsRequest {
+    string asset_id = 1;
+    DisposalStatus status = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListDisposalsResponse {
+    repeated AssetDisposal disposals = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateRetirementRequest {
+    string asset_id = 1;
+    google.protobuf.Timestamp retirement_date = 2;
+    RetirementReason reason = 3;
+    string reason_description = 4;
+    common.v1.Money salvage_value = 5;
+}
+
+message GetRetirementRequest {
+    string id = 1;
+}
+
+message ApproveRetirementRequest {
+    string id = 1;
+    string approver_id = 2;
+}
+
+message CompleteRetirementRequest {
+    string id = 1;
+    string gl_account = 2;
+    string cost_center = 3;
+}
+
+message ListRetirementsRequest {
+    string asset_id = 1;
+    RetirementStatus status = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListRetirementsResponse {
+    repeated AssetRetirement retirements = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateInsurancePolicyRequest {
+    string asset_id = 1;
+    string insurer_id = 2;
+    InsuranceType type = 3;
+    google.protobuf.Timestamp start_date = 4;
+    google.protobuf.Timestamp end_date = 5;
+    common.v1.Money coverage_amount = 6;
+    common.v1.Money premium = 7;
+    string payment_frequency = 8;
+}
+
+message GetInsurancePolicyRequest {
+    string id = 1;
+}
+
+message UpdateInsurancePolicyRequest {
+    string id = 1;
+    common.v1.Money coverage_amount = 2;
+    common.v1.Money premium = 3;
+    string payment_frequency = 4;
+}
+
+message ListInsurancePoliciesRequest {
+    string asset_id = 1;
+    InsurancePolicyStatus status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListInsurancePoliciesResponse {
+    repeated InsurancePolicy policies = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message RenewInsurancePolicyRequest {
+    string id = 1;
+    google.protobuf.Timestamp new_end_date = 2;
+    common.v1.Money new_premium = 3;
+}
+
+message GetAssetValuationReportRequest {
+    string company_code = 1;
+    google.protobuf.Timestamp as_of_date = 2;
+}
+
+message GetDisposalReportRequest {
+    string company_code = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+message GetAssetMovementReportRequest {
+    string company_code = 1;
+    common.v1.DateRange date_range = 2;
+}
+
+// Auto-generated Response messages
+message CreateAssetValuationResponse {
+    AssetValuation asset_valuation = 1;
+}
+
+message GetAssetValuationResponse {
+    AssetValuation asset_valuation = 1;
+}
+
+message UpdateAssetValuationResponse {
+    AssetValuation asset_valuation = 1;
+}
+
+message ApproveValuationResponse {
+    AssetValuation asset_valuation = 1;
+}
+
+message CreateAssetTransferResponse {
+    AssetTransfer asset_transfer = 1;
+}
+
+message GetAssetTransferResponse {
+    AssetTransfer asset_transfer = 1;
+}
+
+message ApproveTransferResponse {
+    AssetTransfer asset_transfer = 1;
+}
+
+message RejectTransferResponse {
+    AssetTransfer asset_transfer = 1;
+}
+
+message CompleteTransferResponse {
+    AssetTransfer asset_transfer = 1;
+}
+
+message CreateDisposalResponse {
+    AssetDisposal asset_disposal = 1;
+}
+
+message GetDisposalResponse {
+    AssetDisposal asset_disposal = 1;
+}
+
+message UpdateDisposalResponse {
+    AssetDisposal asset_disposal = 1;
+}
+
+message ApproveDisposalResponse {
+    AssetDisposal asset_disposal = 1;
+}
+
+message CompleteDisposalResponse {
+    AssetDisposal asset_disposal = 1;
+}
+
+message CreateRetirementResponse {
+    AssetRetirement asset_retirement = 1;
+}
+
+message GetRetirementResponse {
+    AssetRetirement asset_retirement = 1;
+}
+
+message ApproveRetirementResponse {
+    AssetRetirement asset_retirement = 1;
+}
+
+message CompleteRetirementResponse {
+    AssetRetirement asset_retirement = 1;
+}
+
+message CreateInsurancePolicyResponse {
+    InsurancePolicy insurance_policy = 1;
+}
+
+message GetInsurancePolicyResponse {
+    InsurancePolicy insurance_policy = 1;
+}
+
+message UpdateInsurancePolicyResponse {
+    InsurancePolicy insurance_policy = 1;
+}
+
+message RenewInsurancePolicyResponse {
+    InsurancePolicy insurance_policy = 1;
+}
+
+message GetAssetValuationReportResponse {
+    AssetValuationReport asset_valuation_report = 1;
+}
+
+message GetDisposalReportResponse {
+    DisposalReport disposal_report = 1;
+}
+
+message GetAssetMovementReportResponse {
+    AssetMovementReport asset_movement_report = 1;
+}

@@ -1,0 +1,267 @@
+syntax = "proto3";
+
+package sys.nr.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+// ============================================================================
+// 编号规则服务 - 单据编号生成
+// ============================================================================
+service NumberRangeService {
+    // 编号范围管理
+    rpc CreateNumberRange(CreateNumberRangeRequest) returns (CreateNumberRangeResponse);
+    rpc GetNumberRange(GetNumberRangeRequest) returns (GetNumberRangeResponse);
+    rpc UpdateNumberRange(UpdateNumberRangeRequest) returns (UpdateNumberRangeResponse);
+    rpc DeleteNumberRange(DeleteNumberRangeRequest) returns (google.protobuf.Empty);
+    rpc ListNumberRanges(ListNumberRangesRequest) returns (ListNumberRangesResponse);
+
+    // 编号生成
+    rpc GetNextNumber(GetNextNumberRequest) returns (GetNextNumberResponse);
+    rpc GetNextNumbers(GetNextNumbersRequest) returns (GetNextNumbersResponse);
+    rpc ReserveNumber(ReserveNumberRequest) returns (ReserveNumberResponse);
+    rpc ReleaseNumber(ReleaseNumberRequest) returns (google.protobuf.Empty);
+
+    // 编号范围状态
+    rpc GetNumberRangeStatus(GetNumberRangeStatusRequest) returns (GetNumberRangeStatusResponse);
+    rpc ResetNumberRange(ResetNumberRangeRequest) returns (google.protobuf.Empty);
+}
+
+// ============================================================================
+// 核心实体
+// ============================================================================
+
+// 编号范围
+message NumberRange {
+    string id = 1;                                  // 编号范围ID (UUID)
+    string object_type = 2;                         // 对象类型 (如: MATERIAL, SALES_ORDER, PURCHASE_ORDER)
+    string subobject = 3;                           // 子对象 (可选, 如: 公司代码, 工厂)
+    string fiscal_year = 4;                         // 会计年度 (可选, 如: 2024)
+
+    // 编号规则
+    string prefix = 5;                              // 前缀 (如: SO, PO, MAT)
+    string suffix = 6;                              // 后缀
+    int32 number_length = 7;                        // 编号长度 (不含前后缀)
+    int64 from_number = 8;                          // 起始编号
+    int64 to_number = 9;                            // 结束编号
+    int64 current_number = 10;                      // 当前编号
+    bool external_numbering = 11;                   // 是否外部编号 (手工输入)
+
+    // 高级选项
+    NumberingPattern pattern = 12;                  // 编号模式
+    bool year_dependent = 13;                       // 是否年度相关
+    bool month_dependent = 14;                      // 是否月份相关
+    bool auto_reset = 15;                           // 是否自动重置
+    ResetFrequency reset_frequency = 16;            // 重置频率
+
+    // 状态
+    NumberRangeStatus status = 17;                  // 状态
+    int64 warning_threshold = 18;                   // 预警阈值 (剩余数量)
+    google.protobuf.Timestamp last_used_at = 19;    // 最后使用时间
+
+    // 审计
+    common.v1.AuditInfo audit_info = 20;
+}
+
+// 编号模式
+message NumberingPattern {
+    string template = 1;                            // 模板 (如: {PREFIX}{YYYY}{MM}{NUMBER})
+    repeated PatternSegment segments = 2;           // 模式段
+}
+
+// 模式段
+message PatternSegment {
+    SegmentType type = 1;                           // 段类型
+    string value = 2;                               // 固定值 (对于FIXED类型)
+    int32 length = 3;                               // 长度
+    string format = 4;                              // 格式 (如: 日期格式)
+}
+
+// 编号预留记录
+message NumberReservation {
+    string id = 1;                                  // 预留ID
+    string number_range_id = 2;                     // 编号范围ID
+    string number = 3;                              // 预留的编号
+    string reserved_by = 4;                         // 预留人
+    google.protobuf.Timestamp reserved_at = 5;      // 预留时间
+    google.protobuf.Timestamp expires_at = 6;       // 过期时间
+    ReservationStatus status = 7;                   // 预留状态
+}
+
+// ============================================================================
+// 枚举
+// ============================================================================
+
+enum SegmentType {
+    SEGMENT_TYPE_UNSPECIFIED = 0;
+    SEGMENT_TYPE_FIXED = 1;                         // 固定文本
+    SEGMENT_TYPE_NUMBER = 2;                        // 序号
+    SEGMENT_TYPE_YEAR = 3;                          // 年份 (YYYY)
+    SEGMENT_TYPE_MONTH = 4;                         // 月份 (MM)
+    SEGMENT_TYPE_DAY = 5;                           // 日期 (DD)
+    SEGMENT_TYPE_COMPANY_CODE = 6;                  // 公司代码
+    SEGMENT_TYPE_PLANT = 7;                         // 工厂
+    SEGMENT_TYPE_CUSTOM = 8;                        // 自定义
+}
+
+enum ResetFrequency {
+    RESET_FREQUENCY_UNSPECIFIED = 0;
+    RESET_FREQUENCY_NEVER = 1;                      // 永不重置
+    RESET_FREQUENCY_DAILY = 2;                      // 每日
+    RESET_FREQUENCY_MONTHLY = 3;                    // 每月
+    RESET_FREQUENCY_YEARLY = 4;                     // 每年
+    RESET_FREQUENCY_FISCAL_YEAR = 5;                // 每会计年度
+}
+
+enum NumberRangeStatus {
+    NUMBER_RANGE_STATUS_UNSPECIFIED = 0;
+    NUMBER_RANGE_STATUS_ACTIVE = 1;                 // 活跃
+    NUMBER_RANGE_STATUS_INACTIVE = 2;               // 停用
+    NUMBER_RANGE_STATUS_EXHAUSTED = 3;              // 已用尽
+    NUMBER_RANGE_STATUS_WARNING = 4;                // 预警
+}
+
+enum ReservationStatus {
+    RESERVATION_STATUS_UNSPECIFIED = 0;
+    RESERVATION_STATUS_ACTIVE = 1;                  // 活跃
+    RESERVATION_STATUS_USED = 2;                    // 已使用
+    RESERVATION_STATUS_EXPIRED = 3;                 // 已过期
+    RESERVATION_STATUS_RELEASED = 4;                // 已释放
+}
+
+// ============================================================================
+// 请求/响应消息
+// ============================================================================
+
+message CreateNumberRangeRequest {
+    string object_type = 1;
+    string subobject = 2;
+    string fiscal_year = 3;
+    string prefix = 4;
+    string suffix = 5;
+    int32 number_length = 6;
+    int64 from_number = 7;
+    int64 to_number = 8;
+    bool external_numbering = 9;
+    NumberingPattern pattern = 10;
+    bool year_dependent = 11;
+    bool month_dependent = 12;
+    bool auto_reset = 13;
+    ResetFrequency reset_frequency = 14;
+    int64 warning_threshold = 15;
+}
+
+message CreateNumberRangeResponse {
+    NumberRange number_range = 1;
+}
+
+message GetNumberRangeRequest {
+    oneof identifier {
+        string id = 1;
+        NumberRangeKey key = 2;
+    }
+}
+
+message NumberRangeKey {
+    string object_type = 1;
+    string subobject = 2;
+    string fiscal_year = 3;
+}
+
+message GetNumberRangeResponse {
+    NumberRange number_range = 1;
+}
+
+message UpdateNumberRangeRequest {
+    string id = 1;
+    string prefix = 2;
+    string suffix = 3;
+    int64 to_number = 4;
+    int64 warning_threshold = 5;
+    NumberRangeStatus status = 6;
+}
+
+message UpdateNumberRangeResponse {
+    NumberRange number_range = 1;
+}
+
+message DeleteNumberRangeRequest {
+    string id = 1;
+}
+
+message ListNumberRangesRequest {
+    string object_type = 1;
+    string subobject = 2;
+    NumberRangeStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListNumberRangesResponse {
+    repeated NumberRange number_ranges = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetNextNumberRequest {
+    string object_type = 1;                         // 对象类型
+    string subobject = 2;                           // 子对象 (可选)
+    string fiscal_year = 3;                         // 会计年度 (可选)
+    map<string, string> context = 4;                // 上下文参数 (用于模式替换)
+}
+
+message GetNextNumberResponse {
+    string number = 1;                              // 生成的编号
+    string number_range_id = 2;                     // 使用的编号范围ID
+    int64 remaining_numbers = 3;                    // 剩余可用编号数
+}
+
+message GetNextNumbersRequest {
+    string object_type = 1;
+    string subobject = 2;
+    string fiscal_year = 3;
+    int32 quantity = 4;                             // 需要的编号数量
+    map<string, string> context = 5;
+}
+
+message GetNextNumbersResponse {
+    repeated string numbers = 1;                    // 生成的编号列表
+    string number_range_id = 2;
+    int64 remaining_numbers = 3;
+}
+
+message ReserveNumberRequest {
+    string object_type = 1;
+    string subobject = 2;
+    string fiscal_year = 3;
+    int32 duration_minutes = 4;                     // 预留时长 (分钟)
+    map<string, string> context = 5;
+}
+
+message ReserveNumberResponse {
+    string reservation_id = 1;                      // 预留ID
+    string number = 2;                              // 预留的编号
+    google.protobuf.Timestamp expires_at = 3;       // 过期时间
+}
+
+message ReleaseNumberRequest {
+    string reservation_id = 1;
+}
+
+message GetNumberRangeStatusRequest {
+    string id = 1;
+}
+
+message GetNumberRangeStatusResponse {
+    NumberRange number_range = 1;
+    int64 total_numbers = 2;                        // 总编号数
+    int64 used_numbers = 3;                         // 已使用编号数
+    int64 remaining_numbers = 4;                    // 剩余编号数
+    double usage_percentage = 5;                    // 使用率 (%)
+    bool is_warning = 6;                            // 是否预警
+    bool is_exhausted = 7;                          // 是否用尽
+}
+
+message ResetNumberRangeRequest {
+    string id = 1;
+    int64 reset_to = 2;                             // 重置到的编号 (默认为from_number)
+}

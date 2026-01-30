@@ -1,0 +1,5 @@
+# Development environment overrides
+app_env = "development"
+
+[telemetry]
+log_level = "debug"

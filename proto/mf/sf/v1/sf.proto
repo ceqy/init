@@ -1,0 +1,633 @@
+syntax = "proto3";
+
+package mf.sf.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+service ShopFloorService {
+    rpc CreateWorkCenter(CreateWorkCenterRequest) returns (CreateWorkCenterResponse);
+    rpc GetWorkCenter(GetWorkCenterRequest) returns (GetWorkCenterResponse);
+    rpc UpdateWorkCenter(UpdateWorkCenterRequest) returns (UpdateWorkCenterResponse);
+    rpc DeleteWorkCenter(DeleteWorkCenterRequest) returns (google.protobuf.Empty);
+    rpc ListWorkCenters(ListWorkCentersRequest) returns (ListWorkCentersResponse);
+
+    rpc GetWorkCenterCapacity(GetWorkCenterCapacityRequest) returns (GetWorkCenterCapacityResponse);
+    rpc UpdateWorkCenterCapacity(UpdateWorkCenterCapacityRequest) returns (UpdateWorkCenterCapacityResponse);
+    rpc GetCapacityOverview(GetCapacityOverviewRequest) returns (GetCapacityOverviewResponse);
+
+    rpc CreateShift(CreateShiftRequest) returns (CreateShiftResponse);
+    rpc GetShift(GetShiftRequest) returns (GetShiftResponse);
+    rpc UpdateShift(UpdateShiftRequest) returns (UpdateShiftResponse);
+    rpc ListShifts(ListShiftsRequest) returns (ListShiftsResponse);
+
+    rpc CreateWorkQueue(CreateWorkQueueRequest) returns (CreateWorkQueueResponse);
+    rpc GetWorkQueue(GetWorkQueueRequest) returns (GetWorkQueueResponse);
+    rpc UpdateWorkQueueSequence(UpdateWorkQueueSequenceRequest) returns (UpdateWorkQueueSequenceResponse);
+    rpc GetOperatorWorkQueue(GetOperatorWorkQueueRequest) returns (GetOperatorWorkQueueResponse);
+
+    rpc StartOperation(StartOperationRequest) returns (StartOperationResponse);
+    rpc PauseOperation(PauseOperationRequest) returns (PauseOperationResponse);
+    rpc ResumeOperation(ResumeOperationRequest) returns (ResumeOperationResponse);
+    rpc CompleteOperation(CompleteOperationRequest) returns (CompleteOperationResponse);
+    rpc GetOperationExecution(GetOperationExecutionRequest) returns (GetOperationExecutionResponse);
+
+    rpc RecordDowntime(RecordDowntimeRequest) returns (RecordDowntimeResponse);
+    rpc GetDowntimeRecords(GetDowntimeRecordsRequest) returns (GetDowntimeRecordsResponse);
+    rpc GetDowntimeAnalysis(GetDowntimeAnalysisRequest) returns (GetDowntimeAnalysisResponse);
+
+    rpc GetShopFloorDashboard(GetShopFloorDashboardRequest) returns (GetShopFloorDashboardResponse);
+    rpc GetOEEMetrics(GetOEEMetricsRequest) returns (GetOEEMetricsResponse);
+}
+
+message WorkCenter {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    string plant = 5;
+    string cost_center = 6;
+    WorkCenterType type = 7;
+    string category = 8;
+    string responsible_person = 9;
+    int32 capacity_category = 10;
+    double standard_capacity = 11;
+    string capacity_unit = 12;
+    double efficiency_rate = 13;
+    double utilization_rate = 14;
+    repeated string machines = 15;
+    common.v1.Status status = 16;
+    WorkCenterCost costing = 17;
+    common.v1.AuditInfo audit_info = 18;
+}
+
+enum WorkCenterType {
+    WORK_CENTER_TYPE_UNSPECIFIED = 0;
+    WORK_CENTER_TYPE_MACHINE = 1;
+    WORK_CENTER_TYPE_LABOR = 2;
+    WORK_CENTER_TYPE_PRODUCTION_LINE = 3;
+    WORK_CENTER_TYPE_ASSEMBLY = 4;
+}
+
+message WorkCenterCost {
+    common.v1.Money setup_cost_rate = 1;
+    common.v1.Money machine_cost_rate = 2;
+    common.v1.Money labor_cost_rate = 3;
+    common.v1.Money overhead_rate = 4;
+    string cost_center = 5;
+    string activity_type = 6;
+}
+
+message WorkCenterCapacity {
+    string work_center_id = 1;
+    string work_center_code = 2;
+    google.protobuf.Timestamp date = 3;
+    double available_capacity = 4;
+    double planned_capacity = 5;
+    double remaining_capacity = 6;
+    string capacity_unit = 7;
+    double utilization_percentage = 8;
+    repeated CapacitySlot slots = 9;
+}
+
+message CapacitySlot {
+    google.protobuf.Timestamp start_time = 1;
+    google.protobuf.Timestamp end_time = 2;
+    double capacity = 3;
+    double allocated = 4;
+    string shift_id = 5;
+    bool is_break = 6;
+}
+
+message Shift {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string plant = 4;
+    google.protobuf.Timestamp start_time = 5;
+    google.protobuf.Timestamp end_time = 6;
+    double break_duration_minutes = 7;
+    repeated ShiftBreak breaks = 8;
+    repeated int32 working_days = 9;
+    common.v1.Status status = 10;
+    common.v1.AuditInfo audit_info = 11;
+}
+
+message ShiftBreak {
+    google.protobuf.Timestamp start_time = 1;
+    google.protobuf.Timestamp end_time = 2;
+    string description = 3;
+}
+
+message WorkQueue {
+    string id = 1;
+    string work_center_id = 2;
+    string work_center_code = 3;
+    google.protobuf.Timestamp date = 4;
+    repeated WorkQueueItem items = 5;
+    common.v1.AuditInfo audit_info = 6;
+}
+
+message WorkQueueItem {
+    string id = 1;
+    int32 sequence = 2;
+    string production_order_id = 3;
+    string order_number = 4;
+    string operation_id = 5;
+    int32 operation_number = 6;
+    string product_code = 7;
+    string product_name = 8;
+    common.v1.Quantity quantity = 9;
+    google.protobuf.Timestamp planned_start = 10;
+    google.protobuf.Timestamp planned_end = 11;
+    double estimated_duration = 12;
+    int32 priority = 13;
+    WorkQueueItemStatus status = 14;
+    string assigned_operator = 15;
+}
+
+enum WorkQueueItemStatus {
+    WORK_QUEUE_ITEM_STATUS_UNSPECIFIED = 0;
+    WORK_QUEUE_ITEM_STATUS_QUEUED = 1;
+    WORK_QUEUE_ITEM_STATUS_IN_PROGRESS = 2;
+    WORK_QUEUE_ITEM_STATUS_PAUSED = 3;
+    WORK_QUEUE_ITEM_STATUS_COMPLETED = 4;
+    WORK_QUEUE_ITEM_STATUS_CANCELLED = 5;
+}
+
+message OperationExecution {
+    string id = 1;
+    string production_order_id = 2;
+    string operation_id = 3;
+    string work_center_id = 4;
+    string operator_id = 5;
+    string operator_name = 6;
+    google.protobuf.Timestamp start_time = 7;
+    google.protobuf.Timestamp end_time = 8;
+    double setup_time_minutes = 9;
+    double run_time_minutes = 10;
+    double total_time_minutes = 11;
+    common.v1.Quantity quantity_produced = 12;
+    common.v1.Quantity quantity_scrapped = 13;
+    OperationExecutionStatus status = 14;
+    repeated ExecutionPause pauses = 15;
+    string notes = 16;
+    common.v1.AuditInfo audit_info = 17;
+}
+
+enum OperationExecutionStatus {
+    OPERATION_EXECUTION_STATUS_UNSPECIFIED = 0;
+    OPERATION_EXECUTION_STATUS_STARTED = 1;
+    OPERATION_EXECUTION_STATUS_IN_PROGRESS = 2;
+    OPERATION_EXECUTION_STATUS_PAUSED = 3;
+    OPERATION_EXECUTION_STATUS_COMPLETED = 4;
+    OPERATION_EXECUTION_STATUS_CANCELLED = 5;
+}
+
+message ExecutionPause {
+    google.protobuf.Timestamp pause_time = 1;
+    google.protobuf.Timestamp resume_time = 2;
+    string reason = 3;
+    double duration_minutes = 4;
+}
+
+message DowntimeRecord {
+    string id = 1;
+    string work_center_id = 2;
+    string work_center_code = 3;
+    string machine_id = 4;
+    google.protobuf.Timestamp start_time = 5;
+    google.protobuf.Timestamp end_time = 6;
+    double duration_minutes = 7;
+    DowntimeType type = 8;
+    DowntimeCategory category = 9;
+    string reason_code = 10;
+    string reason_description = 11;
+    string production_order_id = 12;
+    string reported_by = 13;
+    string resolution = 14;
+    bool planned = 15;
+    common.v1.AuditInfo audit_info = 16;
+}
+
+enum DowntimeType {
+    DOWNTIME_TYPE_UNSPECIFIED = 0;
+    DOWNTIME_TYPE_PLANNED = 1;
+    DOWNTIME_TYPE_UNPLANNED = 2;
+}
+
+enum DowntimeCategory {
+    DOWNTIME_CATEGORY_UNSPECIFIED = 0;
+    DOWNTIME_CATEGORY_BREAKDOWN = 1;
+    DOWNTIME_CATEGORY_SETUP = 2;
+    DOWNTIME_CATEGORY_MAINTENANCE = 3;
+    DOWNTIME_CATEGORY_MATERIAL_SHORTAGE = 4;
+    DOWNTIME_CATEGORY_QUALITY_ISSUE = 5;
+    DOWNTIME_CATEGORY_OPERATOR_UNAVAILABLE = 6;
+    DOWNTIME_CATEGORY_OTHER = 7;
+}
+
+message OEEMetrics {
+    string work_center_id = 1;
+    google.protobuf.Timestamp date = 2;
+    double oee = 3;
+    double availability = 4;
+    double performance = 5;
+    double quality = 6;
+    double planned_production_time = 7;
+    double actual_run_time = 8;
+    double downtime = 9;
+    double ideal_cycle_time = 10;
+    double actual_cycle_time = 11;
+    int32 total_count = 12;
+    int32 good_count = 13;
+    int32 defect_count = 14;
+    repeated OEELoss losses = 15;
+}
+
+message OEELoss {
+    string category = 1;
+    double time_lost = 2;
+    double percentage = 3;
+    int32 occurrences = 4;
+}
+
+message ShopFloorDashboard {
+    string plant = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    int32 active_work_centers = 3;
+    int32 active_orders = 4;
+    int32 operators_on_shift = 5;
+    double overall_oee = 6;
+    double overall_utilization = 7;
+    int32 orders_on_schedule = 8;
+    int32 orders_delayed = 9;
+    repeated WorkCenterStatus work_center_statuses = 10;
+    repeated ActiveOrder active_orders_list = 11;
+    repeated Alert alerts = 12;
+}
+
+message WorkCenterStatus {
+    string work_center_id = 1;
+    string work_center_code = 2;
+    string work_center_name = 3;
+    string status = 4;
+    string current_order = 5;
+    string current_product = 6;
+    double current_oee = 7;
+    double utilization = 8;
+    int32 queue_length = 9;
+}
+
+message ActiveOrder {
+    string production_order_id = 1;
+    string order_number = 2;
+    string product_code = 3;
+    double progress = 4;
+    string current_operation = 5;
+    string work_center = 6;
+    bool on_schedule = 7;
+}
+
+message Alert {
+    string id = 1;
+    string type = 2;
+    string severity = 3;
+    string message = 4;
+    string source = 5;
+    google.protobuf.Timestamp timestamp = 6;
+}
+
+message CreateWorkCenterRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    string plant = 4;
+    string cost_center = 5;
+    WorkCenterType type = 6;
+    string category = 7;
+    string responsible_person = 8;
+    double standard_capacity = 9;
+    string capacity_unit = 10;
+    double efficiency_rate = 11;
+    WorkCenterCost costing = 12;
+}
+
+message GetWorkCenterRequest {
+    string id = 1;
+}
+
+message UpdateWorkCenterRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string responsible_person = 4;
+    double standard_capacity = 5;
+    double efficiency_rate = 6;
+    WorkCenterCost costing = 7;
+    common.v1.Status status = 8;
+}
+
+message DeleteWorkCenterRequest {
+    string id = 1;
+}
+
+message ListWorkCentersRequest {
+    string plant = 1;
+    WorkCenterType type = 2;
+    string category = 3;
+    common.v1.Status status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListWorkCentersResponse {
+    repeated WorkCenter work_centers = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetWorkCenterCapacityRequest {
+    string work_center_id = 1;
+    google.protobuf.Timestamp date = 2;
+}
+
+message UpdateWorkCenterCapacityRequest {
+    string work_center_id = 1;
+    google.protobuf.Timestamp date = 2;
+    double available_capacity = 3;
+    repeated CapacitySlot slots = 4;
+}
+
+message GetCapacityOverviewRequest {
+    string plant = 1;
+    common.v1.DateRange date_range = 2;
+    repeated string work_center_ids = 3;
+}
+
+message GetCapacityOverviewResponse {
+    repeated WorkCenterCapacity capacities = 1;
+    CapacitySummary summary = 2;
+}
+
+message CapacitySummary {
+    double total_available = 1;
+    double total_planned = 2;
+    double total_remaining = 3;
+    double average_utilization = 4;
+    int32 overloaded_work_centers = 5;
+    int32 underutilized_work_centers = 6;
+}
+
+message CreateShiftRequest {
+    string code = 1;
+    string name = 2;
+    string plant = 3;
+    google.protobuf.Timestamp start_time = 4;
+    google.protobuf.Timestamp end_time = 5;
+    repeated ShiftBreak breaks = 6;
+    repeated int32 working_days = 7;
+}
+
+message GetShiftRequest {
+    string id = 1;
+}
+
+message UpdateShiftRequest {
+    string id = 1;
+    string name = 2;
+    google.protobuf.Timestamp start_time = 3;
+    google.protobuf.Timestamp end_time = 4;
+    repeated ShiftBreak breaks = 5;
+    repeated int32 working_days = 6;
+    common.v1.Status status = 7;
+}
+
+message ListShiftsRequest {
+    string plant = 1;
+    common.v1.Status status = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message ListShiftsResponse {
+    repeated Shift shifts = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateWorkQueueRequest {
+    string work_center_id = 1;
+    google.protobuf.Timestamp date = 2;
+    repeated WorkQueueItemInput items = 3;
+}
+
+message WorkQueueItemInput {
+    string production_order_id = 1;
+    string operation_id = 2;
+    int32 sequence = 3;
+    string assigned_operator = 4;
+}
+
+message GetWorkQueueRequest {
+    string work_center_id = 1;
+    google.protobuf.Timestamp date = 2;
+}
+
+message UpdateWorkQueueSequenceRequest {
+    string work_queue_id = 1;
+    repeated WorkQueueSequenceUpdate updates = 2;
+}
+
+message WorkQueueSequenceUpdate {
+    string item_id = 1;
+    int32 new_sequence = 2;
+}
+
+message GetOperatorWorkQueueRequest {
+    string operator_id = 1;
+    google.protobuf.Timestamp date = 2;
+}
+
+message GetOperatorWorkQueueResponse {
+    string operator_id = 1;
+    string operator_name = 2;
+    repeated WorkQueueItem items = 3;
+    WorkQueueItem current_item = 4;
+}
+
+message StartOperationRequest {
+    string production_order_id = 1;
+    string operation_id = 2;
+    string work_center_id = 3;
+    string operator_id = 4;
+}
+
+message PauseOperationRequest {
+    string execution_id = 1;
+    string reason = 2;
+}
+
+message ResumeOperationRequest {
+    string execution_id = 1;
+}
+
+message CompleteOperationRequest {
+    string execution_id = 1;
+    common.v1.Quantity quantity_produced = 2;
+    common.v1.Quantity quantity_scrapped = 3;
+    string notes = 4;
+}
+
+message GetOperationExecutionRequest {
+    string id = 1;
+}
+
+message RecordDowntimeRequest {
+    string work_center_id = 1;
+    string machine_id = 2;
+    google.protobuf.Timestamp start_time = 3;
+    google.protobuf.Timestamp end_time = 4;
+    DowntimeType type = 5;
+    DowntimeCategory category = 6;
+    string reason_code = 7;
+    string reason_description = 8;
+    string production_order_id = 9;
+    string resolution = 10;
+}
+
+message GetDowntimeRecordsRequest {
+    string work_center_id = 1;
+    string machine_id = 2;
+    common.v1.DateRange date_range = 3;
+    DowntimeCategory category = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message GetDowntimeRecordsResponse {
+    repeated DowntimeRecord records = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetDowntimeAnalysisRequest {
+    string plant = 1;
+    string work_center_id = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetDowntimeAnalysisResponse {
+    double total_downtime_hours = 1;
+    double planned_downtime_hours = 2;
+    double unplanned_downtime_hours = 3;
+    double mtbf_hours = 4;
+    double mttr_hours = 5;
+    repeated DowntimeByCategory by_category = 6;
+    repeated DowntimeByReason by_reason = 7;
+    repeated DowntimeTrend trend = 8;
+}
+
+message DowntimeByCategory {
+    string category = 1;
+    double hours = 2;
+    int32 occurrences = 3;
+    double percentage = 4;
+}
+
+message DowntimeByReason {
+    string reason_code = 1;
+    string reason_description = 2;
+    double hours = 3;
+    int32 occurrences = 4;
+}
+
+message DowntimeTrend {
+    google.protobuf.Timestamp date = 1;
+    double planned_hours = 2;
+    double unplanned_hours = 3;
+    double total_hours = 4;
+}
+
+message GetShopFloorDashboardRequest {
+    string plant = 1;
+}
+
+message GetOEEMetricsRequest {
+    string work_center_id = 1;
+    common.v1.DateRange date_range = 2;
+    string granularity = 3;
+}
+
+// Auto-generated Response messages
+message CreateWorkCenterResponse {
+    WorkCenter work_center = 1;
+}
+
+message GetWorkCenterResponse {
+    WorkCenter work_center = 1;
+}
+
+message UpdateWorkCenterResponse {
+    WorkCenter work_center = 1;
+}
+
+message GetWorkCenterCapacityResponse {
+    WorkCenterCapacity work_center_capacity = 1;
+}
+
+message UpdateWorkCenterCapacityResponse {
+    WorkCenterCapacity work_center_capacity = 1;
+}
+
+message CreateShiftResponse {
+    Shift shift = 1;
+}
+
+message GetShiftResponse {
+    Shift shift = 1;
+}
+
+message UpdateShiftResponse {
+    Shift shift = 1;
+}
+
+message CreateWorkQueueResponse {
+    WorkQueue work_queue = 1;
+}
+
+message GetWorkQueueResponse {
+    WorkQueue work_queue = 1;
+}
+
+message UpdateWorkQueueSequenceResponse {
+    WorkQueue work_queue = 1;
+}
+
+message StartOperationResponse {
+    OperationExecution operation_execution = 1;
+}
+
+message PauseOperationResponse {
+    OperationExecution operation_execution = 1;
+}
+
+message ResumeOperationResponse {
+    OperationExecution operation_execution = 1;
+}
+
+message CompleteOperationResponse {
+    OperationExecution operation_execution = 1;
+}
+
+message GetOperationExecutionResponse {
+    OperationExecution operation_execution = 1;
+}
+
+message RecordDowntimeResponse {
+    DowntimeRecord downtime_record = 1;
+}
+
+message GetShopFloorDashboardResponse {
+    ShopFloorDashboard shop_floor_dashboard = 1;
+}
+
+message GetOEEMetricsResponse {
+    OEEMetrics o_e_e_metrics = 1;
+}

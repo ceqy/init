@@ -1,0 +1,536 @@
+syntax = "proto3";
+
+package cs.cb.v1;
+
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/base.proto";
+
+service CaseManagementService {
+    rpc CreateCase(CreateCaseRequest) returns (CreateCaseResponse);
+    rpc GetCase(GetCaseRequest) returns (GetCaseResponse);
+    rpc UpdateCase(UpdateCaseRequest) returns (UpdateCaseResponse);
+    rpc ListCases(ListCasesRequest) returns (ListCasesResponse);
+
+    rpc AssignCase(AssignCaseRequest) returns (AssignCaseResponse);
+    rpc EscalateCase(EscalateCaseRequest) returns (EscalateCaseResponse);
+    rpc ResolveCase(ResolveCaseRequest) returns (ResolveCaseResponse);
+    rpc CloseCase(CloseCaseRequest) returns (CloseCaseResponse);
+    rpc ReopenCase(ReopenCaseRequest) returns (ReopenCaseResponse);
+
+    rpc AddCaseNote(AddCaseNoteRequest) returns (AddCaseNoteResponse);
+    rpc GetCaseNotes(GetCaseNotesRequest) returns (GetCaseNotesResponse);
+
+    rpc AddCaseAttachment(AddCaseAttachmentRequest) returns (AddCaseAttachmentResponse);
+    rpc GetCaseAttachments(GetCaseAttachmentsRequest) returns (GetCaseAttachmentsResponse);
+
+    rpc LinkCaseToOrder(LinkCaseToOrderRequest) returns (LinkCaseToOrderResponse);
+    rpc LinkCaseToProduct(LinkCaseToProductRequest) returns (LinkCaseToProductResponse);
+
+    rpc GetCaseHistory(GetCaseHistoryRequest) returns (GetCaseHistoryResponse);
+    rpc GetCustomerCases(GetCustomerCasesRequest) returns (GetCustomerCasesResponse);
+
+    rpc CreateCaseTemplate(CreateCaseTemplateRequest) returns (CreateCaseTemplateResponse);
+    rpc GetCaseTemplate(GetCaseTemplateRequest) returns (GetCaseTemplateResponse);
+    rpc ListCaseTemplates(ListCaseTemplatesRequest) returns (ListCaseTemplatesResponse);
+
+    rpc GetCaseMetrics(GetCaseMetricsRequest) returns (GetCaseMetricsResponse);
+    rpc GetAgentPerformance(GetAgentPerformanceRequest) returns (GetAgentPerformanceResponse);
+}
+
+message Case {
+    string id = 1;
+    string case_number = 2;
+    string subject = 3;
+    string description = 4;
+    string company_code = 5;
+    string customer_id = 6;
+    string customer_name = 7;
+    string contact_id = 8;
+    string contact_name = 9;
+    string contact_email = 10;
+    string contact_phone = 11;
+    CaseType type = 12;
+    CaseCategory category = 13;
+    string subcategory = 14;
+    CasePriority priority = 15;
+    CaseSeverity severity = 16;
+    CaseStatus status = 17;
+    CaseOrigin origin = 18;
+    string assigned_to = 19;
+    string assigned_team = 20;
+    string escalated_to = 21;
+    int32 escalation_level = 22;
+    google.protobuf.Timestamp created_at = 23;
+    google.protobuf.Timestamp first_response_at = 24;
+    google.protobuf.Timestamp resolved_at = 25;
+    google.protobuf.Timestamp closed_at = 26;
+    google.protobuf.Timestamp due_date = 27;
+    string resolution = 28;
+    string resolution_code = 29;
+    double satisfaction_score = 30;
+    string feedback = 31;
+    repeated string tags = 32;
+    repeated CaseRelatedObject related_objects = 33;
+    string parent_case_id = 34;
+    common.v1.AuditInfo audit_info = 35;
+}
+
+enum CaseType {
+    CASE_TYPE_UNSPECIFIED = 0;
+    CASE_TYPE_INQUIRY = 1;
+    CASE_TYPE_COMPLAINT = 2;
+    CASE_TYPE_REQUEST = 3;
+    CASE_TYPE_INCIDENT = 4;
+    CASE_TYPE_PROBLEM = 5;
+    CASE_TYPE_FEEDBACK = 6;
+}
+
+enum CaseCategory {
+    CASE_CATEGORY_UNSPECIFIED = 0;
+    CASE_CATEGORY_PRODUCT = 1;
+    CASE_CATEGORY_ORDER = 2;
+    CASE_CATEGORY_DELIVERY = 3;
+    CASE_CATEGORY_BILLING = 4;
+    CASE_CATEGORY_TECHNICAL = 5;
+    CASE_CATEGORY_ACCOUNT = 6;
+    CASE_CATEGORY_OTHER = 7;
+}
+
+enum CasePriority {
+    CASE_PRIORITY_UNSPECIFIED = 0;
+    CASE_PRIORITY_LOW = 1;
+    CASE_PRIORITY_MEDIUM = 2;
+    CASE_PRIORITY_HIGH = 3;
+    CASE_PRIORITY_CRITICAL = 4;
+}
+
+enum CaseSeverity {
+    CASE_SEVERITY_UNSPECIFIED = 0;
+    CASE_SEVERITY_MINOR = 1;
+    CASE_SEVERITY_MODERATE = 2;
+    CASE_SEVERITY_MAJOR = 3;
+    CASE_SEVERITY_CRITICAL = 4;
+}
+
+enum CaseStatus {
+    CASE_STATUS_UNSPECIFIED = 0;
+    CASE_STATUS_NEW = 1;
+    CASE_STATUS_ASSIGNED = 2;
+    CASE_STATUS_IN_PROGRESS = 3;
+    CASE_STATUS_PENDING_CUSTOMER = 4;
+    CASE_STATUS_PENDING_INTERNAL = 5;
+    CASE_STATUS_ESCALATED = 6;
+    CASE_STATUS_RESOLVED = 7;
+    CASE_STATUS_CLOSED = 8;
+    CASE_STATUS_REOPENED = 9;
+}
+
+enum CaseOrigin {
+    CASE_ORIGIN_UNSPECIFIED = 0;
+    CASE_ORIGIN_PHONE = 1;
+    CASE_ORIGIN_EMAIL = 2;
+    CASE_ORIGIN_WEB = 3;
+    CASE_ORIGIN_CHAT = 4;
+    CASE_ORIGIN_SOCIAL = 5;
+    CASE_ORIGIN_INTERNAL = 6;
+}
+
+message CaseRelatedObject {
+    string object_type = 1;
+    string object_id = 2;
+    string object_number = 3;
+    string description = 4;
+}
+
+message CaseNote {
+    string id = 1;
+    string case_id = 2;
+    string content = 3;
+    bool is_internal = 4;
+    string created_by = 5;
+    string created_by_name = 6;
+    google.protobuf.Timestamp created_at = 7;
+}
+
+message CaseAttachment {
+    string id = 1;
+    string case_id = 2;
+    common.v1.Attachment attachment = 3;
+    string uploaded_by = 4;
+    google.protobuf.Timestamp uploaded_at = 5;
+}
+
+message CaseHistoryEntry {
+    string id = 1;
+    string case_id = 2;
+    google.protobuf.Timestamp timestamp = 3;
+    string action = 4;
+    string field_changed = 5;
+    string old_value = 6;
+    string new_value = 7;
+    string changed_by = 8;
+    string changed_by_name = 9;
+}
+
+message CaseTemplate {
+    string id = 1;
+    string code = 2;
+    string name = 3;
+    string description = 4;
+    CaseType type = 5;
+    CaseCategory category = 6;
+    CasePriority default_priority = 7;
+    string default_assigned_team = 8;
+    int32 sla_response_hours = 9;
+    int32 sla_resolution_hours = 10;
+    repeated CaseTemplateTask tasks = 11;
+    string email_template = 12;
+    common.v1.Status status = 13;
+    common.v1.AuditInfo audit_info = 14;
+}
+
+message CaseTemplateTask {
+    int32 sequence = 1;
+    string description = 2;
+    string assigned_role = 3;
+    int32 due_hours = 4;
+}
+
+message CaseMetrics {
+    common.v1.DateRange period = 1;
+    int32 total_cases = 2;
+    int32 new_cases = 3;
+    int32 resolved_cases = 4;
+    int32 closed_cases = 5;
+    int32 open_cases = 6;
+    int32 escalated_cases = 7;
+    double average_resolution_hours = 8;
+    double average_first_response_hours = 9;
+    double sla_compliance_rate = 10;
+    double customer_satisfaction = 11;
+    double first_contact_resolution_rate = 12;
+    repeated CasesByCategory by_category = 13;
+    repeated CasesByPriority by_priority = 14;
+    repeated CasesByStatus by_status = 15;
+}
+
+message CasesByCategory {
+    CaseCategory category = 1;
+    string category_name = 2;
+    int32 count = 3;
+    double percentage = 4;
+}
+
+message CasesByPriority {
+    CasePriority priority = 1;
+    string priority_name = 2;
+    int32 count = 3;
+    double percentage = 4;
+}
+
+message CasesByStatus {
+    CaseStatus status = 1;
+    string status_name = 2;
+    int32 count = 3;
+    double percentage = 4;
+}
+
+message AgentPerformance {
+    string agent_id = 1;
+    string agent_name = 2;
+    common.v1.DateRange period = 3;
+    int32 cases_assigned = 4;
+    int32 cases_resolved = 5;
+    int32 cases_escalated = 6;
+    double average_resolution_hours = 7;
+    double average_first_response_hours = 8;
+    double sla_compliance_rate = 9;
+    double customer_satisfaction = 10;
+    double first_contact_resolution_rate = 11;
+    int32 current_open_cases = 12;
+}
+
+message CreateCaseRequest {
+    string subject = 1;
+    string description = 2;
+    string company_code = 3;
+    string customer_id = 4;
+    string contact_id = 5;
+    string contact_email = 6;
+    string contact_phone = 7;
+    CaseType type = 8;
+    CaseCategory category = 9;
+    string subcategory = 10;
+    CasePriority priority = 11;
+    CaseSeverity severity = 12;
+    CaseOrigin origin = 13;
+    string assigned_to = 14;
+    string assigned_team = 15;
+    repeated string tags = 16;
+    repeated CaseRelatedObjectInput related_objects = 17;
+    string template_id = 18;
+}
+
+message CaseRelatedObjectInput {
+    string object_type = 1;
+    string object_id = 2;
+    string description = 3;
+}
+
+message GetCaseRequest {
+    string id = 1;
+}
+
+message UpdateCaseRequest {
+    string id = 1;
+    string subject = 2;
+    string description = 3;
+    CaseCategory category = 4;
+    string subcategory = 5;
+    CasePriority priority = 6;
+    CaseSeverity severity = 7;
+    repeated string tags = 8;
+    google.protobuf.Timestamp due_date = 9;
+}
+
+message ListCasesRequest {
+    string company_code = 1;
+    string customer_id = 2;
+    CaseType type = 3;
+    CaseCategory category = 4;
+    CasePriority priority = 5;
+    CaseStatus status = 6;
+    string assigned_to = 7;
+    string assigned_team = 8;
+    common.v1.DateRange date_range = 9;
+    string search = 10;
+    common.v1.Pagination pagination = 11;
+}
+
+message ListCasesResponse {
+    repeated Case cases = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message AssignCaseRequest {
+    string id = 1;
+    string assigned_to = 2;
+    string assigned_team = 3;
+    string notes = 4;
+}
+
+message EscalateCaseRequest {
+    string id = 1;
+    string escalated_to = 2;
+    string reason = 3;
+}
+
+message ResolveCaseRequest {
+    string id = 1;
+    string resolution = 2;
+    string resolution_code = 3;
+}
+
+message CloseCaseRequest {
+    string id = 1;
+    string notes = 2;
+}
+
+message ReopenCaseRequest {
+    string id = 1;
+    string reason = 2;
+}
+
+message AddCaseNoteRequest {
+    string case_id = 1;
+    string content = 2;
+    bool is_internal = 3;
+}
+
+message GetCaseNotesRequest {
+    string case_id = 1;
+    bool include_internal = 2;
+    common.v1.Pagination pagination = 3;
+}
+
+message GetCaseNotesResponse {
+    repeated CaseNote notes = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message AddCaseAttachmentRequest {
+    string case_id = 1;
+    bytes content = 2;
+    string filename = 3;
+    string content_type = 4;
+}
+
+message GetCaseAttachmentsRequest {
+    string case_id = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message GetCaseAttachmentsResponse {
+    repeated CaseAttachment attachments = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message LinkCaseToOrderRequest {
+    string case_id = 1;
+    string order_id = 2;
+    string order_type = 3;
+}
+
+message LinkCaseToProductRequest {
+    string case_id = 1;
+    string product_id = 2;
+    string serial_number = 3;
+}
+
+message GetCaseHistoryRequest {
+    string case_id = 1;
+    common.v1.Pagination pagination = 2;
+}
+
+message GetCaseHistoryResponse {
+    repeated CaseHistoryEntry entries = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetCustomerCasesRequest {
+    string customer_id = 1;
+    CaseStatus status = 2;
+    common.v1.DateRange date_range = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message GetCustomerCasesResponse {
+    repeated Case cases = 1;
+    common.v1.PaginationResponse pagination = 2;
+    CustomerCaseSummary summary = 3;
+}
+
+message CustomerCaseSummary {
+    int32 total_cases = 1;
+    int32 open_cases = 2;
+    int32 resolved_cases = 3;
+    double average_satisfaction = 4;
+}
+
+message CreateCaseTemplateRequest {
+    string code = 1;
+    string name = 2;
+    string description = 3;
+    CaseType type = 4;
+    CaseCategory category = 5;
+    CasePriority default_priority = 6;
+    string default_assigned_team = 7;
+    int32 sla_response_hours = 8;
+    int32 sla_resolution_hours = 9;
+    repeated CaseTemplateTask tasks = 10;
+    string email_template = 11;
+}
+
+message GetCaseTemplateRequest {
+    string id = 1;
+}
+
+message ListCaseTemplatesRequest {
+    CaseType type = 1;
+    CaseCategory category = 2;
+    common.v1.Status status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListCaseTemplatesResponse {
+    repeated CaseTemplate templates = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetCaseMetricsRequest {
+    string company_code = 1;
+    string assigned_team = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetCaseMetricsResponse {
+    CaseMetrics metrics = 1;
+    repeated CaseMetricsTrend trend = 2;
+}
+
+message CaseMetricsTrend {
+    string period = 1;
+    int32 new_cases = 2;
+    int32 resolved_cases = 3;
+    double average_resolution_hours = 4;
+    double satisfaction = 5;
+}
+
+message GetAgentPerformanceRequest {
+    string agent_id = 1;
+    string team = 2;
+    common.v1.DateRange date_range = 3;
+}
+
+message GetAgentPerformanceResponse {
+    repeated AgentPerformance agents = 1;
+    AgentPerformance team_average = 2;
+}
+
+// Auto-generated Response messages
+message CreateCaseResponse {
+    Case case = 1;
+}
+
+message GetCaseResponse {
+    Case case = 1;
+}
+
+message UpdateCaseResponse {
+    Case case = 1;
+}
+
+message AssignCaseResponse {
+    Case case = 1;
+}
+
+message EscalateCaseResponse {
+    Case case = 1;
+}
+
+message ResolveCaseResponse {
+    Case case = 1;
+}
+
+message CloseCaseResponse {
+    Case case = 1;
+}
+
+message ReopenCaseResponse {
+    Case case = 1;
+}
+
+message AddCaseNoteResponse {
+    CaseNote case_note = 1;
+}
+
+message AddCaseAttachmentResponse {
+    CaseAttachment case_attachment = 1;
+}
+
+message LinkCaseToOrderResponse {
+    Case case = 1;
+}
+
+message LinkCaseToProductResponse {
+    Case case = 1;
+}
+
+message CreateCaseTemplateResponse {
+    CaseTemplate case_template = 1;
+}
+
+message GetCaseTemplateResponse {
+    CaseTemplate case_template = 1;
+}

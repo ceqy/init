@@ -1,0 +1,665 @@
+syntax = "proto3";
+
+package mf.eng.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/base.proto";
+
+// ============================================================================
+// 工程数据服务 (Engineering Data - BOM + Routing)
+// ============================================================================
+service EngineeringService {
+    // BOM管理
+    rpc CreateBOM(CreateBOMRequest) returns (CreateBOMResponse);
+    rpc GetBOM(GetBOMRequest) returns (GetBOMResponse);
+    rpc UpdateBOM(UpdateBOMRequest) returns (UpdateBOMResponse);
+    rpc DeleteBOM(DeleteBOMRequest) returns (google.protobuf.Empty);
+    rpc ListBOMs(ListBOMsRequest) returns (ListBOMsResponse);
+
+    // BOM项目管理
+    rpc AddBOMItem(AddBOMItemRequest) returns (AddBOMItemResponse);
+    rpc UpdateBOMItem(UpdateBOMItemRequest) returns (UpdateBOMItemResponse);
+    rpc DeleteBOMItem(DeleteBOMItemRequest) returns (google.protobuf.Empty);
+
+    // BOM版本管理
+    rpc CreateBOMVersion(CreateBOMVersionRequest) returns (CreateBOMVersionResponse);
+    rpc ActivateBOMVersion(ActivateBOMVersionRequest) returns (google.protobuf.Empty);
+    rpc GetBOMVersionHistory(GetBOMVersionHistoryRequest) returns (GetBOMVersionHistoryResponse);
+
+    // BOM展开
+    rpc ExplodeBOM(ExplodeBOMRequest) returns (ExplodeBOMResponse);
+    rpc GetBOMWhereUsed(GetBOMWhereUsedRequest) returns (GetBOMWhereUsedResponse);
+
+    // 工艺路线管理
+    rpc CreateRouting(CreateRoutingRequest) returns (CreateRoutingResponse);
+    rpc GetRouting(GetRoutingRequest) returns (GetRoutingResponse);
+    rpc UpdateRouting(UpdateRoutingRequest) returns (UpdateRoutingResponse);
+    rpc DeleteRouting(DeleteRoutingRequest) returns (google.protobuf.Empty);
+    rpc ListRoutings(ListRoutingsRequest) returns (ListRoutingsResponse);
+
+    // 工序管理
+    rpc AddOperation(AddOperationRequest) returns (AddOperationResponse);
+    rpc UpdateOperation(UpdateOperationRequest) returns (UpdateOperationResponse);
+    rpc DeleteOperation(DeleteOperationRequest) returns (google.protobuf.Empty);
+
+    // 工作中心管理
+    rpc CreateWorkCenter(CreateWorkCenterRequest) returns (CreateWorkCenterResponse);
+    rpc GetWorkCenter(GetWorkCenterRequest) returns (GetWorkCenterResponse);
+    rpc UpdateWorkCenter(UpdateWorkCenterRequest) returns (UpdateWorkCenterResponse);
+    rpc DeleteWorkCenter(DeleteWorkCenterRequest) returns (google.protobuf.Empty);
+    rpc ListWorkCenters(ListWorkCentersRequest) returns (ListWorkCentersResponse);
+
+    // 工作中心产能
+    rpc GetWorkCenterCapacity(GetWorkCenterCapacityRequest) returns (GetWorkCenterCapacityResponse);
+    rpc UpdateWorkCenterCapacity(UpdateWorkCenterCapacityRequest) returns (UpdateWorkCenterCapacityResponse);
+}
+
+// ============================================================================
+// 核心实体 - BOM
+// ============================================================================
+
+// BOM (Bill of Material - 物料清单)
+message BOM {
+    string id = 1;                              // BOM ID (UUID)
+    string bom_number = 2;                      // BOM编号
+    string material_id = 3;                     // 物料ID
+    string material_number = 4;                 // 物料编号
+    string plant = 5;                           // 工厂
+    BOMUsage bom_usage = 6;                     // BOM用途
+
+    // 版本信息
+    string version = 7;                         // 版本号
+    BOMStatus status = 8;                       // 状态
+    common.v1.ValidityPeriod validity = 9; // 有效期
+
+    // 基本数据
+    double base_quantity = 10;                  // 基本数量
+    string base_unit = 11;                      // 基本单位
+    string alternative_bom = 12;                // 替代BOM
+
+    // BOM项目
+    repeated BOMItem items = 13;                // BOM项目列表
+
+    // 审计
+    common.v1.AuditInfo audit_info = 14;
+}
+
+// BOM项目
+message BOMItem {
+    string id = 1;                              // BOM项目ID
+    string bom_id = 2;                          // BOM ID
+    int32 item_number = 3;                      // 项目号 (10, 20, 30...)
+
+    // 组件信息
+    string component_material_id = 4;           // 组件物料ID
+    string component_material_number = 5;       // 组件物料编号
+    double quantity = 6;                        // 数量
+    string unit = 7;                            // 单位
+    double scrap_percentage = 8;                // 损耗率 (%)
+
+    // 项目类型
+    BOMItemCategory item_category = 9;          // 项目类别
+    string item_text = 10;                      // 项目文本
+
+    // 采购
+    bool is_purchased = 11;                     // 是否采购件
+    bool is_phantom = 12;                       // 是否虚拟件
+
+    // 位置
+    string installation_point = 13;             // 安装点
+    string assembly_group = 14;                 // 装配组
+
+    // 有效期
+    common.v1.ValidityPeriod validity = 15;
+
+    // 替代组
+    string alternative_item_group = 16;         // 替代项目组
+    int32 alternative_item_priority = 17;       // 替代优先级
+    double alternative_item_strategy = 18;      // 替代策略 (%)
+}
+
+// BOM展开结果
+message BOMExplosion {
+    string material_id = 1;                     // 物料ID
+    string material_number = 2;                 // 物料编号
+    int32 level = 3;                            // 层级 (0=顶层)
+    double quantity = 4;                        // 数量
+    string unit = 5;                            // 单位
+    double total_quantity = 6;                  // 总数量 (考虑父级数量)
+    string path = 7;                            // 路径
+    repeated BOMExplosion children = 8;         // 子项
+}
+
+// ============================================================================
+// 核心实体 - 工艺路线
+// ============================================================================
+
+// 工艺路线 (Routing)
+message Routing {
+    string id = 1;                              // 工艺路线ID (UUID)
+    string routing_number = 2;                  // 工艺路线编号
+    string material_id = 3;                     // 物料ID
+    string material_number = 4;                 // 物料编号
+    string plant = 5;                           // 工厂
+    RoutingType routing_type = 6;               // 工艺路线类型
+
+    // 版本信息
+    string version = 7;                         // 版本号
+    RoutingStatus status = 8;                   // 状态
+    common.v1.ValidityPeriod validity = 9; // 有效期
+
+    // 基本数据
+    double lot_size_from = 10;                  // 批量从
+    double lot_size_to = 11;                    // 批量到
+    string alternative_routing = 12;            // 替代工艺路线
+
+    // 工序
+    repeated Operation operations = 13;         // 工序列表
+
+    // 审计
+    common.v1.AuditInfo audit_info = 14;
+}
+
+// 工序 (Operation)
+message Operation {
+    string id = 1;                              // 工序ID
+    string routing_id = 2;                      // 工艺路线ID
+    int32 operation_number = 3;                 // 工序号 (10, 20, 30...)
+
+    // 工作中心
+    string work_center_id = 4;                  // 工作中心ID
+    string work_center_code = 5;                // 工作中心编码
+    string control_key = 6;                     // 控制键
+
+    // 描述
+    string description = 7;                     // 工序描述
+    string standard_text_key = 8;               // 标准文本键
+
+    // 时间
+    double setup_time = 9;                      // 准备时间 (分钟)
+    double machine_time = 10;                   // 机器时间 (分钟)
+    double labor_time = 11;                     // 人工时间 (分钟)
+    string time_unit = 12;                      // 时间单位
+
+    // 基准数量
+    double base_quantity = 13;                  // 基准数量
+
+    // 工序关系
+    repeated string predecessor_operations = 14; // 前置工序
+    repeated string successor_operations = 15;   // 后续工序
+
+    // 物料消耗 (关联BOM)
+    repeated OperationMaterialAllocation material_allocations = 16;
+
+    // 有效期
+    common.v1.ValidityPeriod validity = 17;
+}
+
+// 工序物料分配
+message OperationMaterialAllocation {
+    string bom_item_id = 1;                     // BOM项目ID
+    string material_id = 2;                     // 物料ID
+    string material_number = 3;                 // 物料编号
+    double quantity = 4;                        // 数量
+    string unit = 5;                            // 单位
+}
+
+// ============================================================================
+// 核心实体 - 工作中心
+// ============================================================================
+
+// 工作中心 (Work Center)
+message WorkCenter {
+    string id = 1;                              // 工作中心ID (UUID)
+    string code = 2;                            // 工作中心编码
+    string name = 3;                            // 工作中心名称
+    common.v1.LocalizedText localized_name = 4; // 多语言名称
+    string plant = 5;                           // 工厂
+
+    // 分类
+    WorkCenterCategory category = 6;            // 工作中心类别
+    string work_center_type = 7;                // 工作中心类型
+
+    // 产能
+    WorkCenterCapacity capacity = 8;            // 产能数据
+
+    // 成本
+    string cost_center = 9;                     // 成本中心
+    common.v1.Money setup_cost_rate = 10;  // 准备成本费率
+    common.v1.Money machine_cost_rate = 11; // 机器成本费率
+    common.v1.Money labor_cost_rate = 12;  // 人工成本费率
+
+    // 日历
+    string factory_calendar = 13;               // 工厂日历
+
+    // 状态
+    common.v1.DataStatus status = 14;      // 状态
+
+    // 审计
+    common.v1.AuditInfo audit_info = 15;
+}
+
+// 工作中心产能
+message WorkCenterCapacity {
+    int32 number_of_machines = 1;               // 机器数量
+    int32 number_of_workers = 2;                // 工人数量
+    double capacity_utilization = 3;            // 产能利用率 (%)
+
+    // 工作时间
+    double operating_hours_per_day = 4;         // 每日工作小时
+    int32 operating_days_per_week = 5;          // 每周工作天数
+    int32 shifts_per_day = 6;                   // 每日班次
+
+    // 效率
+    double efficiency_rate = 7;                 // 效率率 (%)
+    double availability_rate = 8;               // 可用率 (%)
+}
+
+// ============================================================================
+// 枚举
+// ============================================================================
+
+enum BOMUsage {
+    BOM_USAGE_UNSPECIFIED = 0;
+    BOM_USAGE_PRODUCTION = 1;                   // 生产
+    BOM_USAGE_ENGINEERING = 2;                  // 工程
+    BOM_USAGE_COSTING = 3;                      // 成本核算
+    BOM_USAGE_MAINTENANCE = 4;                  // 维护
+    BOM_USAGE_SALES = 5;                        // 销售
+}
+
+enum BOMStatus {
+    BOM_STATUS_UNSPECIFIED = 0;
+    BOM_STATUS_DRAFT = 1;                       // 草稿
+    BOM_STATUS_ACTIVE = 2;                      // 活跃
+    BOM_STATUS_INACTIVE = 3;                    // 停用
+    BOM_STATUS_OBSOLETE = 4;                    // 过时
+}
+
+enum BOMItemCategory {
+    BOM_ITEM_CATEGORY_UNSPECIFIED = 0;
+    BOM_ITEM_CATEGORY_STOCK = 1;                // L - 库存件
+    BOM_ITEM_CATEGORY_NON_STOCK = 2;            // N - 非库存件
+    BOM_ITEM_CATEGORY_TEXT = 3;                 // T - 文本
+    BOM_ITEM_CATEGORY_DOCUMENT = 4;             // D - 文档
+}
+
+enum RoutingType {
+    ROUTING_TYPE_UNSPECIFIED = 0;
+    ROUTING_TYPE_PRODUCTION = 1;                // 生产
+    ROUTING_TYPE_REWORK = 2;                    // 返工
+    ROUTING_TYPE_INSPECTION = 3;                // 检验
+}
+
+enum RoutingStatus {
+    ROUTING_STATUS_UNSPECIFIED = 0;
+    ROUTING_STATUS_DRAFT = 1;                   // 草稿
+    ROUTING_STATUS_ACTIVE = 2;                  // 活跃
+    ROUTING_STATUS_INACTIVE = 3;                // 停用
+    ROUTING_STATUS_OBSOLETE = 4;                // 过时
+}
+
+enum WorkCenterCategory {
+    WORK_CENTER_CATEGORY_UNSPECIFIED = 0;
+    WORK_CENTER_CATEGORY_MACHINE = 1;           // 机器
+    WORK_CENTER_CATEGORY_LABOR = 2;             // 人工
+    WORK_CENTER_CATEGORY_PRODUCTION_LINE = 3;   // 生产线
+    WORK_CENTER_CATEGORY_ASSEMBLY = 4;          // 装配
+}
+
+// ============================================================================
+// 请求/响应消息 - BOM管理
+// ============================================================================
+
+message CreateBOMRequest {
+    string bom_number = 1;                      // 可选,不填则自动生成
+    string material_id = 2;
+    string plant = 3;
+    BOMUsage bom_usage = 4;
+    string version = 5;
+    double base_quantity = 6;
+    string base_unit = 7;
+    common.v1.ValidityPeriod validity = 8;
+    repeated BOMItem items = 9;
+}
+
+message CreateBOMResponse {
+    BOM bom = 1;
+}
+
+message GetBOMRequest {
+    oneof identifier {
+        string id = 1;
+        BOMKey key = 2;
+    }
+}
+
+message BOMKey {
+    string material_id = 1;
+    string plant = 2;
+    BOMUsage bom_usage = 3;
+    string version = 4;
+}
+
+message GetBOMResponse {
+    BOM bom = 1;
+}
+
+message UpdateBOMRequest {
+    string id = 1;
+    double base_quantity = 2;
+    string base_unit = 3;
+    common.v1.ValidityPeriod validity = 4;
+}
+
+message UpdateBOMResponse {
+    BOM bom = 1;
+}
+
+message DeleteBOMRequest {
+    string id = 1;
+}
+
+message ListBOMsRequest {
+    string material_id = 1;
+    string plant = 2;
+    BOMUsage bom_usage = 3;
+    BOMStatus status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListBOMsResponse {
+    repeated BOM boms = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - BOM项目管理
+// ============================================================================
+
+message AddBOMItemRequest {
+    string bom_id = 1;
+    int32 item_number = 2;
+    string component_material_id = 3;
+    double quantity = 4;
+    string unit = 5;
+    double scrap_percentage = 6;
+    BOMItemCategory item_category = 7;
+    common.v1.ValidityPeriod validity = 8;
+}
+
+message AddBOMItemResponse {
+    BOMItem item = 1;
+}
+
+message UpdateBOMItemRequest {
+    string id = 1;
+    double quantity = 2;
+    string unit = 3;
+    double scrap_percentage = 4;
+    common.v1.ValidityPeriod validity = 5;
+}
+
+message UpdateBOMItemResponse {
+    BOMItem item = 1;
+}
+
+message DeleteBOMItemRequest {
+    string id = 1;
+}
+
+// ============================================================================
+// 请求/响应消息 - BOM版本管理
+// ============================================================================
+
+message CreateBOMVersionRequest {
+    string source_bom_id = 1;
+    string new_version = 2;
+    common.v1.ValidityPeriod validity = 3;
+}
+
+message CreateBOMVersionResponse {
+    BOM bom = 1;
+}
+
+message ActivateBOMVersionRequest {
+    string bom_id = 1;
+}
+
+message GetBOMVersionHistoryRequest {
+    string material_id = 1;
+    string plant = 2;
+    BOMUsage bom_usage = 3;
+}
+
+message GetBOMVersionHistoryResponse {
+    repeated BOM versions = 1;
+}
+
+// ============================================================================
+// 请求/响应消息 - BOM展开
+// ============================================================================
+
+message ExplodeBOMRequest {
+    string bom_id = 1;
+    int32 max_level = 2;                        // 最大层级 (0=无限制)
+    double quantity = 3;                        // 数量
+    google.protobuf.Timestamp explosion_date = 4; // 展开日期 (用于有效期检查)
+}
+
+message ExplodeBOMResponse {
+    BOMExplosion explosion = 1;
+}
+
+message GetBOMWhereUsedRequest {
+    string material_id = 1;
+    string plant = 2;
+    int32 max_level = 3;
+}
+
+message GetBOMWhereUsedResponse {
+    repeated BOMWhereUsedResult results = 1;
+}
+
+message BOMWhereUsedResult {
+    string parent_material_id = 1;
+    string parent_material_number = 2;
+    string bom_id = 3;
+    int32 level = 4;
+}
+
+// ============================================================================
+// 请求/响应消息 - 工艺路线管理
+// ============================================================================
+
+message CreateRoutingRequest {
+    string routing_number = 1;                  // 可选,不填则自动生成
+    string material_id = 2;
+    string plant = 3;
+    RoutingType routing_type = 4;
+    string version = 5;
+    double lot_size_from = 6;
+    double lot_size_to = 7;
+    common.v1.ValidityPeriod validity = 8;
+    repeated Operation operations = 9;
+}
+
+message CreateRoutingResponse {
+    Routing routing = 1;
+}
+
+message GetRoutingRequest {
+    oneof identifier {
+        string id = 1;
+        RoutingKey key = 2;
+    }
+}
+
+message RoutingKey {
+    string material_id = 1;
+    string plant = 2;
+    RoutingType routing_type = 3;
+    string version = 4;
+}
+
+message GetRoutingResponse {
+    Routing routing = 1;
+}
+
+message UpdateRoutingRequest {
+    string id = 1;
+    double lot_size_from = 2;
+    double lot_size_to = 3;
+    common.v1.ValidityPeriod validity = 4;
+}
+
+message UpdateRoutingResponse {
+    Routing routing = 1;
+}
+
+message DeleteRoutingRequest {
+    string id = 1;
+}
+
+message ListRoutingsRequest {
+    string material_id = 1;
+    string plant = 2;
+    RoutingType routing_type = 3;
+    RoutingStatus status = 4;
+    common.v1.Pagination pagination = 5;
+}
+
+message ListRoutingsResponse {
+    repeated Routing routings = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 工序管理
+// ============================================================================
+
+message AddOperationRequest {
+    string routing_id = 1;
+    int32 operation_number = 2;
+    string work_center_id = 3;
+    string control_key = 4;
+    string description = 5;
+    double setup_time = 6;
+    double machine_time = 7;
+    double labor_time = 8;
+    double base_quantity = 9;
+    common.v1.ValidityPeriod validity = 10;
+}
+
+message AddOperationResponse {
+    Operation operation = 1;
+}
+
+message UpdateOperationRequest {
+    string id = 1;
+    string description = 2;
+    double setup_time = 3;
+    double machine_time = 4;
+    double labor_time = 5;
+    double base_quantity = 6;
+    common.v1.ValidityPeriod validity = 7;
+}
+
+message UpdateOperationResponse {
+    Operation operation = 1;
+}
+
+message DeleteOperationRequest {
+    string id = 1;
+}
+
+// ============================================================================
+// 请求/响应消息 - 工作中心管理
+// ============================================================================
+
+message CreateWorkCenterRequest {
+    string code = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    string plant = 4;
+    WorkCenterCategory category = 5;
+    string work_center_type = 6;
+    WorkCenterCapacity capacity = 7;
+    string cost_center = 8;
+    common.v1.Money setup_cost_rate = 9;
+    common.v1.Money machine_cost_rate = 10;
+    common.v1.Money labor_cost_rate = 11;
+    string factory_calendar = 12;
+}
+
+message CreateWorkCenterResponse {
+    WorkCenter work_center = 1;
+}
+
+message GetWorkCenterRequest {
+    oneof identifier {
+        string id = 1;
+        WorkCenterKey key = 2;
+    }
+}
+
+message WorkCenterKey {
+    string code = 1;
+    string plant = 2;
+}
+
+message GetWorkCenterResponse {
+    WorkCenter work_center = 1;
+}
+
+message UpdateWorkCenterRequest {
+    string id = 1;
+    string name = 2;
+    common.v1.LocalizedText localized_name = 3;
+    WorkCenterCapacity capacity = 4;
+    common.v1.Money setup_cost_rate = 5;
+    common.v1.Money machine_cost_rate = 6;
+    common.v1.Money labor_cost_rate = 7;
+}
+
+message UpdateWorkCenterResponse {
+    WorkCenter work_center = 1;
+}
+
+message DeleteWorkCenterRequest {
+    string id = 1;
+}
+
+message ListWorkCentersRequest {
+    string plant = 1;
+    WorkCenterCategory category = 2;
+    common.v1.DataStatus status = 3;
+    common.v1.Pagination pagination = 4;
+}
+
+message ListWorkCentersResponse {
+    repeated WorkCenter work_centers = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// 请求/响应消息 - 工作中心产能
+// ============================================================================
+
+message GetWorkCenterCapacityRequest {
+    string work_center_id = 1;
+}
+
+message GetWorkCenterCapacityResponse {
+    WorkCenterCapacity capacity = 1;
+}
+
+message UpdateWorkCenterCapacityRequest {
+    string work_center_id = 1;
+    WorkCenterCapacity capacity = 2;
+}
+
+message UpdateWorkCenterCapacityResponse {
+    WorkCenterCapacity capacity = 1;
+}
