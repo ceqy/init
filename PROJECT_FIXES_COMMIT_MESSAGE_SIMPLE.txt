@@ -1,3 +1,0 @@
-fix: 修复 WebSocket 认证配置及消除编译警告
-
-同步 Gateway 与 IAM 的 JWT issuer 配置，修复 Benchmark 编译错误，并清理未使用的代码警告。

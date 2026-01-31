@@ -1,8 +1,0 @@
-fix: 修复构建警告、Benchmark 编译及 WebSocket 认证问题
-
-- **Gateway**: 修复 WebSocket 认证失败问题，统一 Gateway 与 IAM 服务的 JWT issuer 配置（从 `cuba-gateway` 改为 `cuba-iam`）。
-- **Benchmarks**: 修复 `auth_benchmark.rs` 中的编译错误，修正导入路径及函数引用 (`generate_codes`)。
-- **清理**: 消除编译警告，为未使用的实现结构体添加 `#[allow(dead_code)]` (`Call<T>`, `PostgresTenantRepository`)。
-- **重构**: 优化 TODO 注释，将其转换为更具操作性的 FUTURE/NOTE 项并补充上下文。
-
-此提交确保项目零警告编译，性能测试可运行，且 Gateway 能正确验证来自 IAM 服务的 Token。
