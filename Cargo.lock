@@ -974,6 +974,7 @@ dependencies = [
  "chrono",
  "clickhouse",
  "cuba-adapter-kafka",
+ "cuba-common",
  "cuba-errors",
  "cuba-ports",
  "futures",
@@ -1009,6 +1010,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
+ "cuba-common",
  "cuba-errors",
  "cuba-ports",
  "futures-util",
@@ -1043,6 +1045,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
+ "cuba-common",
  "cuba-errors",
  "cuba-ports",
  "futures",
@@ -1102,9 +1105,12 @@ dependencies = [
 name = "cuba-common"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "derive_more",
  "serde",
+ "tokio",
+ "tracing",
  "uuid",
 ]
 

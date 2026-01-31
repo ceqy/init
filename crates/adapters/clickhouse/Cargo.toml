@@ -6,6 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+cuba-common = { workspace = true }
 cuba-errors = { workspace = true }
 cuba-ports = { workspace = true }
 cuba-adapter-kafka = { workspace = true }

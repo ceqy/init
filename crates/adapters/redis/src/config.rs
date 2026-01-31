@@ -206,64 +206,16 @@ impl RedisConfig {
     }
 }
 
-/// 重试配置
-#[derive(Debug, Clone)]
-pub struct RetryConfig {
-    /// 最大重试次数
-    pub max_attempts: u32,
-    /// 初始延迟
-    pub initial_delay: Duration,
-    /// 最大延迟
-    pub max_delay: Duration,
-    /// 退避乘数
-    pub multiplier: f64,
-}
+/// 重试配置（使用 cuba_common::RetryConfig）
+pub type RetryConfig = cuba_common::RetryConfig;
 
-impl Default for RetryConfig {
-    fn default() -> Self {
-        Self {
-            max_attempts: 3,
-            initial_delay: Duration::from_millis(100),
-            max_delay: Duration::from_secs(5),
-            multiplier: 2.0,
-        }
-    }
-}
-
-impl RetryConfig {
-    /// 创建新的重试配置
-    pub fn new(max_attempts: u32, initial_delay: Duration, max_delay: Duration) -> Self {
-        Self {
-            max_attempts,
-            initial_delay,
-            max_delay,
-            multiplier: 2.0,
-        }
-    }
-
-    /// 设置退避乘数
-    pub fn with_multiplier(mut self, multiplier: f64) -> Self {
-        self.multiplier = multiplier;
-        self
-    }
-
-    /// 从 RedisConfig 创建
-    pub fn from_redis_config(config: &RedisConfig) -> Self {
-        Self {
-            max_attempts: config.retry_max_attempts,
-            initial_delay: config.retry_initial_delay,
-            max_delay: config.retry_max_delay,
-            multiplier: 2.0,
-        }
-    }
-
-    /// 计算第 n 次重试的延迟
-    pub fn delay_for_attempt(&self, attempt: u32) -> Duration {
-        let delay_ms =
-            self.initial_delay.as_millis() as f64 * self.multiplier.powi(attempt as i32);
-        let capped_delay = (delay_ms as u64).min(self.max_delay.as_millis() as u64);
-        Duration::from_millis(capped_delay)
-    }
+/// 从 RedisConfig 创建重试配置
+pub fn retry_config_from_redis(config: &RedisConfig) -> RetryConfig {
+    RetryConfig::new(
+        config.retry_max_attempts,
+        config.retry_initial_delay,
+        config.retry_max_delay,
+    )
 }
 
 #[cfg(test)]
@@ -303,6 +255,17 @@ mod tests {
 
         let config_no_prefix = RedisConfig::new("redis://localhost:6379");
         assert_eq!(config_no_prefix.prefixed_key("user:123"), "user:123");
+    }
+
+    #[test]
+    fn test_retry_config_from_redis() {
+        let config = RedisConfig::new("redis://localhost:6379")
+            .with_retry(5, Duration::from_millis(100), Duration::from_secs(5));
+
+        let retry_config = retry_config_from_redis(&config);
+        assert_eq!(retry_config.max_attempts, 5);
+        assert_eq!(retry_config.initial_delay, Duration::from_millis(100));
+        assert_eq!(retry_config.max_delay, Duration::from_secs(5));
     }
 
     #[test]

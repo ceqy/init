@@ -187,64 +187,16 @@ impl ClickHouseConfig {
     }
 }
 
-/// 重试配置
-#[derive(Debug, Clone)]
-pub struct RetryConfig {
-    /// 最大重试次数
-    pub max_attempts: u32,
-    /// 初始延迟
-    pub initial_delay: Duration,
-    /// 最大延迟
-    pub max_delay: Duration,
-    /// 退避乘数
-    pub multiplier: f64,
-}
+/// 重试配置（使用 cuba_common::RetryConfig）
+pub type RetryConfig = cuba_common::RetryConfig;
 
-impl Default for RetryConfig {
-    fn default() -> Self {
-        Self {
-            max_attempts: 3,
-            initial_delay: Duration::from_millis(100),
-            max_delay: Duration::from_secs(10),
-            multiplier: 2.0,
-        }
-    }
-}
-
-impl RetryConfig {
-    /// 创建新的重试配置
-    pub fn new(max_attempts: u32, initial_delay: Duration, max_delay: Duration) -> Self {
-        Self {
-            max_attempts,
-            initial_delay,
-            max_delay,
-            multiplier: 2.0,
-        }
-    }
-
-    /// 设置退避乘数
-    pub fn with_multiplier(mut self, multiplier: f64) -> Self {
-        self.multiplier = multiplier;
-        self
-    }
-
-    /// 从 ClickHouseConfig 创建
-    pub fn from_clickhouse_config(config: &ClickHouseConfig) -> Self {
-        Self {
-            max_attempts: config.retry_max_attempts,
-            initial_delay: config.retry_initial_delay,
-            max_delay: config.retry_max_delay,
-            multiplier: 2.0,
-        }
-    }
-
-    /// 计算第 n 次重试的延迟
-    pub fn delay_for_attempt(&self, attempt: u32) -> Duration {
-        let delay_ms =
-            self.initial_delay.as_millis() as f64 * self.multiplier.powi(attempt as i32);
-        let capped_delay = (delay_ms as u64).min(self.max_delay.as_millis() as u64);
-        Duration::from_millis(capped_delay)
-    }
+/// 从 ClickHouseConfig 创建重试配置
+pub fn retry_config_from_clickhouse_config(config: &ClickHouseConfig) -> RetryConfig {
+    RetryConfig::new(
+        config.retry_max_attempts,
+        config.retry_initial_delay,
+        config.retry_max_delay,
+    )
 }
 
 /// 批量写入配置

@@ -10,3 +10,9 @@ serde = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 derive_more = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
