@@ -20,7 +20,7 @@ IP 地址不是有效的域名，导致 WebAuthn 验证失败。
 
 ## 解决方案
 
-### 1. 添加 WebAuthn 配置到 cuba-config
+### 1. 添加 WebAuthn 配置到 config
 
 **文件**: `crates/config/src/lib.rs`
 
@@ -59,8 +59,8 @@ rp_origin = "http://localhost:3000"
 #### production.toml
 ```toml
 [webauthn]
-rp_id = "cuba-erp.com"
-rp_origin = "https://cuba-erp.com"
+rp_id = "erp.com"
+rp_origin = "https://erp.com"
 ```
 
 ### 3. 更新 main.rs
@@ -85,18 +85,18 @@ let webauthn_service = Arc::new(
 ### rp_id（Relying Party ID）
 - 必须是有效的域名（不能是 IP 地址）
 - 开发环境：使用 `localhost`
-- 生产环境：使用实际域名（如 `cuba-erp.com`）
+- 生产环境：使用实际域名（如 `erp.com`）
 
 ### rp_origin（Relying Party Origin）
 - 完整的 URL（包括协议）
 - 开发环境：`http://localhost:3000`（前端地址）
-- 生产环境：`https://cuba-erp.com`
+- 生产环境：`https://erp.com`
 
 ### 域名验证规则
 WebAuthn 要求 `rp_id` 必须是 `rp_origin` 的有效域名：
 - ✅ `rp_id: localhost`, `rp_origin: http://localhost:3000`
-- ✅ `rp_id: cuba-erp.com`, `rp_origin: https://cuba-erp.com`
-- ✅ `rp_id: auth.cuba-erp.com`, `rp_origin: https://auth.cuba-erp.com`
+- ✅ `rp_id: erp.com`, `rp_origin: https://erp.com`
+- ✅ `rp_id: auth.erp.com`, `rp_origin: https://auth.erp.com`
 - ❌ `rp_id: 127.0.0.1`, `rp_origin: https://127.0.0.1`（IP 地址）
 - ❌ `rp_id: localhost`, `rp_origin: https://example.com`（域名不匹配）
 

@@ -1,7 +1,7 @@
 //! Command trait 定义
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
+use errors::AppResult;
 
 /// Command trait
 pub trait Command: Send + Sync {

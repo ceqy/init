@@ -2,7 +2,7 @@
 //!
 //! 提供基本的断路器功能：Closed -> Open -> HalfOpen 状态转换
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 

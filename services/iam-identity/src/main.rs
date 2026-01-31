@@ -3,7 +3,7 @@
 
 //! IAM Identity Service - 身份服务入口
 //!
-//! 使用 cuba-bootstrap 统一启动模式
+//! 使用 bootstrap 统一启动模式
 
 mod api;
 mod application;
@@ -28,9 +28,9 @@ use application::handlers::user::{
 };
 use application::listeners::NotificationListener;
 use async_trait::async_trait;
-use cuba_adapter_email::{EmailClient, EmailSender};
-use cuba_adapter_postgres::PostgresOutbox;
-use cuba_bootstrap::{Infrastructure, run_server};
+use adapter_email::{EmailClient, EmailSender};
+use adapter_postgres::PostgresOutbox;
+use bootstrap::{Infrastructure, run_server};
 use domain::repositories::auth::{
     BackupCodeRepository, PasswordResetRepository, SessionRepository, WebAuthnCredentialRepository,
 };
@@ -63,7 +63,7 @@ use infrastructure::persistence::user::{
 };
 use secrecy::ExposeSecret;
 
-use cuba_ports::{CachePort, OutboxPort};
+use ports::{CachePort, OutboxPort};
 use tonic::transport::Server;
 use tonic_reflection::server::Builder as ReflectionBuilder;
 
@@ -76,7 +76,7 @@ impl SmsSender for NoOpSmsSender {
         &self,
         _phone: &str,
         _code: &str,
-    ) -> cuba_errors::AppResult<()> {
+    ) -> errors::AppResult<()> {
         Ok(())
     }
 }
@@ -97,10 +97,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let event_store_publisher: Arc<dyn EventPublisher> = Arc::new(PostgresEventStore::new(pool.clone()));
 
         // 组装 TOTP 服务
-        let totp_service = Arc::new(TotpService::new("Cuba ERP".to_string()));
+        let totp_service = Arc::new(TotpService::new("ERP".to_string()));
 
         // 组装邮件客户端
-        let email_config = cuba_adapter_email::EmailConfig {
+        let email_config = adapter_email::EmailConfig {
             smtp_host: config.email.smtp_host.clone(),
             smtp_port: config.email.smtp_port,
             username: config.email.username.clone(),
@@ -118,7 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // 组装 Redis 事件发布器
         let redis_event_publisher = RedisEventPublisher::new(config.redis.url.expose_secret(), "domain_events")
-            .map_err(|e| cuba_errors::AppError::internal(format!("Failed to connect to Redis: {}", e)))?;
+            .map_err(|e| errors::AppError::internal(format!("Failed to connect to Redis: {}", e)))?;
         let redis_event_publisher: Arc<dyn EventPublisher> = Arc::new(redis_event_publisher);
 
         // 克隆一份用于 Outbox 处理器
@@ -155,11 +155,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let rp_id = config.webauthn.rp_id.clone();
         let rp_origin = config.webauthn.rp_origin
             .parse()
-            .map_err(|e| cuba_errors::AppError::internal(format!("Invalid RP origin: {}", e)))?;
+            .map_err(|e| errors::AppError::internal(format!("Invalid RP origin: {}", e)))?;
 
         let webauthn_service = Arc::new(
             WebAuthnService::new(rp_id, rp_origin, webauthn_credential_repo)
-                .map_err(|e| cuba_errors::AppError::internal(format!("Failed to create WebAuthn service: {}", e)))?,
+                .map_err(|e| errors::AppError::internal(format!("Failed to create WebAuthn service: {}", e)))?,
         );
 
         // 组组 AuthService
@@ -289,7 +289,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .register_encoded_file_descriptor_set(api::grpc::oauth_proto::FILE_DESCRIPTOR_SET)
             .register_encoded_file_descriptor_set(api::grpc::audit_proto::FILE_DESCRIPTOR_SET)
             .build_v1()
-            .map_err(|e| cuba_errors::AppError::internal(format!("Failed to build reflection service: {}", e)))?;
+            .map_err(|e| errors::AppError::internal(format!("Failed to build reflection service: {}", e)))?;
 
         let router = server
             .add_service(AuthServiceServer::new(auth_service))
@@ -314,7 +314,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 方案：我们手动创建一个 shutdown 任务
         let shutdown_token_spawn = shutdown_token.clone();
         tokio::spawn(async move {
-            cuba_bootstrap::shutdown_signal().await;
+            bootstrap::shutdown_signal().await;
             tracing::info!("Shutdown signal received, cancelling background tasks...");
             shutdown_token_spawn.cancel();
         });

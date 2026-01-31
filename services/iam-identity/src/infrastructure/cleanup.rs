@@ -10,7 +10,7 @@ use tracing::{error, info};
 
 use crate::domain::repositories::auth::PasswordResetRepository;
 use crate::domain::repositories::user::{EmailVerificationRepository, PhoneVerificationRepository};
-use cuba_common::TenantId;
+use common::TenantId;
 
 pub struct CleanupTask {
     email_repo: Arc<dyn EmailVerificationRepository>,

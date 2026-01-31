@@ -2,7 +2,7 @@
 
 ## 概述
 
-Cuba ERP 采用多租户架构，支持多个组织（租户）共享同一套系统，同时确保数据完全隔离。
+ERP 采用多租户架构，支持多个组织（租户）共享同一套系统，同时确保数据完全隔离。
 
 ## 租户模型
 
@@ -205,8 +205,8 @@ pub async fn get_user(
 ### 方式 1：子域名
 
 ```
-tenant1.cuba-erp.com
-tenant2.cuba-erp.com
+tenant1.erp.com
+tenant2.erp.com
 ```
 
 从 Host header 提取租户代码：
@@ -223,8 +223,8 @@ pub fn extract_tenant_from_host(host: &str) -> Option<String> {
 ### 方式 2：路径前缀
 
 ```
-cuba-erp.com/tenant1/api/...
-cuba-erp.com/tenant2/api/...
+erp.com/tenant1/api/...
+erp.com/tenant2/api/...
 ```
 
 从路径提取租户代码：

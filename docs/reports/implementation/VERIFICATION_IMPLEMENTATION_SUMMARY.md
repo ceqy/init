@@ -257,7 +257,7 @@ phone_max_daily_sends = 5
 provider = "aliyun"
 access_key_id = "your_access_key_id"
 access_key_secret = "your_access_key_secret"
-sign_name = "Cuba ERP"
+sign_name = "ERP"
 template_code = "SMS_123456789"
 ```
 
@@ -391,7 +391,7 @@ phone_verification_service.cleanup_expired(&tenant_id).await?;
 ### 代码质量
 - **测试覆盖**: 23 个测试
 - **文档**: 完整的实施计划和总结
-- **代码规范**: 遵循 DDD 和 CUBA 架构规范
+- **代码规范**: 遵循 DDD 和 ERP 架构规范
 - **安全性**: 多层安全措施
 - **可维护性**: 清晰的分层架构
 

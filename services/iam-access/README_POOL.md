@@ -256,7 +256,7 @@ if status.read_size > 0 {
 
 - [PostgreSQL 连接池最佳实践](https://wiki.postgresql.org/wiki/Number_Of_Database_Connections)
 - [SQLx 文档](https://docs.rs/sqlx/latest/sqlx/)
-- [Cuba ERP 架构文档](../../docs/architecture.md)
+- [ERP 架构文档](../../docs/architecture.md)
 
 ## 🤝 贡献
 

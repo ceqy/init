@@ -1,7 +1,7 @@
 //! Query trait 定义
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
+use errors::AppResult;
 
 /// Query trait
 pub trait Query: Send + Sync {

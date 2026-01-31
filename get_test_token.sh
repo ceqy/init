@@ -29,7 +29,7 @@ else
     if [ -n "$USER_ID" ] && [ "$USER_ID" != "null" ]; then
         echo "New user registered with ID: $USER_ID"
         echo "Activating user via database (gRPC activation requires auth)..."
-        docker exec cuba-postgres psql -U postgres -d cuba -c "UPDATE users SET status = 'Active' WHERE id = '$USER_ID';" > /dev/null 2>&1
+        docker exec postgres psql -U postgres -d cuba -c "UPDATE users SET status = 'Active' WHERE id = '$USER_ID';" > /dev/null 2>&1
         if [ $? -eq 0 ]; then
             echo "User activated successfully."
         else
@@ -50,7 +50,7 @@ LOGIN_RESP=$(grpcurl -plaintext -d '{
 # Check if login failed due to inactive account
 if echo "$LOGIN_RESP" | grep -q "User account is not active"; then
     echo "User account is not active. Attempting to activate via database..."
-    docker exec cuba-postgres psql -U postgres -d cuba -c "UPDATE users SET status = 'Active' WHERE username = '$USERNAME';" > /dev/null 2>&1
+    docker exec postgres psql -U postgres -d cuba -c "UPDATE users SET status = 'Active' WHERE username = '$USERNAME';" > /dev/null 2>&1
     if [ $? -eq 0 ]; then
         echo "User activated. Retrying login..."
         LOGIN_RESP=$(grpcurl -plaintext -d '{

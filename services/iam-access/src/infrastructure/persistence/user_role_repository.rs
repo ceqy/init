@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use cuba_common::{AuditInfo, TenantId};
-use cuba_errors::{AppError, AppResult};
+use common::{AuditInfo, TenantId};
+use errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -87,7 +87,7 @@ impl UserRoleRepository for PostgresUserRoleRepository {
 
         if let Some(cache) = &self.auth_cache {
             let _ = cache
-                .invalidate_user_roles(tenant_id, &cuba_common::UserId::from_uuid(user_uuid))
+                .invalidate_user_roles(tenant_id, &common::UserId::from_uuid(user_uuid))
                 .await;
         }
 
@@ -118,7 +118,7 @@ impl UserRoleRepository for PostgresUserRoleRepository {
 
         if let Some(cache) = &self.auth_cache {
             let _ = cache
-                .invalidate_user_roles(tenant_id, &cuba_common::UserId::from_uuid(user_uuid))
+                .invalidate_user_roles(tenant_id, &common::UserId::from_uuid(user_uuid))
                 .await;
         }
 
@@ -129,7 +129,7 @@ impl UserRoleRepository for PostgresUserRoleRepository {
         let user_uuid: Uuid = user_id
             .parse()
             .map_err(|_| AppError::validation("Invalid user_id"))?;
-        let user_id_obj = cuba_common::UserId::from_uuid(user_uuid);
+        let user_id_obj = common::UserId::from_uuid(user_uuid);
 
         if let Some(cache) = &self.auth_cache
             && let Ok(Some(roles)) = cache.get_user_roles(tenant_id, &user_id_obj).await
@@ -303,7 +303,7 @@ impl UserRoleRepository for PostgresUserRoleRepository {
 
         if let Some(cache) = &self.auth_cache {
             let _ = cache
-                .invalidate_user_roles(tenant_id, &cuba_common::UserId::from_uuid(user_uuid))
+                .invalidate_user_roles(tenant_id, &common::UserId::from_uuid(user_uuid))
                 .await;
         }
 
@@ -425,9 +425,9 @@ impl RoleRow {
             permissions,
             audit_info: AuditInfo {
                 created_at: self.created_at,
-                created_by: self.created_by.map(cuba_common::UserId::from_uuid),
+                created_by: self.created_by.map(common::UserId::from_uuid),
                 updated_at: self.updated_at,
-                updated_by: self.updated_by.map(cuba_common::UserId::from_uuid),
+                updated_by: self.updated_by.map(common::UserId::from_uuid),
             },
         }
     }

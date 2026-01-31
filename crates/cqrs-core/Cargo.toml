@@ -1,11 +1,11 @@
 [package]
-name = "cuba-cqrs-core"
+name = "cqrs-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-cuba-errors = { workspace = true }
+errors = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }

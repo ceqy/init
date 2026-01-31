@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use cuba_errors::AppResult;
+use errors::AppResult;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

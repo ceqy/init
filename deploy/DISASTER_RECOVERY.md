@@ -2,7 +2,7 @@
 
 ## 📋 概述
 
-本手册定义了 Cuba ERP 系统的灾难恢复策略、流程和步骤。
+本手册定义了 ERP 系统的灾难恢复策略、流程和步骤。
 
 ### RTO/RPO 目标
 
@@ -34,7 +34,7 @@
 curl http://localhost:8500/v1/health/service/iam-access | jq '.[] | select(.Checks[].Status != "passing")'
 
 # 2. 查看容器日志
-docker logs cuba-iam-access --tail 100
+docker logs iam-access --tail 100
 
 # 3. 重启故障实例
 docker-compose -f deploy/docker/docker-compose.envoy.yml restart iam-access
@@ -73,14 +73,14 @@ docker volume rm cuba_postgres_data
 docker-compose -f deploy/docker/docker-compose.envoy.yml up -d postgres
 
 # 5. 等待数据库就绪
-until docker exec cuba-postgres pg_isready -U postgres; do sleep 1; done
+until docker exec postgres pg_isready -U postgres; do sleep 1; done
 
 # 6. 恢复最新备份
 LATEST_BACKUP=$(ls -t /backups/postgres/cuba_*.sql.gz | head -1)
 ./scripts/restore-database.sh "$LATEST_BACKUP"
 
 # 7. 验证数据完整性
-docker exec cuba-postgres psql -U postgres -d cuba -c "SELECT COUNT(*) FROM users;"
+docker exec postgres psql -U postgres -d cuba -c "SELECT COUNT(*) FROM users;"
 
 # 8. 重启应用服务
 docker-compose -f deploy/docker/docker-compose.envoy.yml up -d gateway iam-access
@@ -95,7 +95,7 @@ curl http://localhost:8080/health
 
 ```bash
 # 1. 提升从库为主库
-docker exec cuba-postgres-slave pg_ctl promote
+docker exec postgres-slave pg_ctl promote
 
 # 2. 更新应用配置指向新主库
 export DATABASE_URL="postgresql://postgres:postgres@postgres-slave:5432/cuba"
@@ -184,15 +184,15 @@ curl http://localhost:8500/v1/status/peers
 
 # 2. 在备用数据中心启动服务
 ssh backup-dc-server
-cd /opt/cuba-erp
+cd /opt/erp
 ./deploy/docker/start-envoy.sh
 
 # 3. 从远程备份恢复数据
-aws s3 sync s3://cuba-backups/latest/ /backups/
+aws s3 sync s3://backups/latest/ /backups/
 ./scripts/restore-all.sh
 
 # 4. 验证服务可用性
-curl https://api.cuba-erp.com/health
+curl https://api.erp.com/health
 
 # 5. 通知用户服务已恢复
 ./scripts/send-notification.sh "服务已切换到备用数据中心"
@@ -217,7 +217,7 @@ curl https://api.cuba-erp.com/health
 ./scripts/create-test-env.sh
 
 # 2. 模拟故障
-docker stop cuba-iam-access
+docker stop iam-access
 
 # 3. 执行恢复流程
 ./scripts/recover-service.sh iam-access
@@ -304,16 +304,16 @@ SELECT COUNT(*) FROM users WHERE email IS NULL;  -- 应该为 0
 # /etc/crontab
 
 # 每天凌晨 2 点备份数据库
-0 2 * * * /opt/cuba-erp/scripts/backup-database.sh
+0 2 * * * /opt/erp/scripts/backup-database.sh
 
 # 每天凌晨 3 点备份 Consul 数据
-0 3 * * * /opt/cuba-erp/scripts/backup-consul.sh
+0 3 * * * /opt/erp/scripts/backup-consul.sh
 
 # 每周日凌晨 4 点备份配置文件
-0 4 * * 0 /opt/cuba-erp/scripts/backup-configs.sh
+0 4 * * 0 /opt/erp/scripts/backup-configs.sh
 
 # 每天凌晨 5 点上传备份到远程存储
-0 5 * * * /opt/cuba-erp/scripts/upload-backups.sh
+0 5 * * * /opt/erp/scripts/upload-backups.sh
 ```
 
 ### 备份验证
@@ -361,7 +361,7 @@ dropdb cuba_test
 
 ```bash
 # P0 故障通知
-Subject: 🚨 [P0] Cuba ERP 核心服务故障
+Subject: 🚨 [P0] ERP 核心服务故障
 
 故障时间: 2024-01-29 14:30:00
 影响范围: 所有用户无法登录

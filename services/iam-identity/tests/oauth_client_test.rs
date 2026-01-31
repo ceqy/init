@@ -1,6 +1,6 @@
 //! OAuth 客户端实体测试
 
-use cuba_common::{TenantId, UserId};
+use common::{TenantId, UserId};
 use iam_identity::domain::oauth::{GrantType, OAuthClient, OAuthClientType};
 
 /// 创建测试 OAuth 客户端

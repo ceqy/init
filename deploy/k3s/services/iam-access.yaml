@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: iam-access
-  namespace: cuba-system
+  namespace: system
   labels:
     app: iam-access
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: iam-access
-          image: cuba-iam-access:latest # 修改为您的私有仓库地址
+          image: iam-access:latest # 修改为您的私有仓库地址
           ports:
             - containerPort: 50051
           env:
@@ -47,7 +47,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: iam-access
-  namespace: cuba-system
+  namespace: system
 spec:
   selector:
     app: iam-access

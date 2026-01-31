@@ -1,7 +1,7 @@
 //! 获取用户查询
 
-use cuba_common::{TenantId, UserId};
-use cuba_cqrs_core::Query;
+use common::{TenantId, UserId};
+use cqrs_core::Query;
 
 /// 通过 ID 获取用户查询
 #[derive(Debug, Clone)]

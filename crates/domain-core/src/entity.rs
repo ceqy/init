@@ -1,6 +1,6 @@
 //! 实体基础 trait
 
-use cuba_common::AuditInfo;
+use common::AuditInfo;
 
 /// 实体 trait
 pub trait Entity {

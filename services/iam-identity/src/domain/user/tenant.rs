@@ -1,8 +1,8 @@
 //! 租户聚合根
 
 use chrono::{DateTime, Utc};
-use cuba_common::{AuditInfo, TenantId};
-use cuba_domain_core::{AggregateRoot, Entity};
+use common::{AuditInfo, TenantId};
+use domain_core::{AggregateRoot, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::value_objects::{PasswordPolicy, TenantSettings};

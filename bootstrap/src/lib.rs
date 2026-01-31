@@ -1,4 +1,4 @@
-//! cuba-bootstrap - 统一服务启动骨架
+//! bootstrap - 统一服务启动骨架
 //!
 //! 所有服务复用的启动逻辑，包括：
 //! - 配置加载
@@ -13,7 +13,7 @@
 //! # 使用方式
 //!
 //! ```ignore
-//! use cuba_bootstrap::{run, Infrastructure};
+//! use bootstrap::{run, Infrastructure};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {

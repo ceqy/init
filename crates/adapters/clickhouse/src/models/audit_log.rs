@@ -3,7 +3,7 @@
 //! ClickHouse 审计日志表对应的数据结构
 
 use clickhouse::Row;
-use cuba_ports::AuditLogEntry;
+use ports::AuditLogEntry;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

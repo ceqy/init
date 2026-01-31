@@ -223,13 +223,13 @@ RATE_LIMIT_MAX_REQUESTS=100    # 窗口内最大请求数
 ### 1. 测试 JWT 密钥验证
 ```bash
 # 应该失败（密钥太短）
-JWT_SECRET=short cargo run --bin cuba-gateway
+JWT_SECRET=short cargo run --bin gateway
 
 # 应该失败（未设置）
-unset JWT_SECRET && cargo run --bin cuba-gateway
+unset JWT_SECRET && cargo run --bin gateway
 
 # 应该成功
-JWT_SECRET=this_is_a_secure_key_with_32_chars cargo run --bin cuba-gateway
+JWT_SECRET=this_is_a_secure_key_with_32_chars cargo run --bin gateway
 ```
 
 ### 2. 测试限流功能

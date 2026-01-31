@@ -7,7 +7,7 @@ set -e
 BACKUP_DIR="/backups/postgres"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
-DB_NAME="${DB_NAME:-cuba}"
+DB_NAME="${DB_NAME:-erp}"
 DB_USER="${DB_USER:-postgres}"
 DB_PASSWORD="${DB_PASSWORD:-postgres}"
 
@@ -30,7 +30,7 @@ if [ $# -eq 0 ]; then
     echo "用法: $0 <backup_file>"
     echo ""
     echo "可用的备份文件:"
-    ls -lh "$BACKUP_DIR"/cuba_*.sql.gz | awk '{print "  " $9 " (" $5 ", " $6 " " $7 ")"}'
+    ls -lh "$BACKUP_DIR"/erp_*.sql.gz | awk '{print "  " $9 " (" $5 ", " $6 " " $7 ")"}'
     exit 1
 fi
 

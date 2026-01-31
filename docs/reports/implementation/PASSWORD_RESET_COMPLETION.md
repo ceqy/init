@@ -184,7 +184,7 @@ smtp_port = 587
 username = "noreply@example.com"
 password = "password"
 from_email = "noreply@example.com"
-from_name = "Cuba ERP"
+from_name = "ERP"
 use_tls = true
 timeout_secs = 30
 ```

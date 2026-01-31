@@ -1,4 +1,4 @@
-//! cuba-adapter-redis - Redis 适配器
+//! adapter-redis - Redis 适配器
 //!
 //! 提供完整的 Redis 功能支持：
 //! - 缓存操作

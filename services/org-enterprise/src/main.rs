@@ -18,7 +18,7 @@ mod common {
 
 use std::sync::Arc;
 
-use cuba_bootstrap::{Infrastructure, run_server};
+use bootstrap::{Infrastructure, run_server};
 use tonic_reflection::server::Builder as ReflectionBuilder;
 use tracing::info;
 

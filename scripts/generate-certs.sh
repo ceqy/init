@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}Cuba ERP - TLS 证书生成工具${NC}"
+echo -e "${GREEN}ERP - TLS 证书生成工具${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
@@ -25,7 +25,7 @@ if [ ! -f "$CERT_DIR/ca-key.pem" ]; then
     openssl genrsa -out "$CERT_DIR/ca-key.pem" 4096
     openssl req -new -x509 -days 3650 -key "$CERT_DIR/ca-key.pem" \
       -out "$CERT_DIR/ca-cert.pem" \
-      -subj "/C=CN/ST=Beijing/L=Beijing/O=Cuba ERP/OU=IT/CN=Cuba CA"
+      -subj "/C=CN/ST=Beijing/L=Beijing/O=ERP/OU=IT/CN=ERP CA"
     echo -e "${GREEN}✓ CA 证书生成完成${NC}"
 else
     echo -e "${GREEN}✓ CA 证书已存在，跳过${NC}"
@@ -44,7 +44,7 @@ generate_service_cert() {
     # 生成 CSR
     openssl req -new -key "$CERT_DIR/${SERVICE}-key.pem" \
       -out "$CERT_DIR/${SERVICE}.csr" \
-      -subj "/C=CN/ST=Beijing/L=Beijing/O=Cuba ERP/OU=IT/CN=${SERVICE}"
+      -subj "/C=CN/ST=Beijing/L=Beijing/O=ERP/OU=IT/CN=${SERVICE}"
 
     # 创建扩展配置
     cat > "$CERT_DIR/${SERVICE}-ext.cnf" <<EOF

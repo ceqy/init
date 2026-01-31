@@ -3,7 +3,7 @@
 //! 提供 /health 和 /ready 端点
 
 use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
-use cuba_adapter_clickhouse::check_pool_health;
+use adapter_clickhouse::check_pool_health;
 use serde::Serialize;
 use std::net::SocketAddr;
 use std::sync::Arc;

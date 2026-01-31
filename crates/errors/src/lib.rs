@@ -1,4 +1,4 @@
-//! cuba-errors - 统一错误处理
+//! errors - 统一错误处理
 //!
 //! 基于 RFC 7807 Problem Details 规范
 
@@ -134,24 +134,24 @@ impl AppError {
 
     fn problem_type(&self) -> String {
         match self {
-            Self::NotFound(_) => "https://api.cuba-erp.com/problems/not-found".to_string(),
-            Self::Validation(_) => "https://api.cuba-erp.com/problems/validation".to_string(),
-            Self::Unauthorized(_) => "https://api.cuba-erp.com/problems/unauthorized".to_string(),
-            Self::Forbidden(_) => "https://api.cuba-erp.com/problems/forbidden".to_string(),
-            Self::Conflict(_) => "https://api.cuba-erp.com/problems/conflict".to_string(),
-            Self::Internal(_) => "https://api.cuba-erp.com/problems/internal".to_string(),
-            Self::Database(_) => "https://api.cuba-erp.com/problems/database".to_string(),
+            Self::NotFound(_) => "https://api.erp.com/problems/not-found".to_string(),
+            Self::Validation(_) => "https://api.erp.com/problems/validation".to_string(),
+            Self::Unauthorized(_) => "https://api.erp.com/problems/unauthorized".to_string(),
+            Self::Forbidden(_) => "https://api.erp.com/problems/forbidden".to_string(),
+            Self::Conflict(_) => "https://api.erp.com/problems/conflict".to_string(),
+            Self::Internal(_) => "https://api.erp.com/problems/internal".to_string(),
+            Self::Database(_) => "https://api.erp.com/problems/database".to_string(),
             Self::ExternalService(_) => {
-                "https://api.cuba-erp.com/problems/external-service".to_string()
+                "https://api.erp.com/problems/external-service".to_string()
             }
             Self::Unauthenticated(_) => {
-                "https://api.cuba-erp.com/problems/unauthenticated".to_string()
+                "https://api.erp.com/problems/unauthenticated".to_string()
             }
             Self::FailedPrecondition(_) => {
-                "https://api.cuba-erp.com/problems/failed-precondition".to_string()
+                "https://api.erp.com/problems/failed-precondition".to_string()
             }
             Self::ResourceExhausted(_) => {
-                "https://api.cuba-erp.com/problems/resource-exhausted".to_string()
+                "https://api.erp.com/problems/resource-exhausted".to_string()
             }
         }
     }

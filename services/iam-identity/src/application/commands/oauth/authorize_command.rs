@@ -1,4 +1,4 @@
-use cuba_cqrs_core::Command;
+use cqrs_core::Command;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

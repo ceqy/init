@@ -141,7 +141,7 @@ cleanup_test_data() {
 main() {
     echo ""
     echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}Cuba ERP 性能测试${NC}"
+    echo -e "${GREEN}ERP 性能测试${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
 

@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::{debug, error, info};
 

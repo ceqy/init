@@ -7,13 +7,13 @@ set -e
 BACKUP_DIR="/backups/postgres"
 RETENTION_DAYS=30
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="cuba_${DATE}.sql"
+BACKUP_FILE="erp_${DATE}.sql"
 COMPRESSED_FILE="${BACKUP_FILE}.gz"
 
 # 数据库连接信息
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
-DB_NAME="${DB_NAME:-cuba}"
+DB_NAME="${DB_NAME:-erp}"
 DB_USER="${DB_USER:-postgres}"
 DB_PASSWORD="${DB_PASSWORD:-postgres}"
 
@@ -72,10 +72,10 @@ if pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
 
     # 清理旧备份
     log "清理 ${RETENTION_DAYS} 天前的备份..."
-    find "$BACKUP_DIR" -name "cuba_*.sql.gz" -mtime +${RETENTION_DAYS} -delete
+    find "$BACKUP_DIR" -name "erp_*.sql.gz" -mtime +${RETENTION_DAYS} -delete
 
     # 统计备份文件数量
-    BACKUP_COUNT=$(find "$BACKUP_DIR" -name "cuba_*.sql.gz" | wc -l)
+    BACKUP_COUNT=$(find "$BACKUP_DIR" -name "erp_*.sql.gz" | wc -l)
     log "当前保留备份数量: $BACKUP_COUNT"
 
     # 上传到远程存储（可选）

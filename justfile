@@ -6,7 +6,7 @@ default:
 
 # 开发环境启动 - Gateway
 dev:
-    cargo run --package cuba-gateway
+    cargo run --package gateway
 
 # 启动 IAM Identity 服务
 iam:
@@ -52,7 +52,7 @@ lint:
 
 # 生成 proto
 proto-gen:
-    cargo build --package cuba-bootstrap --features proto-gen
+    cargo build --package bootstrap --features proto-gen
 
 # 数据库迁移
 migrate service:

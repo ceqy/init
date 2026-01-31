@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 
 use super::queries::*;
 use crate::domain::role::{Permission, Role, RoleId, RoleRepository, UserRoleRepository};

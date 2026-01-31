@@ -2,7 +2,7 @@ app_name = "sd-so"
 app_env = "development"
 
 [database]
-url = "postgres://postgres:postgres@localhost:5432/cuba"
+url = "postgres://postgres:postgres@localhost:5432/erp"
 max_connections = 20
 
 [redis]

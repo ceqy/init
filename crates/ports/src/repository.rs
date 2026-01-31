@@ -1,8 +1,8 @@
 //! Repository trait 定义
 
 use async_trait::async_trait;
-use cuba_common::Pagination;
-use cuba_errors::AppResult;
+use common::Pagination;
+use errors::AppResult;
 
 /// 基础 Repository trait
 #[async_trait]

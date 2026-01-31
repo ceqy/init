@@ -2,7 +2,7 @@
 //!
 //! 提供数据库迁移的管理功能
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::{info, warn};
 

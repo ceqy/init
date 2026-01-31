@@ -3,8 +3,8 @@
 //! 提供 Token 黑名单和用户信息缓存，使用原子操作防止竞态条件
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
-use cuba_ports::CachePort;
+use errors::AppResult;
+use ports::CachePort;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -90,7 +90,7 @@ impl AuthCache for RedisAuthCache {
     async fn cache_user(&self, user: &User) -> AppResult<()> {
         let key = Self::user_cache_key(&user.id.0.to_string());
         let value = serde_json::to_string(user).map_err(|e| {
-            cuba_errors::AppError::internal(format!("Failed to serialize user: {}", e))
+            errors::AppError::internal(format!("Failed to serialize user: {}", e))
         })?;
         self.cache
             .set(&key, &value, Some(Duration::from_secs(USER_CACHE_TTL_SECS)))
@@ -102,7 +102,7 @@ impl AuthCache for RedisAuthCache {
         match self.cache.get(&key).await? {
             Some(value) => {
                 let user: User = serde_json::from_str(&value).map_err(|e| {
-                    cuba_errors::AppError::internal(format!("Failed to deserialize user: {}", e))
+                    errors::AppError::internal(format!("Failed to deserialize user: {}", e))
                 })?;
                 Ok(Some(user))
             }

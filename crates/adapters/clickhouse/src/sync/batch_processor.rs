@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clickhouse::Row;
-use cuba_errors::AppResult;
+use errors::AppResult;
 use serde::Serialize;
 use tracing::{debug, error, info};
 

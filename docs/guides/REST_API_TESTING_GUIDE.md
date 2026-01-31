@@ -201,7 +201,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 由于用户注册后状态为 `PendingVerification`，需要手动激活：
 
 ```bash
-docker exec -i cuba-postgres psql -U postgres -d cuba -c \
+docker exec -i postgres psql -U postgres -d cuba -c \
   "UPDATE users SET status = 'Active' WHERE username = 'john_doe';"
 ```
 

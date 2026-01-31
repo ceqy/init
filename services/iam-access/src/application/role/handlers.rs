@@ -4,7 +4,7 @@ use super::commands::*;
 use crate::domain::role::events::RbacEvent;
 use crate::domain::role::{Role, RoleId};
 use crate::domain::unit_of_work::UnitOfWorkFactory;
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use std::sync::Arc;
 
 use uuid::Uuid;

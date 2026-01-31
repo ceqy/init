@@ -4,7 +4,7 @@ services:
   # PostgreSQL 主库
   postgres-primary:
     image: postgres:16-alpine
-    container_name: cuba-postgres-primary
+    container_name: postgres-primary
     environment:
       POSTGRES_DB: cuba
       POSTGRES_USER: postgres
@@ -50,7 +50,7 @@ services:
       - "-c"
       - "hot_standby=on"
     networks:
-      - cuba-network
+      - network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -60,7 +60,7 @@ services:
   # PostgreSQL 从库（读副本）
   postgres-replica:
     image: postgres:16-alpine
-    container_name: cuba-postgres-replica
+    container_name: postgres-replica
     environment:
       POSTGRES_DB: cuba
       POSTGRES_USER: postgres
@@ -90,7 +90,7 @@ services:
       postgres-primary:
         condition: service_healthy
     networks:
-      - cuba-network
+      - network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -100,14 +100,14 @@ services:
   # Redis
   redis:
     image: redis:7-alpine
-    container_name: cuba-redis
+    container_name: redis
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     networks:
-      - cuba-network
+      - network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -117,9 +117,9 @@ services:
   # pgAdmin（可选，用于数据库管理）
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: cuba-pgadmin
+    container_name: pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@cuba-erp.local
+      PGADMIN_DEFAULT_EMAIL: admin@erp.local
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
@@ -129,12 +129,12 @@ services:
     depends_on:
       - postgres-primary
     networks:
-      - cuba-network
+      - network
 
   # Prometheus（监控）
   prometheus:
     image: prom/prometheus:latest
-    container_name: cuba-prometheus
+    container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
@@ -146,12 +146,12 @@ services:
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
     networks:
-      - cuba-network
+      - network
 
   # Grafana（可视化）
   grafana:
     image: grafana/grafana:latest
-    container_name: cuba-grafana
+    container_name: grafana
     ports:
       - "3000:3000"
     environment:
@@ -165,7 +165,7 @@ services:
     depends_on:
       - prometheus
     networks:
-      - cuba-network
+      - network
 
 volumes:
   postgres-primary-data:
@@ -176,5 +176,5 @@ volumes:
   grafana-data:
 
 networks:
-  cuba-network:
+  network:
     driver: bridge

@@ -1,7 +1,7 @@
 //! 事件发布器测试
 
 use chrono::Utc;
-use cuba_common::{TenantId, UserId};
+use common::{TenantId, UserId};
 use iam_identity::infrastructure::events::{
     EventPublisher, IamDomainEvent, InMemoryEventBus, LoggingEventPublisher, NoOpEventPublisher,
 };

@@ -2,7 +2,7 @@ app_name = "iam-access"
 app_env = "development"
 
 [database]
-url = "postgres://postgres:postgres@localhost:5432/cuba"
+url = "postgres://postgres:postgres@localhost:5432/erp"
 # 开发环境: 20 个连接，适合本地开发和测试
 max_connections = 20
 
@@ -23,8 +23,8 @@ smtp_host = "localhost"
 smtp_port = 1025
 username = ""
 password = ""
-from_email = "noreply@cuba-erp.local"
-from_name = "Cuba ERP"
+from_email = "noreply@erp.local"
+from_name = "ERP"
 use_tls = false
 timeout_secs = 30
 

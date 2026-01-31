@@ -1,6 +1,6 @@
 //! 角色相关查询定义
 
-use cuba_common::TenantId;
+use common::TenantId;
 
 /// 获取角色详情查询
 #[derive(Debug, Clone)]

@@ -1,9 +1,9 @@
 //! 暴力破解防护服务
 
 use chrono::{Duration, Utc};
-use cuba_common::{TenantId, UserId};
-use cuba_errors::{AppError, AppResult};
-use cuba_ports::CachePort;
+use common::{TenantId, UserId};
+use errors::{AppError, AppResult};
+use ports::CachePort;
 use std::sync::Arc;
 
 use crate::domain::repositories::auth::LoginLogRepository;

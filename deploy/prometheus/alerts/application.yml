@@ -18,9 +18,9 @@ groups:
       - alert: HighMemoryUsage
         expr: |
           (
-            container_memory_usage_bytes{name=~"cuba-.*"}
+            container_memory_usage_bytes{name=~".*"}
             /
-            container_spec_memory_limit_bytes{name=~"cuba-.*"}
+            container_spec_memory_limit_bytes{name=~".*"}
           ) > 0.9
         for: 5m
         labels:
@@ -32,7 +32,7 @@ groups:
 
       - alert: HighCPUUsage
         expr: |
-          rate(container_cpu_usage_seconds_total{name=~"cuba-.*"}[5m]) > 0.8
+          rate(container_cpu_usage_seconds_total{name=~".*"}[5m]) > 0.8
         for: 5m
         labels:
           severity: warning

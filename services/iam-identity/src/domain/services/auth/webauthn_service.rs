@@ -1,7 +1,7 @@
 //! WebAuthn 服务
 
-use cuba_common::TenantId;
-use cuba_errors::{AppError, AppResult};
+use common::TenantId;
+use errors::{AppError, AppResult};
 use std::sync::Arc;
 use tracing::{debug, info};
 use uuid::Uuid;
@@ -49,7 +49,7 @@ impl WebAuthnService {
         info!("Starting WebAuthn registration for user: {}", user_id);
 
         // 获取用户现有的凭证
-        let user_id_typed = cuba_common::UserId::from_uuid(user_id);
+        let user_id_typed = common::UserId::from_uuid(user_id);
         let existing_credentials = self
             .credential_repo
             .find_by_user_id(&user_id_typed, tenant_id)
@@ -130,7 +130,7 @@ impl WebAuthnService {
         info!("Starting WebAuthn authentication for user: {}", user_id);
 
         // 获取用户的凭证
-        let user_id_typed = cuba_common::UserId::from_uuid(user_id);
+        let user_id_typed = common::UserId::from_uuid(user_id);
         let credentials = self
             .credential_repo
             .find_by_user_id(&user_id_typed, tenant_id)
@@ -202,7 +202,7 @@ impl WebAuthnService {
         user_id: Uuid,
         tenant_id: &TenantId,
     ) -> AppResult<Vec<WebAuthnCredential>> {
-        let user_id_typed = cuba_common::UserId::from_uuid(user_id);
+        let user_id_typed = common::UserId::from_uuid(user_id);
         self.credential_repo
             .find_by_user_id(&user_id_typed, tenant_id)
             .await
@@ -234,7 +234,7 @@ impl WebAuthnService {
 
     /// 检查用户是否有 WebAuthn 凭证
     pub async fn has_credentials(&self, user_id: Uuid, tenant_id: &TenantId) -> AppResult<bool> {
-        let user_id_typed = cuba_common::UserId::from_uuid(user_id);
+        let user_id_typed = common::UserId::from_uuid(user_id);
         self.credential_repo
             .has_credentials(&user_id_typed, tenant_id)
             .await

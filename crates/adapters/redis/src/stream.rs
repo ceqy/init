@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use redis::aio::ConnectionManager;
 use redis::{AsyncCommands, Client, RedisResult, Value};
 use serde::{Deserialize, Serialize};

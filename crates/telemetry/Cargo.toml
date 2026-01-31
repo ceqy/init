@@ -1,5 +1,5 @@
 [package]
-name = "cuba-telemetry"
+name = "telemetry"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

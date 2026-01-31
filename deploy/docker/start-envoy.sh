@@ -66,7 +66,7 @@ done
 # 检查 PostgreSQL 健康状态
 echo -n "等待 PostgreSQL 启动..."
 for i in {1..30}; do
-    if docker exec cuba-postgres pg_isready -U postgres &>/dev/null; then
+    if docker exec postgres pg_isready -U postgres &>/dev/null; then
         echo -e " ${GREEN}✓${NC}"
         break
     fi

@@ -1,6 +1,6 @@
 //! Policy gRPC 服务实现
 
-use cuba_common::TenantId;
+use common::TenantId;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 

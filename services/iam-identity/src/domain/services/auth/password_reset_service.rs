@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use cuba_common::{TenantId, UserId};
-use cuba_errors::{AppError, AppResult};
+use common::{TenantId, UserId};
+use errors::{AppError, AppResult};
 use rand::Rng;
 use sha2::{Digest, Sha256};
 use tracing::{debug, info, warn};

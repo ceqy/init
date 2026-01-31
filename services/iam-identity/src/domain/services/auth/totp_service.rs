@@ -2,7 +2,7 @@
 //!
 //! 提供 TOTP 生成、验证和 QR 码生成功能
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use data_encoding::BASE32;
 use rand::Rng;
 use totp_rs::{Algorithm, Secret, TOTP};

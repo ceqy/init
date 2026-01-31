@@ -1,8 +1,8 @@
 //! 用户实体
 
 use chrono::{DateTime, Utc};
-use cuba_common::{AuditInfo, TenantId, UserId};
-use cuba_domain_core::{AggregateRoot, Entity};
+use common::{AuditInfo, TenantId, UserId};
+use domain_core::{AggregateRoot, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::value_objects::{Email, HashedPassword, Username};

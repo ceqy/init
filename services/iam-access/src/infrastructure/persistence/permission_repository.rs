@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use chrono::Utc;
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 

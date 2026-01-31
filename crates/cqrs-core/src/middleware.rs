@@ -1,7 +1,7 @@
 //! Middleware 定义
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
+use errors::AppResult;
 
 /// Command Middleware trait
 #[async_trait]

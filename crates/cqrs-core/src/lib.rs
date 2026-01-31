@@ -1,4 +1,4 @@
-//! cuba-cqrs-core - CQRS 核心库
+//! cqrs-core - CQRS 核心库
 //!
 //! Command/Query trait、Bus、Middleware
 

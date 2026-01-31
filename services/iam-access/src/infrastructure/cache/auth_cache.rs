@@ -1,7 +1,7 @@
 use crate::domain::role::Role;
-use cuba_common::{TenantId, UserId};
-use cuba_errors::AppResult;
-use cuba_ports::CachePort;
+use common::{TenantId, UserId};
+use errors::AppResult;
+use ports::CachePort;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -65,7 +65,7 @@ impl AuthCache {
         match data {
             Some(json) => {
                 let roles: Vec<Role> = serde_json::from_str(&json).map_err(|e| {
-                    cuba_errors::AppError::internal(format!(
+                    errors::AppError::internal(format!(
                         "Failed to deserialize roles from cache: {}",
                         e
                     ))
@@ -84,7 +84,7 @@ impl AuthCache {
     ) -> AppResult<()> {
         let key = Self::user_roles_key(tenant_id, user_id);
         let json = serde_json::to_string(roles).map_err(|e| {
-            cuba_errors::AppError::internal(format!("Failed to serialize roles for cache: {}", e))
+            errors::AppError::internal(format!("Failed to serialize roles for cache: {}", e))
         })?;
 
         let ttl = Duration::from_secs(self.config.user_roles_ttl_secs);
@@ -118,7 +118,7 @@ impl AuthCache {
         match data {
             Some(json) => {
                 let role: Role = serde_json::from_str(&json).map_err(|e| {
-                    cuba_errors::AppError::internal(format!("Failed to deserialize role: {}", e))
+                    errors::AppError::internal(format!("Failed to deserialize role: {}", e))
                 })?;
                 Ok(Some(role))
             }
@@ -131,7 +131,7 @@ impl AuthCache {
         let key_id = Self::role_by_id_key(&role.id.0);
         let key_code = Self::role_by_code_key(&role.tenant_id, &role.code);
         let json = serde_json::to_string(role).map_err(|e| {
-            cuba_errors::AppError::internal(format!("Failed to serialize role: {}", e))
+            errors::AppError::internal(format!("Failed to serialize role: {}", e))
         })?;
 
         let ttl = Duration::from_secs(self.config.role_ttl_secs);
@@ -152,7 +152,7 @@ impl AuthCache {
         match data {
             Some(json) => {
                 let role: Role = serde_json::from_str(&json).map_err(|e| {
-                    cuba_errors::AppError::internal(format!("Failed to deserialize role: {}", e))
+                    errors::AppError::internal(format!("Failed to deserialize role: {}", e))
                 })?;
                 Ok(Some(role))
             }
@@ -186,7 +186,7 @@ impl AuthCache {
             Some(json) => {
                 let policies: Vec<crate::domain::policy::Policy> = serde_json::from_str(&json)
                     .map_err(|e| {
-                        cuba_errors::AppError::internal(format!(
+                        errors::AppError::internal(format!(
                             "Failed to deserialize policies from cache: {}",
                             e
                         ))
@@ -205,7 +205,7 @@ impl AuthCache {
     ) -> AppResult<()> {
         let key = Self::tenant_policies_key(tenant_id);
         let json = serde_json::to_string(policies).map_err(|e| {
-            cuba_errors::AppError::internal(format!(
+            errors::AppError::internal(format!(
                 "Failed to serialize policies for cache: {}",
                 e
             ))

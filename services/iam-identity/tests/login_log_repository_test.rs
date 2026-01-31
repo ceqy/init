@@ -1,4 +1,4 @@
-use cuba_common::{TenantId, UserId};
+use common::{TenantId, UserId};
 use iam_identity::domain::auth::LoginLog;
 use iam_identity::domain::repositories::auth::LoginLogRepository;
 use iam_identity::infrastructure::persistence::auth::PostgresLoginLogRepository;

@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::Utc;
-use cuba_common::TenantId;
-use cuba_cqrs_core::CommandHandler;
-use cuba_errors::{AppError, AppResult};
+use common::TenantId;
+use cqrs_core::CommandHandler;
+use errors::{AppError, AppResult};
 use tracing::info;
 
 use crate::application::commands::oauth::CreateClientCommand;

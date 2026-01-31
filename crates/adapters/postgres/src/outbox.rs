@@ -1,8 +1,8 @@
 //! PostgreSQL Outbox 实现
 
 use async_trait::async_trait;
-use cuba_errors::{AppError, AppResult};
-use cuba_ports::{OutboxMessage, OutboxPort};
+use errors::{AppError, AppResult};
+use ports::{OutboxMessage, OutboxPort};
 use sqlx::PgPool;
 
 /// PostgreSQL Outbox

@@ -1,8 +1,8 @@
 //! 备份码实体
 
 use chrono::{DateTime, Utc};
-use cuba_common::UserId;
-use cuba_domain_core::Entity;
+use common::UserId;
+use domain_core::Entity;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -31,7 +31,7 @@ impl Default for BackupCodeId {
 pub struct BackupCode {
     pub id: BackupCodeId,
     pub user_id: UserId,
-    pub tenant_id: cuba_common::TenantId,
+    pub tenant_id: common::TenantId,
     pub code_hash: String,
     pub used: bool,
     pub used_at: Option<DateTime<Utc>>,
@@ -39,7 +39,7 @@ pub struct BackupCode {
 }
 
 impl BackupCode {
-    pub fn new(user_id: UserId, tenant_id: cuba_common::TenantId, code_hash: String) -> Self {
+    pub fn new(user_id: UserId, tenant_id: common::TenantId, code_hash: String) -> Self {
         Self {
             id: BackupCodeId::new(),
             user_id,

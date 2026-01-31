@@ -1,8 +1,8 @@
 //! Access Token 仓储接口
 
 use async_trait::async_trait;
-use cuba_common::{TenantId, UserId};
-use cuba_errors::AppResult;
+use common::{TenantId, UserId};
+use errors::AppResult;
 
 use crate::domain::oauth::{AccessToken, OAuthClientId};
 

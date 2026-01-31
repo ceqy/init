@@ -2,7 +2,7 @@
 //!
 //! 提供事务管理器和分布式事务支持
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use sqlx::{PgPool, Postgres, Transaction};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;

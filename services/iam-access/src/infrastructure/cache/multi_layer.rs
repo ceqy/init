@@ -7,8 +7,8 @@
 //! 当 Redis 故障时，自动降级到本地缓存
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
-use cuba_ports::CachePort;
+use errors::AppResult;
+use ports::CachePort;
 use moka::future::Cache as MokaCache;
 use std::sync::Arc;
 use std::time::Duration;
@@ -212,7 +212,7 @@ impl CachePort for MultiLayerCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cuba_errors::AppError;
+    use errors::AppError;
 
     struct MockCache {
         should_fail: bool,

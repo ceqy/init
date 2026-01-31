@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use base64::{Engine as _, engine::general_purpose};
 use chrono::{Duration, Utc};
-use cuba_auth_core::{Claims, TokenService};
-use cuba_common::{TenantId, UserId};
+use auth_core::{Claims, TokenService};
+use common::{TenantId, UserId};
 use prost_types::Timestamp;
 use sha2::{Digest, Sha256};
 use tonic::{Request, Response, Status};
@@ -20,7 +20,7 @@ use crate::domain::repositories::user::UserRepository;
 use crate::domain::services::auth::{BackupCodeService, TotpService, WebAuthnService};
 use crate::domain::value_objects::{Email, HashedPassword, Username};
 use crate::infrastructure::cache::AuthCache;
-use cuba_adapter_email::EmailSender;
+use adapter_email::EmailSender;
 
 use super::auth_proto::*;
 use super::auth_proto::{self, auth_service_server::AuthService};
@@ -41,7 +41,7 @@ pub struct AuthServiceImpl {
     event_publisher: Arc<dyn EventPublisher>,
     uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
     refresh_token_expires_in: i64,
-    password_reset_config: cuba_config::PasswordResetConfig,
+    password_reset_config: config::PasswordResetConfig,
 }
 
 impl AuthServiceImpl {
@@ -59,7 +59,7 @@ impl AuthServiceImpl {
         event_publisher: Arc<dyn EventPublisher>,
         uow_factory: Arc<dyn crate::domain::unit_of_work::UnitOfWorkFactory>,
         refresh_token_expires_in: i64,
-        password_reset_config: cuba_config::PasswordResetConfig,
+        password_reset_config: config::PasswordResetConfig,
     ) -> Self {
         Self {
             user_repo,
@@ -676,7 +676,7 @@ impl AuthService for AuthServiceImpl {
         );
 
         // 7. 发送邮件
-        let subject = "密码重置请求 - Cuba ERP";
+        let subject = "密码重置请求 - ERP";
         let user_name = user
             .display_name
             .as_deref()
@@ -695,14 +695,14 @@ impl AuthService for AuthServiceImpl {
 <p><strong>此链接将在 {} 分钟后失效。</strong></p>
 <p>如果您没有请求重置密码，请忽略此邮件。</p>
 <hr>
-<p><small>此邮件由 Cuba ERP 系统自动发送，请勿回复。</small></p>
+<p><small>此邮件由 ERP 系统自动发送，请勿回复。</small></p>
 </body>
 </html>"#,
             user_name, reset_link, reset_link, self.password_reset_config.token_expires_minutes
         );
 
         let text_body = format!(
-            "密码重置\n\n您好，{}！\n\n我们收到了您的密码重置请求。请访问以下链接重置您的密码：\n\n{}\n\n此链接将在 {} 分钟后失效。\n\n如果您没有请求重置密码，请忽略此邮件。\n\n---\n此邮件由 Cuba ERP 系统自动发送，请勿回复。",
+            "密码重置\n\n您好，{}！\n\n我们收到了您的密码重置请求。请访问以下链接重置您的密码：\n\n{}\n\n此链接将在 {} 分钟后失效。\n\n如果您没有请求重置密码，请忽略此邮件。\n\n---\n此邮件由 ERP 系统自动发送，请勿回复。",
             user_name, reset_link, self.password_reset_config.token_expires_minutes
         );
 

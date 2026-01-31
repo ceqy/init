@@ -1,6 +1,6 @@
 //! 验证令牌查询
 
-use cuba_cqrs_core::Query;
+use cqrs_core::Query;
 
 /// 验证令牌查询
 #[derive(Debug, Clone)]

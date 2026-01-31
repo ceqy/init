@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use redis::cluster::ClusterClient;
 use redis::cluster_async::ClusterConnection;
 use redis::AsyncCommands;

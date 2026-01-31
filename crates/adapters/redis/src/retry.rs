@@ -4,7 +4,7 @@
 
 use std::future::Future;
 
-use cuba_errors::AppResult;
+use errors::AppResult;
 use tracing::{info, warn};
 
 use crate::config::RetryConfig;
@@ -107,7 +107,7 @@ pub fn is_retryable_error(error: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cuba_errors::AppError;
+    use errors::AppError;
     use std::sync::atomic::{AtomicU32, Ordering};
     use std::time::Duration;
 

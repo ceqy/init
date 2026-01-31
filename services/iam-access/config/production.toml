@@ -30,7 +30,7 @@ smtp_host = "${SMTP_HOST}"
 smtp_port = 587
 username = "${SMTP_USERNAME}"
 password = "${SMTP_PASSWORD}"
-from_email = "noreply@cuba-erp.com"
+from_email = "noreply@erp.com"
 from_name = "Cuba ERP"
 use_tls = true
 timeout_secs = 30
@@ -38,15 +38,15 @@ timeout_secs = 30
 [password_reset]
 token_expires_minutes = 15
 max_requests_per_hour = 3
-reset_link_base_url = "https://app.cuba-erp.com/reset-password"
+reset_link_base_url = "https://app.erp.com/reset-password"
 
 [telemetry]
 log_level = "info"
 otlp_endpoint = "${OTLP_ENDPOINT}"
 
 [webauthn]
-rp_id = "cuba-erp.com"
-rp_origin = "https://app.cuba-erp.com"
+rp_id = "erp.com"
+rp_origin = "https://app.erp.com"
 
 # 可选: Kafka 配置 (用于事件发布)
 # [kafka]

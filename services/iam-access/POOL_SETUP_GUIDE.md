@@ -72,7 +72,7 @@ CONCURRENT_CONNECTIONS=100 TEST_DURATION=120 ./scripts/stress_test_pool.sh
 
 - **Grafana**: http://localhost:3000 (admin/admin)
 - **Prometheus**: http://localhost:9090
-- **pgAdmin**: http://localhost:5050 (admin@cuba-erp.local/admin)
+- **pgAdmin**: http://localhost:5050 (admin@erp.local/admin)
 
 ## 📊 配置详解
 

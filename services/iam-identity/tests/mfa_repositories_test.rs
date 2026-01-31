@@ -1,4 +1,4 @@
-use cuba_common::{TenantId, UserId};
+use common::{TenantId, UserId};
 use iam_identity::domain::auth::{BackupCode, WebAuthnCredential};
 use iam_identity::domain::repositories::auth::{
     BackupCodeRepository, WebAuthnCredentialRepository,

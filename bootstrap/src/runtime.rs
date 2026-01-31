@@ -1,7 +1,7 @@
 //! 服务运行时
 
-use cuba_config::AppConfig;
-use cuba_telemetry::{init_tracing, init_tracing_json};
+use config::AppConfig;
+use telemetry::{init_tracing, init_tracing_json};
 use tracing::info;
 
 /// 服务运行时配置

@@ -1,6 +1,6 @@
 use base64::{Engine as _, engine::general_purpose};
-use cuba_common::{TenantId, UserId};
-use cuba_errors::{AppError, AppResult};
+use common::{TenantId, UserId};
+use errors::{AppError, AppResult};
 use rand::Rng;
 use sha2::{Digest, Sha256};
 use tracing::debug;

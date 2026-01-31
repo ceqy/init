@@ -1,8 +1,8 @@
 //! 会话 Repository trait
 
 use async_trait::async_trait;
-use cuba_common::{TenantId, UserId};
-use cuba_errors::AppResult;
+use common::{TenantId, UserId};
+use errors::AppResult;
 
 use crate::domain::auth::{Session, SessionId};
 

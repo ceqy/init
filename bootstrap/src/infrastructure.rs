@@ -5,17 +5,17 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use cuba_adapter_clickhouse::{
+use adapter_clickhouse::{
     BatchConfig, BatchWriter, ClickHouseConfig as ChAdapterConfig, ClickHousePool,
     CompressionMethod, ReplicaConfig,
 };
-use cuba_adapter_kafka::{KafkaEventPublisher, KafkaProducerConfig};
-pub use cuba_adapter_postgres::PoolStatus;
-use cuba_adapter_postgres::{PostgresConfig, ReadWritePool, create_pool};
-use cuba_adapter_redis::{RedisCache, create_connection_manager};
-use cuba_auth_core::TokenService;
-use cuba_config::AppConfig;
-use cuba_errors::AppResult;
+use adapter_kafka::{KafkaEventPublisher, KafkaProducerConfig};
+pub use adapter_postgres::PoolStatus;
+use adapter_postgres::{PostgresConfig, ReadWritePool, create_pool};
+use adapter_redis::{RedisCache, create_connection_manager};
+use auth_core::TokenService;
+use config::AppConfig;
+use errors::AppResult;
 use clickhouse::Row;
 use redis::aio::ConnectionManager;
 use secrecy::ExposeSecret;
@@ -108,8 +108,8 @@ impl Infrastructure {
             config.jwt.secret.expose_secret(),
             config.jwt.expires_in as i64,
             config.jwt.refresh_expires_in as i64,
-            "cuba-iam".to_string(), // issuer
-            "cuba-api".to_string(), // audience
+            "iam".to_string(), // issuer
+            "api".to_string(), // audience
         ));
 
         // 4. 创建 Kafka Producer（可选，带重试）
@@ -167,7 +167,7 @@ impl Infrastructure {
     }
 
     /// 构建 ClickHouse 适配器配置
-    fn build_clickhouse_config(config: &cuba_config::ClickHouseConfig) -> ChAdapterConfig {
+    fn build_clickhouse_config(config: &config::ClickHouseConfig) -> ChAdapterConfig {
         let compression = match config.compression.to_lowercase().as_str() {
             "zstd" => CompressionMethod::Zstd,
             "none" => CompressionMethod::None,
@@ -242,12 +242,12 @@ impl Infrastructure {
     }
 
     /// 获取 JWT 配置
-    pub fn jwt_config(&self) -> &cuba_config::JwtConfig {
+    pub fn jwt_config(&self) -> &config::JwtConfig {
         &self.config.jwt
     }
 
     /// 获取服务器配置
-    pub fn server_config(&self) -> &cuba_config::ServerConfig {
+    pub fn server_config(&self) -> &config::ServerConfig {
         &self.config.server
     }
 
@@ -288,7 +288,7 @@ impl Infrastructure {
     }
 
     /// 获取 ClickHouse 连接池状态
-    pub fn clickhouse_pool_status(&self) -> Option<cuba_adapter_clickhouse::PoolStatus> {
+    pub fn clickhouse_pool_status(&self) -> Option<adapter_clickhouse::PoolStatus> {
         self.clickhouse_pool.as_ref().map(|p| p.status())
     }
 

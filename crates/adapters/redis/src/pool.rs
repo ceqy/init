@@ -5,7 +5,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use parking_lot::RwLock;
 use redis::aio::ConnectionManager;
 use redis::Client;

@@ -1,6 +1,6 @@
 //! PostgreSQL 连接管理
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
 use crate::config::PostgresConfig;

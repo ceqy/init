@@ -6,8 +6,8 @@ use crate::infrastructure::cache::{
     AuthCache, AuthCacheConfig, AvalancheProtectedCache, CacheWarmer, MultiLayerCache,
     MultiLayerCacheConfig, SimpleBloomFilter,
 };
-use cuba_adapter_redis::RedisCache;
-use cuba_errors::AppResult;
+use adapter_redis::RedisCache;
+use errors::AppResult;
 use redis::aio::ConnectionManager;
 use std::sync::Arc;
 
@@ -57,7 +57,7 @@ pub fn create_enhanced_cache(
 ) -> Arc<AuthCache> {
     // 1. 基础 Redis 缓存
     let redis_cache = RedisCache::new(redis_conn.clone());
-    let mut cache: Arc<dyn cuba_ports::CachePort> = Arc::new(redis_cache);
+    let mut cache: Arc<dyn ports::CachePort> = Arc::new(redis_cache);
 
     // 2. 雪崩防护层
     if config.enable_avalanche_protection {
@@ -108,14 +108,14 @@ pub async fn start_cache_warming(
     auth_cache: Arc<AuthCache>,
     policy_repo: Arc<dyn crate::domain::policy::PolicyRepository>,
     role_repo: Arc<dyn crate::domain::role::RoleRepository>,
-    tenant_ids: Vec<cuba_common::TenantId>,
+    tenant_ids: Vec<common::TenantId>,
 ) -> AppResult<()> {
     let warmer = CacheWarmer::new(auth_cache);
 
     // 定义策略加载器
     let policy_loader = {
         let repo = policy_repo.clone();
-        move |tenant_id: &cuba_common::TenantId| {
+        move |tenant_id: &common::TenantId| {
             let repo = repo.clone();
             let tenant_id = tenant_id.clone();
             Box::pin(async move { repo.list_active_by_tenant(&tenant_id).await })

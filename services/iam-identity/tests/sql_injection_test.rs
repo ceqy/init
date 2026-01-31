@@ -10,7 +10,7 @@
 //!
 //! 预期结果：所有测试应该通过（即所有注入尝试都应该失败或被安全处理）
 
-use cuba_common::{TenantId, UserId};
+use common::{TenantId, UserId};
 use iam_identity::domain::repositories::user::UserRepository;
 use iam_identity::domain::user::User;
 use iam_identity::domain::value_objects::{Email, HashedPassword, Username};

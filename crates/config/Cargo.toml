@@ -1,5 +1,5 @@
 [package]
-name = "cuba-config"
+name = "config"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

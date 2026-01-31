@@ -3,7 +3,7 @@
 //! 使用 SQLx Transaction 提供事务协调能力。
 
 use async_trait::async_trait;
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use sqlx::{PgPool, Postgres, Transaction};
 use std::sync::Arc;
 use tokio::sync::Mutex;

@@ -1,7 +1,7 @@
 //! 服务错误定义
 
 use crate::domain::value_objects::UsernameError;
-use cuba_errors::AppError;
+use errors::AppError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

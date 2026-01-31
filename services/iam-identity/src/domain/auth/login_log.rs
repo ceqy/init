@@ -1,7 +1,7 @@
 //! 登录日志实体
 
 use chrono::{DateTime, Utc};
-use cuba_common::{TenantId, UserId};
+use common::{TenantId, UserId};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

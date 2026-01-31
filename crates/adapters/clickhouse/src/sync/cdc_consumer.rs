@@ -5,8 +5,8 @@
 use std::sync::Arc;
 
 use clickhouse::Row;
-use cuba_adapter_kafka::{KafkaConsumerConfig, KafkaEventConsumer};
-use cuba_errors::{AppError, AppResult};
+use adapter_kafka::{KafkaConsumerConfig, KafkaEventConsumer};
+use errors::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 

@@ -209,13 +209,13 @@ curl http://localhost:9901/stats | grep circuit_breakers
 
 ```bash
 # 停止一个实例
-docker stop cuba-iam-access
+docker stop iam-access
 
 # 等待 Consul 检测（约 30 秒）
 watch -n 1 'curl -s http://localhost:8500/v1/health/service/iam-access | jq'
 
 # 重启实例
-docker start cuba-iam-access
+docker start iam-access
 
 # 观察自动恢复
 curl http://localhost:9901/clusters | grep health_flags
@@ -291,13 +291,13 @@ routes:
 
 1. **Envoy 无法连接后端**
    ```bash
-   docker logs cuba-gateway-envoy
-   docker exec cuba-gateway-envoy ping iam-access-envoy
+   docker logs gateway-envoy
+   docker exec gateway-envoy ping iam-access-envoy
    ```
 
 2. **Consul 服务注册失败**
    ```bash
-   docker logs cuba-consul
+   docker logs consul
    curl http://localhost:8500/v1/catalog/services
    ```
 

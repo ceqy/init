@@ -4,7 +4,7 @@
 
 use std::time::Duration;
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use futures_util::StreamExt;
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};

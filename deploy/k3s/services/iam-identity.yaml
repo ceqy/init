@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: iam-identity
-  namespace: cuba-system
+  namespace: system
   labels:
     app: iam-identity
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: iam-identity
-          image: cuba-iam-identity:latest
+          image: iam-identity:latest
           ports:
             - containerPort: 50051 # gRPC
             - containerPort: 51051 # Health Check
@@ -42,7 +42,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: iam-identity
-  namespace: cuba-system
+  namespace: system
 spec:
   selector:
     app: iam-identity

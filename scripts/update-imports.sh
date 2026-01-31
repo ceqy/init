@@ -18,7 +18,7 @@ echo "📝 更新所有 Rust 文件中的导入路径..."
 # 查找所有 .rs 文件并更新导入路径
 find "$SRC_DIR" -name "*.rs" -type f | while read -r file; do
     # 跳过 proto 生成的文件
-    if [[ "$file" == *"/cuba.iam."* ]]; then
+    if [[ "$file" == *"/iam."* ]]; then
         continue
     fi
 

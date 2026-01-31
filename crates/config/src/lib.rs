@@ -1,4 +1,4 @@
-//! cuba-config - 配置加载库
+//! config - 配置加载库
 
 use figment::{
     Figment,

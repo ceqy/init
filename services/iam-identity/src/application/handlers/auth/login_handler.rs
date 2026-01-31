@@ -4,10 +4,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
-use cuba_auth_core::TokenService;
-use cuba_common::TenantId;
-use cuba_cqrs_core::CommandHandler;
-use cuba_errors::{AppError, AppResult};
+use auth_core::TokenService;
+use common::TenantId;
+use cqrs_core::CommandHandler;
+use errors::{AppError, AppResult};
 use uuid::Uuid;
 
 use crate::application::commands::auth::{LoginCommand, LoginResult};
@@ -65,7 +65,7 @@ impl LoginHandler {
         uow: &dyn UnitOfWork,
         tenant_id: &TenantId,
         username: &str,
-        user_id: Option<&cuba_common::UserId>,
+        user_id: Option<&common::UserId>,
         ip: &str,
         user_agent: &str,
         result: LogResult,

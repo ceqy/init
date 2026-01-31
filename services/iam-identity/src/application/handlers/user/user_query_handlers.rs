@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use cuba_cqrs_core::QueryHandler;
-use cuba_errors::AppResult;
+use cqrs_core::QueryHandler;
+use errors::AppResult;
 use tracing::info;
 
 use crate::application::queries::user::{
@@ -76,7 +76,7 @@ impl QueryHandler<GetUserByUsernameQuery> for GetUserByUsernameHandler {
 
         // 转换为 Username 值对象
         let username = Username::new(&query.username)
-            .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?;
+            .map_err(|e| errors::AppError::validation(e.to_string()))?;
 
         let user = self
             .user_repository
@@ -121,7 +121,7 @@ impl QueryHandler<GetUserByEmailQuery> for GetUserByEmailHandler {
 
         // 转换为 Email 值对象
         let email = Email::new(&query.email)
-            .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?;
+            .map_err(|e| errors::AppError::validation(e.to_string()))?;
 
         let user = self
             .user_repository

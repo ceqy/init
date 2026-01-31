@@ -69,8 +69,8 @@ use infrastructure::cache::{
     AvalancheProtectedCache, MultiLayerCache, MultiLayerCacheConfig,
     AuthCache, AuthCacheConfig,
 };
-use cuba_adapter_redis::RedisCache;
-use cuba_ports::CachePort;
+use adapter_redis::RedisCache;
+use ports::CachePort;
 
 // 1. 基础 Redis 缓存
 let redis_conn = infra.redis_connection_manager();
@@ -106,7 +106,7 @@ let auth_cache = Arc::new(
 /*
 // 只启用雪崩防护，其他保持不变
 use infrastructure::cache::{AvalancheProtectedCache, AuthCache};
-use cuba_adapter_redis::RedisCache;
+use adapter_redis::RedisCache;
 
 let redis_conn = infra.redis_connection_manager();
 let redis_cache = RedisCache::new(redis_conn);

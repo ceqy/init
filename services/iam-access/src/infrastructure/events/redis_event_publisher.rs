@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use cuba_errors::AppResult;
-use cuba_ports::EventPublisher;
+use errors::AppResult;
+use ports::EventPublisher;
 use redis::{AsyncCommands, Client};
 use serde::Serialize;
 use tracing::warn;
@@ -24,7 +24,7 @@ impl RedisEventPublisher {
 impl EventPublisher for RedisEventPublisher {
     async fn publish<E: Serialize + Send + Sync>(&self, topic: &str, event: &E) -> AppResult<()> {
         let payload = serde_json::to_string(event)
-            .map_err(|e| cuba_errors::AppError::internal(e.to_string()))?;
+            .map_err(|e| errors::AppError::internal(e.to_string()))?;
         self.publish_raw(topic, &payload).await
     }
 
@@ -34,12 +34,12 @@ impl EventPublisher for RedisEventPublisher {
             .get_multiplexed_async_connection()
             .await
             .map_err(|e| {
-                cuba_errors::AppError::internal(format!("Redis connection failed: {}", e))
+                errors::AppError::internal(format!("Redis connection failed: {}", e))
             })?;
 
         conn.publish::<_, _, ()>(topic, payload)
             .await
-            .map_err(|e| cuba_errors::AppError::internal(format!("Redis publish failed: {}", e)))?;
+            .map_err(|e| errors::AppError::internal(format!("Redis publish failed: {}", e)))?;
 
         Ok(())
     }
@@ -54,18 +54,18 @@ impl EventPublisher for RedisEventPublisher {
             .get_multiplexed_async_connection()
             .await
             .map_err(|e| {
-                cuba_errors::AppError::internal(format!("Redis connection failed: {}", e))
+                errors::AppError::internal(format!("Redis connection failed: {}", e))
             })?;
 
         // Pipeline support would be better, but loop is simple for now
         for event in events {
             let payload = serde_json::to_string(event)
-                .map_err(|e| cuba_errors::AppError::internal(e.to_string()))?;
+                .map_err(|e| errors::AppError::internal(e.to_string()))?;
             if let Err(e) = conn.publish::<_, _, ()>(topic, payload).await {
                 warn!("Failed to publish event in batch: {}", e);
                 // Continue or fail? Trait says AppResult needed.
                 // Let's fail fast for now.
-                return Err(cuba_errors::AppError::internal(format!(
+                return Err(errors::AppError::internal(format!(
                     "Redis batch publish failed: {}",
                     e
                 )));

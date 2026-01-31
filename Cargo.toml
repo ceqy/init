@@ -118,21 +118,21 @@ futures = { version = "0.3" }
 url = { version = "2.5.8" }
 
 # Internal crates
-cuba-common = { path = "crates/common" }
-cuba-errors = { path = "crates/errors" }
-cuba-config = { path = "crates/config" }
-cuba-telemetry = { path = "crates/telemetry" }
-cuba-auth-core = { path = "crates/auth-core" }
-cuba-ports = { path = "crates/ports" }
-cuba-domain-core = { path = "crates/domain-core" }
-cuba-cqrs-core = { path = "crates/cqrs-core" }
-cuba-event-core = { path = "crates/event-core" }
-cuba-adapter-postgres = { path = "crates/adapters/postgres" }
-cuba-adapter-redis = { path = "crates/adapters/redis" }
-cuba-adapter-clickhouse = { path = "crates/adapters/clickhouse" }
-cuba-adapter-kafka = { path = "crates/adapters/kafka" }
-cuba-adapter-email = { path = "crates/adapters/email" }
-cuba-bootstrap = { path = "bootstrap" }
+common = { path = "crates/common" }
+errors = { path = "crates/errors" }
+config = { path = "crates/config" }
+telemetry = { path = "crates/telemetry" }
+auth-core = { path = "crates/auth-core" }
+ports = { path = "crates/ports" }
+domain-core = { path = "crates/domain-core" }
+cqrs-core = { path = "crates/cqrs-core" }
+event-core = { path = "crates/event-core" }
+adapter-postgres = { path = "crates/adapters/postgres" }
+adapter-redis = { path = "crates/adapters/redis" }
+adapter-clickhouse = { path = "crates/adapters/clickhouse" }
+adapter-kafka = { path = "crates/adapters/kafka" }
+adapter-email = { path = "crates/adapters/email" }
+bootstrap = { path = "bootstrap" }
 
 # ============================================
 # 编译优化配置

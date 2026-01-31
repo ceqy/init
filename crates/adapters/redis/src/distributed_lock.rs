@@ -3,8 +3,8 @@
 //! 使用 Redis SETNX 和 Lua 脚本实现分布式锁，防止误删其他进程的锁
 
 use async_trait::async_trait;
-use cuba_errors::{AppError, AppResult};
-use cuba_ports::DistributedLock;
+use errors::{AppError, AppResult};
+use ports::DistributedLock;
 use redis::Script;
 use redis::aio::ConnectionManager;
 use std::time::Duration;

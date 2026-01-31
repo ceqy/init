@@ -244,7 +244,7 @@ AND conname = 'uk_event_store_aggregate_version';
 cargo build --release
 
 # 运行测试
-cargo test -p cuba-adapter-postgres
+cargo test -p adapter-postgres
 
 # 部署服务
 # (根据你的部署流程)

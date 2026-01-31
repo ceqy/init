@@ -1,7 +1,7 @@
 //! Access Token 实体
 
 use chrono::{DateTime, Duration, Utc};
-use cuba_common::{TenantId, UserId};
+use common::{TenantId, UserId};
 use serde::{Deserialize, Serialize};
 
 use super::OAuthClientId;

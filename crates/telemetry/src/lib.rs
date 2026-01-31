@@ -1,4 +1,4 @@
-//! cuba-telemetry - 可观测性库
+//! telemetry - 可观测性库
 
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 

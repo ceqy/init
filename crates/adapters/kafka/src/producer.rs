@@ -5,8 +5,8 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
-use cuba_errors::{AppError, AppResult};
-use cuba_ports::EventPublisher;
+use errors::{AppError, AppResult};
+use ports::EventPublisher;
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::util::Timeout;

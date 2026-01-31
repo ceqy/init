@@ -1,6 +1,6 @@
 //! 领域事件测试
 
-use cuba_event_core::DomainEvent;
+use event_core::DomainEvent;
 use iam_identity::domain::events::{
     PasswordChanged, TwoFactorDisabled, TwoFactorEnabled, UserCreated, UserLoggedIn, UserLoggedOut,
 };

@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use clickhouse::Client;
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use parking_lot::RwLock;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tracing::{debug, warn};

@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use cuba_common::{AuditInfo, TenantId};
-use cuba_errors::{AppError, AppResult};
+use common::{AuditInfo, TenantId};
+use errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -286,9 +286,9 @@ impl From<PolicyRow> for Policy {
             is_active: row.is_active,
             audit_info: AuditInfo {
                 created_at: row.created_at,
-                created_by: row.created_by.map(cuba_common::UserId::from_uuid),
+                created_by: row.created_by.map(common::UserId::from_uuid),
                 updated_at: row.updated_at,
-                updated_by: row.updated_by.map(cuba_common::UserId::from_uuid),
+                updated_by: row.updated_by.map(common::UserId::from_uuid),
             },
         }
     }

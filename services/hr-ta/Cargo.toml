@@ -6,17 +6,17 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-cuba-common = { workspace = true }
-cuba-errors = { workspace = true }
-cuba-config = { workspace = true }
-cuba-telemetry = { workspace = true }
-cuba-ports = { workspace = true }
-cuba-domain-core = { workspace = true }
-cuba-cqrs-core = { workspace = true }
-cuba-event-core = { workspace = true }
-cuba-adapter-postgres = { workspace = true }
-cuba-adapter-redis = { workspace = true }
-cuba-bootstrap = { workspace = true }
+common = { workspace = true }
+errors = { workspace = true }
+config = { workspace = true }
+telemetry = { workspace = true }
+ports = { workspace = true }
+domain-core = { workspace = true }
+cqrs-core = { workspace = true }
+event-core = { workspace = true }
+adapter-postgres = { workspace = true }
+adapter-redis = { workspace = true }
+bootstrap = { workspace = true }
 
 tonic = { workspace = true }
 tonic-reflection = "0.13"

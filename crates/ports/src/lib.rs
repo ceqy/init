@@ -1,4 +1,4 @@
-//! cuba-ports - 抽象 trait 层
+//! ports - 抽象 trait 层
 //!
 //! 定义所有基础设施的抽象接口
 

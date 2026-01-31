@@ -2,7 +2,7 @@
 //!
 //! 提供统一的 SQLx 错误到 AppError 的转换
 
-use cuba_errors::AppError;
+use errors::AppError;
 
 /// 将 SQLx 错误转换为 AppError，区分不同错误类型
 pub fn map_sqlx_error(e: sqlx::Error) -> AppError {

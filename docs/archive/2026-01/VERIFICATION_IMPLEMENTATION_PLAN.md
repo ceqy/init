@@ -302,7 +302,7 @@ phone_max_daily_sends = 5
 provider = "aliyun"
 access_key_id = "your_access_key_id"
 access_key_secret = "your_access_key_secret"
-sign_name = "Cuba ERP"
+sign_name = "ERP"
 template_code = "SMS_123456789"
 ```
 

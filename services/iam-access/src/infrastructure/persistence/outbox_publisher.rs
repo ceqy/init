@@ -2,8 +2,8 @@
 //!
 //! 定期从 outbox 表读取待发布事件并发送到消息队列
 
-use cuba_errors::AppResult;
-use cuba_ports::EventPublisher;
+use errors::AppResult;
+use ports::EventPublisher;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::interval;

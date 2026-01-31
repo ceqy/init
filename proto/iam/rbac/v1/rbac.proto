@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package iam.rbac.v1;
 
-option go_package = "github.com/cuba-erp/api/iam/rbac/v1";
+option go_package = "github.com/erp/api/iam/rbac/v1";
 
 import "google/protobuf/timestamp.proto";
 

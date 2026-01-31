@@ -1,7 +1,7 @@
 //! 角色实体
 
-use cuba_common::{AuditInfo, TenantId};
-use cuba_domain_core::{AggregateRoot, Entity};
+use common::{AuditInfo, TenantId};
+use domain_core::{AggregateRoot, Entity};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

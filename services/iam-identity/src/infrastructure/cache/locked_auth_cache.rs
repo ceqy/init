@@ -3,8 +3,8 @@
 //! 为关键的认证缓存操作添加分布式锁，防止竞态条件
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
-use cuba_ports::DistributedLock;
+use errors::AppResult;
+use ports::DistributedLock;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -103,7 +103,7 @@ impl AuthCache for LockedAuthCache {
 mod tests {
     use super::*;
     use crate::infrastructure::cache::auth_cache::NoOpAuthCache;
-    use cuba_ports::DistributedLock;
+    use ports::DistributedLock;
 
     struct MockLock {
         should_fail: bool,

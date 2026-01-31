@@ -4,7 +4,7 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
-    cluster: 'cuba-erp'
+    cluster: 'erp'
     environment: 'development'
 
 # 告警规则文件

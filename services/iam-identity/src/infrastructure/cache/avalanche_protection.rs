@@ -6,8 +6,8 @@
 //! 3. 缓存预热 - 启动时预加载热点数据
 
 use async_trait::async_trait;
-use cuba_errors::{AppError, AppResult};
-use cuba_ports::CachePort;
+use errors::{AppError, AppResult};
+use ports::CachePort;
 use rand::Rng;
 use std::collections::HashMap;
 use std::sync::Arc;

@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use cuba_common::{TenantId, UserId};
-use cuba_errors::{AppError, AppResult};
+use common::{TenantId, UserId};
+use errors::{AppError, AppResult};
 use tracing::{debug, info, warn};
 
 use crate::domain::repositories::user::{PhoneVerificationRepository, UserRepository};

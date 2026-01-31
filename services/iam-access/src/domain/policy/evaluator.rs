@@ -228,7 +228,7 @@ impl PolicyEvaluator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cuba_common::TenantId;
+    use common::TenantId;
 
     fn setup_policies() -> Vec<Policy> {
         let tenant_id = TenantId::new();

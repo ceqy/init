@@ -1,5 +1,5 @@
 //! Service configuration
 
-use cuba_config::AppConfig;
+use config::AppConfig;
 
 pub type ServiceConfig = AppConfig;

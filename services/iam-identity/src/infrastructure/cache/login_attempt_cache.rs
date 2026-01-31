@@ -1,9 +1,9 @@
 //! 登录尝试缓存实现
 
 use async_trait::async_trait;
-use cuba_adapter_redis::RedisCache;
-use cuba_errors::AppResult;
-use cuba_ports::CachePort;
+use adapter_redis::RedisCache;
+use errors::AppResult;
+use ports::CachePort;
 
 use crate::domain::services::auth::LoginAttemptCache;
 

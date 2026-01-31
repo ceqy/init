@@ -193,7 +193,7 @@
 - 算法：SHA1
 - 位数：6
 - 时间窗口：30 秒
-- QR 码格式：`otpauth://totp/Cuba%20ERP:username?secret=XXX&issuer=Cuba%20ERP&algorithm=SHA1&digits=6&period=30`
+- QR 码格式：`otpauth://totp/ERP%20ERP:username?secret=XXX&issuer=ERP%20ERP&algorithm=SHA1&digits=6&period=30`
 
 ### 备份码
 - 数量：10 个

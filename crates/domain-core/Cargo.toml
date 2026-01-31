@@ -1,12 +1,12 @@
 [package]
-name = "cuba-domain-core"
+name = "domain-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-cuba-common = { workspace = true }
+common = { workspace = true }
 serde = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }

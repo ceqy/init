@@ -8,9 +8,9 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use tracing::info;
 
-use cuba_auth_core::{Claims, TokenService};
-use cuba_common::{TenantId, UserId};
-use cuba_cqrs_core::CommandHandler;
+use auth_core::{Claims, TokenService};
+use common::{TenantId, UserId};
+use cqrs_core::CommandHandler;
 
 use crate::application::commands::user::{
     SendEmailVerificationCommand, SendPhoneVerificationCommand, VerifyEmailCommand,

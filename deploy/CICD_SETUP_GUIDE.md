@@ -19,17 +19,17 @@
 
 ```bash
 # 创建命名空间
-kubectl create namespace cuba-system
+kubectl create namespace system
 
 # 创建数据库密钥
 kubectl create secret generic db-secrets \
   --from-literal=database-url="postgresql://postgres:postgres@10.0.0.101:5432/cuba" \
-  -n cuba-system
+  -n system
 
 # 创建 JWT 密钥
 kubectl create secret generic jwt-secrets \
   --from-literal=secret="your-super-secret-key" \
-  -n cuba-system
+  -n system
 ```
 
 ## 3. 验证权限

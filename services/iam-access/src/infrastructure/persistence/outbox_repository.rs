@@ -7,8 +7,8 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use cuba_errors::AppResult;
-// use cuba_errors::AppError; // Removed unused
+use errors::AppResult;
+// use errors::AppError; // Removed unused
 // use serde::Serialize; // Removed unused
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;

@@ -96,7 +96,7 @@ grpcurl -plaintext \
 由于 ActivateUser 需要管理员权限，暂时使用数据库直接激活：
 
 ```bash
-docker exec -i cuba-postgres psql -U postgres -d cuba -c \
+docker exec -i postgres psql -U postgres -d cuba -c \
   "UPDATE users SET status = 'Active' WHERE username = 'john_doe';"
 ```
 

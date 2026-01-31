@@ -1,5 +1,5 @@
 [package]
-name = "cuba-common"
+name = "common"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

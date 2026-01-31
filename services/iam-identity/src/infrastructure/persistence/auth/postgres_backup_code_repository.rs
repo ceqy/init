@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use cuba_common::UserId;
-use cuba_errors::{AppError, AppResult};
+use common::UserId;
+use errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -36,7 +36,7 @@ impl BackupCodeRow {
         BackupCode {
             id: BackupCodeId(self.id),
             user_id: UserId::from_uuid(self.user_id),
-            tenant_id: cuba_common::TenantId::from_uuid(self.tenant_id),
+            tenant_id: common::TenantId::from_uuid(self.tenant_id),
             code_hash: self.code_hash,
             used: self.used,
             used_at: self.used_at,
@@ -104,7 +104,7 @@ impl BackupCodeRepository for PostgresBackupCodeRepository {
     async fn find_by_id(
         &self,
         id: &BackupCodeId,
-        tenant_id: &cuba_common::TenantId,
+        tenant_id: &common::TenantId,
     ) -> AppResult<Option<BackupCode>> {
         let row = sqlx::query_as::<_, BackupCodeRow>(
             r#"
@@ -125,7 +125,7 @@ impl BackupCodeRepository for PostgresBackupCodeRepository {
     async fn find_available_by_user_id(
         &self,
         user_id: &UserId,
-        tenant_id: &cuba_common::TenantId,
+        tenant_id: &common::TenantId,
     ) -> AppResult<Vec<BackupCode>> {
         let rows = sqlx::query_as::<_, BackupCodeRow>(
             r#"
@@ -166,7 +166,7 @@ impl BackupCodeRepository for PostgresBackupCodeRepository {
     async fn delete_by_user_id(
         &self,
         user_id: &UserId,
-        tenant_id: &cuba_common::TenantId,
+        tenant_id: &common::TenantId,
     ) -> AppResult<()> {
         sqlx::query(
             r#"
@@ -186,7 +186,7 @@ impl BackupCodeRepository for PostgresBackupCodeRepository {
     async fn count_available_by_user_id(
         &self,
         user_id: &UserId,
-        tenant_id: &cuba_common::TenantId,
+        tenant_id: &common::TenantId,
     ) -> AppResult<i64> {
         let count: (i64,) = sqlx::query_as(
             r#"

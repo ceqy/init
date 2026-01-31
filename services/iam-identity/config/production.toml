@@ -4,5 +4,5 @@ app_env = "production"
 log_level = "info"
 
 [webauthn]
-rp_id = "cuba-erp.com"
-rp_origin = "https://cuba-erp.com"
+rp_id = "erp.com"
+rp_origin = "https://erp.com"

@@ -349,8 +349,8 @@ pub enum PasswordError {
     InvalidHash(String),
 }
 
-impl From<PasswordError> for cuba_errors::AppError {
+impl From<PasswordError> for errors::AppError {
     fn from(err: PasswordError) -> Self {
-        cuba_errors::AppError::validation(err.to_string())
+        errors::AppError::validation(err.to_string())
     }
 }

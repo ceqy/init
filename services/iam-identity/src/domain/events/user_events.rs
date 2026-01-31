@@ -1,6 +1,6 @@
 //! 用户领域事件
 
-use cuba_event_core::DomainEvent;
+use event_core::DomainEvent;
 use serde::{Deserialize, Serialize};
 
 /// 用户已创建

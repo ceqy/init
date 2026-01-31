@@ -4,10 +4,10 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use cuba_adapter_email::EmailSender;
-use cuba_common::TenantId;
-use cuba_cqrs_core::CommandHandler;
-use cuba_errors::{AppError, AppResult};
+use adapter_email::EmailSender;
+use common::TenantId;
+use cqrs_core::CommandHandler;
+use errors::{AppError, AppResult};
 use tracing::{info, warn};
 
 use crate::application::commands::auth::RequestPasswordResetCommand;
@@ -74,7 +74,7 @@ impl CommandHandler<RequestPasswordResetCommand> for RequestPasswordResetHandler
 如果您没有请求重置密码，请忽略此邮件。
 
 ---
-Cuba ERP 系统
+ERP 系统
 "#,
                     reset_link, self.expires_in_minutes
                 );

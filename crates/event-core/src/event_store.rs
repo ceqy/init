@@ -1,7 +1,7 @@
 //! Event Store trait 定义
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
+use errors::AppResult;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -52,5 +52,5 @@ pub trait EventStore: Send + Sync {
 /// 从存储的事件反序列化
 pub fn deserialize_event<E: DeserializeOwned>(stored: &StoredEvent) -> AppResult<E> {
     serde_json::from_str(&stored.payload)
-        .map_err(|e| cuba_errors::AppError::internal(format!("Failed to deserialize event: {}", e)))
+        .map_err(|e| errors::AppError::internal(format!("Failed to deserialize event: {}", e)))
 }

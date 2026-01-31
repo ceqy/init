@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use cuba_common::TenantId;
+use common::TenantId;
 use tonic::{Request, Response, Status};
 
 use crate::api::proto::authorization::{

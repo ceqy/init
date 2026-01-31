@@ -1,8 +1,8 @@
 //! Redis Cache 实现
 
 use async_trait::async_trait;
-use cuba_errors::{AppError, AppResult};
-use cuba_ports::CachePort;
+use errors::{AppError, AppResult};
+use ports::CachePort;
 use redis::aio::ConnectionManager;
 use redis::{AsyncCommands, Script};
 use std::time::Duration;

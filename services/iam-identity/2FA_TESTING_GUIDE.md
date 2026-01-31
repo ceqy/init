@@ -91,7 +91,7 @@ grpcurl -plaintext \
 ```json
 {
   "secret": "JBSWY3DPEHPK3PXP",
-  "qr_code_url": "otpauth://totp/Cuba%20ERP:testuser?secret=JBSWY3DPEHPK3PXP&issuer=Cuba%20ERP&algorithm=SHA1&digits=6&period=30",
+  "qr_code_url": "otpauth://totp/ERP%20ERP:testuser?secret=JBSWY3DPEHPK3PXP&issuer=ERP%20ERP&algorithm=SHA1&digits=6&period=30",
   "backup_codes": [],
   "enabled": false
 }

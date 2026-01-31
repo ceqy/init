@@ -1,8 +1,8 @@
 //! 会话实体
 
 use chrono::{DateTime, Utc};
-use cuba_common::UserId;
-use cuba_domain_core::Entity;
+use common::UserId;
+use domain_core::Entity;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -27,7 +27,7 @@ impl Default for SessionId {
 pub struct Session {
     pub id: SessionId,
     pub user_id: UserId,
-    pub tenant_id: cuba_common::TenantId,
+    pub tenant_id: common::TenantId,
     pub refresh_token_hash: String,
     pub device_info: Option<String>,
     pub ip_address: Option<String>,
@@ -41,7 +41,7 @@ pub struct Session {
 impl Session {
     pub fn new(
         user_id: UserId,
-        tenant_id: cuba_common::TenantId,
+        tenant_id: common::TenantId,
         refresh_token_hash: String,
         expires_at: DateTime<Utc>,
     ) -> Self {
@@ -117,7 +117,7 @@ mod tests {
 
     fn create_test_session() -> Session {
         let user_id = UserId::new();
-        let tenant_id = cuba_common::TenantId::new();
+        let tenant_id = common::TenantId::new();
         let refresh_token_hash = "test_hash".to_string();
         let expires_at = Utc::now() + chrono::Duration::hours(24);
 
@@ -178,7 +178,7 @@ mod tests {
     #[test]
     fn test_is_expired() {
         let user_id = UserId::new();
-        let tenant_id = cuba_common::TenantId::new();
+        let tenant_id = common::TenantId::new();
         let refresh_token_hash = "test_hash".to_string();
         let expires_at = Utc::now() - chrono::Duration::hours(1); // 已过期
 

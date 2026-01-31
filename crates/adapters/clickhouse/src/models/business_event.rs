@@ -3,7 +3,7 @@
 //! ClickHouse 业务事件表对应的数据结构
 
 use clickhouse::Row;
-use cuba_ports::BusinessEvent;
+use ports::BusinessEvent;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

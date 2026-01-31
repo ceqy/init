@@ -1,6 +1,6 @@
 //! 登录命令
 
-use cuba_cqrs_core::Command;
+use cqrs_core::Command;
 
 use crate::application::dto::auth::TokenPair;
 

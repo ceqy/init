@@ -3,8 +3,8 @@
 global:
   # SMTP 配置（邮件通知）
   smtp_smarthost: 'smtp.example.com:587'
-  smtp_from: 'alerts@cuba-erp.com'
-  smtp_auth_username: 'alerts@cuba-erp.com'
+  smtp_from: 'alerts@erp.com'
+  smtp_auth_username: 'alerts@erp.com'
   smtp_auth_password: 'your-password'
   smtp_require_tls: true
 
@@ -70,7 +70,7 @@ receivers:
   # 默认运维团队
   - name: 'team-ops'
     email_configs:
-      - to: 'ops@cuba-erp.com'
+      - to: 'ops@erp.com'
         headers:
           Subject: '[Cuba ERP] {{ .GroupLabels.alertname }}'
         html: '{{ template "email.default.html" . }}'
@@ -86,7 +86,7 @@ receivers:
   # 严重告警 - 多渠道通知
   - name: 'team-ops-critical'
     email_configs:
-      - to: 'ops@cuba-erp.com,cto@cuba-erp.com'
+      - to: 'ops@erp.com,cto@erp.com'
         headers:
           Subject: '🚨 [CRITICAL] {{ .GroupLabels.alertname }}'
         html: '{{ template "email.default.html" . }}'
@@ -110,21 +110,21 @@ receivers:
   # 数据库团队
   - name: 'team-database'
     email_configs:
-      - to: 'dba@cuba-erp.com'
+      - to: 'dba@erp.com'
         headers:
           Subject: '[Database] {{ .GroupLabels.alertname }}'
 
   # 平台团队
   - name: 'team-platform'
     email_configs:
-      - to: 'platform@cuba-erp.com'
+      - to: 'platform@erp.com'
         headers:
           Subject: '[Platform] {{ .GroupLabels.alertname }}'
 
   # 业务团队
   - name: 'team-business'
     email_configs:
-      - to: 'business@cuba-erp.com'
+      - to: 'business@erp.com'
         headers:
           Subject: '[Business] {{ .GroupLabels.alertname }}'
 

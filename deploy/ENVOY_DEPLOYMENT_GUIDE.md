@@ -338,7 +338,7 @@ curl http://localhost:9901/stats | grep circuit_breakers
 
 ```bash
 # 停止一个 IAM 实例
-docker stop cuba-iam-access
+docker stop iam-access
 
 # 等待 Consul 检测到不健康（约 30 秒）
 watch -n 1 'curl -s http://localhost:8500/v1/health/service/iam-access | jq'
@@ -353,20 +353,20 @@ curl http://localhost:9901/clusters | grep iam_cluster
 
 ```bash
 # 检查 Envoy 日志
-docker logs cuba-gateway-envoy
+docker logs gateway-envoy
 
 # 检查网络连通性
-docker exec cuba-gateway-envoy ping iam-access-envoy
+docker exec gateway-envoy ping iam-access-envoy
 
 # 检查 DNS 解析
-docker exec cuba-gateway-envoy nslookup iam-access-envoy
+docker exec gateway-envoy nslookup iam-access-envoy
 ```
 
 ### 问题 2：Consul 服务注册失败
 
 ```bash
 # 检查 Consul 日志
-docker logs cuba-consul
+docker logs consul
 
 # 手动注册服务
 curl -X PUT -d @deploy/consul/services/iam-access.json \

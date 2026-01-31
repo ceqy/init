@@ -1,8 +1,8 @@
 //! 用户 Repository trait
 
 use async_trait::async_trait;
-use cuba_common::{TenantId, UserId};
-use cuba_errors::AppResult;
+use common::{TenantId, UserId};
+use errors::AppResult;
 
 use crate::domain::user::User;
 use crate::domain::value_objects::{Email, Username};

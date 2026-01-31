@@ -1,7 +1,7 @@
 //! PostgreSQL WebAuthn 凭证仓储实现
 
 use async_trait::async_trait;
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::debug;
 use uuid::Uuid;
@@ -58,7 +58,7 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
     async fn find_by_id(
         &self,
         id: &WebAuthnCredentialId,
-        tenant_id: &cuba_common::TenantId,
+        tenant_id: &common::TenantId,
     ) -> AppResult<Option<WebAuthnCredential>> {
         debug!("Finding WebAuthn credential by id: {}", id);
 
@@ -83,7 +83,7 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
     async fn find_by_credential_id(
         &self,
         credential_id: &[u8],
-        tenant_id: &cuba_common::TenantId,
+        tenant_id: &common::TenantId,
     ) -> AppResult<Option<WebAuthnCredential>> {
         debug!("Finding WebAuthn credential by credential_id");
 
@@ -107,8 +107,8 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
 
     async fn find_by_user_id(
         &self,
-        user_id: &cuba_common::UserId,
-        tenant_id: &cuba_common::TenantId,
+        user_id: &common::UserId,
+        tenant_id: &common::TenantId,
     ) -> AppResult<Vec<WebAuthnCredential>> {
         debug!("Finding WebAuthn credentials for user: {}", user_id);
 
@@ -160,7 +160,7 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
     async fn delete(
         &self,
         id: &WebAuthnCredentialId,
-        tenant_id: &cuba_common::TenantId,
+        tenant_id: &common::TenantId,
     ) -> AppResult<()> {
         debug!("Deleting WebAuthn credential: {}", id);
 
@@ -178,8 +178,8 @@ impl WebAuthnCredentialRepository for PostgresWebAuthnCredentialRepository {
 
     async fn has_credentials(
         &self,
-        user_id: &cuba_common::UserId,
-        tenant_id: &cuba_common::TenantId,
+        user_id: &common::UserId,
+        tenant_id: &common::TenantId,
     ) -> AppResult<bool> {
         debug!("Checking if user has WebAuthn credentials: {}", user_id);
 
@@ -219,7 +219,7 @@ impl From<WebAuthnCredentialRow> for WebAuthnCredential {
         Self {
             id: WebAuthnCredentialId::from_uuid(row.id),
             user_id: row.user_id,
-            tenant_id: cuba_common::TenantId::from_uuid(row.tenant_id),
+            tenant_id: common::TenantId::from_uuid(row.tenant_id),
             credential_id: row.credential_id,
             public_key: row.public_key,
             counter: row.counter as u32,

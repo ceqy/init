@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use cuba_common::{AuditInfo, TenantId};
-use cuba_errors::{AppError, AppResult};
+use common::{AuditInfo, TenantId};
+use errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -366,9 +366,9 @@ impl RoleRow {
             permissions,
             audit_info: AuditInfo {
                 created_at: self.created_at,
-                created_by: self.created_by.map(cuba_common::UserId::from_uuid),
+                created_by: self.created_by.map(common::UserId::from_uuid),
                 updated_at: self.updated_at,
-                updated_by: self.updated_by.map(cuba_common::UserId::from_uuid),
+                updated_by: self.updated_by.map(common::UserId::from_uuid),
             },
         }
     }

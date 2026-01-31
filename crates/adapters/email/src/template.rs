@@ -1,6 +1,6 @@
 //! 邮件模板系统
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use std::collections::HashMap;
 use tera::Tera;
 use tracing::debug;

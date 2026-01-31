@@ -6,8 +6,8 @@ mod tests {
         AvalancheProtectedCache, AuthCache, AuthCacheConfig, MultiLayerCache,
         MultiLayerCacheConfig, SimpleBloomFilter,
     };
-    use cuba_errors::AppResult;
-    use cuba_ports::CachePort;
+    use errors::AppResult;
+    use ports::CachePort;
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
     use std::time::Duration;
@@ -46,7 +46,7 @@ mod tests {
         async fn get(&self, key: &str) -> AppResult<Option<String>> {
             if self.should_fail {
                 *self.fail_count.lock().unwrap() += 1;
-                return Err(cuba_errors::AppError::internal("Mock cache error"));
+                return Err(errors::AppError::internal("Mock cache error"));
             }
             Ok(self.data.lock().unwrap().get(key).cloned())
         }
@@ -54,7 +54,7 @@ mod tests {
         async fn set(&self, key: &str, value: &str, _ttl: Option<Duration>) -> AppResult<()> {
             if self.should_fail {
                 *self.fail_count.lock().unwrap() += 1;
-                return Err(cuba_errors::AppError::internal("Mock cache error"));
+                return Err(errors::AppError::internal("Mock cache error"));
             }
             self.data
                 .lock()

@@ -1,8 +1,8 @@
 //! 租户 Repository trait
 
 use async_trait::async_trait;
-use cuba_common::TenantId;
-use cuba_errors::AppResult;
+use common::TenantId;
+use errors::AppResult;
 
 use crate::domain::user::{Tenant, TenantStatus};
 

@@ -1,4 +1,4 @@
-//! cuba-event-core - 事件核心库
+//! event-core - 事件核心库
 //!
 //! DomainEvent trait、Event Store、Event Handler
 

@@ -1,6 +1,6 @@
 //! 租户上下文值对象
 
-use cuba_common::TenantId;
+use common::TenantId;
 use serde::{Deserialize, Serialize};
 
 /// 租户上下文

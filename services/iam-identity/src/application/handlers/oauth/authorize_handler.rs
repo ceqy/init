@@ -2,9 +2,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use cuba_common::{TenantId, UserId};
-use cuba_cqrs_core::CommandHandler;
-use cuba_errors::{AppError, AppResult};
+use common::{TenantId, UserId};
+use cqrs_core::CommandHandler;
+use errors::{AppError, AppResult};
 use tracing::info;
 
 use crate::application::commands::oauth::AuthorizeCommand;

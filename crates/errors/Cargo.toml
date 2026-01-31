@@ -1,5 +1,5 @@
 [package]
-name = "cuba-errors"
+name = "errors"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

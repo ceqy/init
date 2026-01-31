@@ -1,10 +1,10 @@
-//! cuba-auth-core - 认证核心库
+//! auth-core - 认证核心库
 //!
 //! JWT/Claims/RBAC 核心逻辑
 
 use chrono::{Duration, Utc};
-use cuba_common::{TenantId, UserId};
-use cuba_errors::{AppError, AppResult};
+use common::{TenantId, UserId};
+use errors::{AppError, AppResult};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -239,7 +239,7 @@ impl TokenService {
 macro_rules! require_permission {
     ($claims:expr, $permission:expr) => {
         if !$claims.has_permission($permission) {
-            return Err(cuba_errors::AppError::forbidden(format!(
+            return Err(errors::AppError::forbidden(format!(
                 "Missing permission: {}",
                 $permission
             )));
@@ -252,7 +252,7 @@ macro_rules! require_permission {
 macro_rules! require_role {
     ($claims:expr, $role:expr) => {
         if !$claims.has_role($role) {
-            return Err(cuba_errors::AppError::forbidden(format!(
+            return Err(errors::AppError::forbidden(format!(
                 "Missing role: {}",
                 $role
             )));

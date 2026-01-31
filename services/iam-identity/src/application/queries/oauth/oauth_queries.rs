@@ -1,7 +1,7 @@
 //! OAuth 查询
 
-use cuba_common::TenantId;
-use cuba_cqrs_core::Query;
+use common::TenantId;
+use cqrs_core::Query;
 
 /// 通过 ID 获取 OAuth 客户端查询
 #[derive(Debug, Clone)]

@@ -26,7 +26,7 @@ openssl genrsa -out "$CERT_DIR/ca-key.pem" 4096
 # 生成 CA 证书
 openssl req -new -x509 -days 3650 -key "$CERT_DIR/ca-key.pem" \
   -out "$CERT_DIR/ca-cert.pem" \
-  -subj "/C=CN/ST=Beijing/L=Beijing/O=Cuba ERP/OU=IT/CN=Cuba CA"
+  -subj "/C=CN/ST=Beijing/L=Beijing/O=ERP/OU=IT/CN=ERP CA"
 
 echo "✓ CA 证书生成完成"
 ```
@@ -44,7 +44,7 @@ generate_service_cert() {
   # 生成 CSR
   openssl req -new -key "$CERT_DIR/${SERVICE}-key.pem" \
     -out "$CERT_DIR/${SERVICE}.csr" \
-    -subj "/C=CN/ST=Beijing/L=Beijing/O=Cuba ERP/OU=IT/CN=${SERVICE}"
+    -subj "/C=CN/ST=Beijing/L=Beijing/O=ERP/OU=IT/CN=${SERVICE}"
 
   # 签发证书
   openssl x509 -req -days 365 \
@@ -74,10 +74,10 @@ generate_service_cert "consul"
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: cuba-ca-issuer
+  name: ca-issuer
 spec:
   ca:
-    secretName: cuba-ca-secret
+    secretName: ca-secret
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -87,7 +87,7 @@ metadata:
 spec:
   secretName: gateway-envoy-tls
   issuerRef:
-    name: cuba-ca-issuer
+    name: ca-issuer
     kind: ClusterIssuer
   dnsNames:
     - gateway-envoy
@@ -256,7 +256,7 @@ services:
   # Gateway Envoy with TLS
   gateway-envoy:
     image: envoyproxy/envoy:v1.29-latest
-    container_name: cuba-gateway-envoy
+    container_name: gateway-envoy
     command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
     ports:
       - "50053:50051"
@@ -267,12 +267,12 @@ services:
     environment:
       - ENVOY_UID=0
     networks:
-      - cuba-network
+      - network
 
   # IAM Envoy with TLS
   iam-access-envoy:
     image: envoyproxy/envoy:v1.29-latest
-    container_name: cuba-iam-access-envoy
+    container_name: iam-access-envoy
     command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
     ports:
       - "50051:50051"
@@ -283,12 +283,12 @@ services:
     environment:
       - ENVOY_UID=0
     networks:
-      - cuba-network
+      - network
 
   # Consul with TLS
   consul:
     image: hashicorp/consul:1.18
-    container_name: cuba-consul
+    container_name: consul
     command: agent -server -ui -bootstrap-expect=1 -config-file=/consul/config/consul-tls-config.json
     ports:
       - "8501:8501"  # HTTPS
@@ -299,10 +299,10 @@ services:
       - ../consul/consul-tls-config.json:/consul/config/consul-tls-config.json:ro
       - ../certs:/consul/config/certs:ro  # 挂载证书
     networks:
-      - cuba-network
+      - network
 
 networks:
-  cuba-network:
+  network:
     driver: bridge
 
 volumes:

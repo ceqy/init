@@ -1,5 +1,5 @@
 [package]
-name = "cuba-bootstrap"
+name = "bootstrap"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -7,15 +7,15 @@ license.workspace = true
 
 [dependencies]
 # 内部 crates
-cuba-config = { workspace = true }
-cuba-errors = { workspace = true }
-cuba-telemetry = { workspace = true }
-cuba-auth-core = { workspace = true }
-cuba-ports = { workspace = true }
-cuba-adapter-postgres = { workspace = true }
-cuba-adapter-redis = { workspace = true }
-cuba-adapter-kafka = { workspace = true }
-cuba-adapter-clickhouse = { workspace = true }
+config = { workspace = true }
+errors = { workspace = true }
+telemetry = { workspace = true }
+auth-core = { workspace = true }
+ports = { workspace = true }
+adapter-postgres = { workspace = true }
+adapter-redis = { workspace = true }
+adapter-kafka = { workspace = true }
+adapter-clickhouse = { workspace = true }
 
 # gRPC
 tonic = { workspace = true }

@@ -416,4 +416,4 @@ docker-compose -f docker-compose.pool-test.yml logs
 
 **最后更新**: 2026-01-29
 **版本**: 1.0.0
-**维护者**: Cuba ERP Team
+**维护者**: ERP Team

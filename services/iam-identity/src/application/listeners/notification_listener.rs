@@ -1,6 +1,6 @@
 use crate::infrastructure::events::{EventPublisher, IamDomainEvent};
 use async_trait::async_trait;
-use cuba_adapter_email::EmailSender;
+use adapter_email::EmailSender;
 use std::sync::Arc;
 
 /// 通知监听器
@@ -16,9 +16,9 @@ impl NotificationListener {
     }
 
     async fn handle_user_created(&self, email: &str, username: &str) {
-        let subject = "Welcome to Cuba ERP";
+        let subject = "Welcome to ERP";
         let body = format!(
-            "Hello {},\n\nWelcome to Cuba ERP! Your account has been created successfully.",
+            "Hello {},\n\nWelcome to ERP! Your account has been created successfully.",
             username
         );
 

@@ -2,7 +2,7 @@
 //!
 //! 这些测试需要数据库连接，使用 mock 或真实数据库
 
-use cuba_common::TenantId;
+use common::TenantId;
 
 // 导入 Repository 和实体
 use iam_identity::domain::user::User;

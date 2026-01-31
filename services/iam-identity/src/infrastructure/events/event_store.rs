@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn test_extract_aggregate_id() {
         use chrono::Utc;
-        use cuba_common::{TenantId, UserId};
+        use common::{TenantId, UserId};
 
         let user_id = UserId::new();
         let tenant_id = TenantId::new();

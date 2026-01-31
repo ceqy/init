@@ -1,4 +1,4 @@
-//! cuba-adapter-postgres - PostgreSQL 适配器
+//! adapter-postgres - PostgreSQL 适配器
 //!
 //! 提供完整的 PostgreSQL 数据库支持，包括：
 //! - 连接池管理（支持读写分离）

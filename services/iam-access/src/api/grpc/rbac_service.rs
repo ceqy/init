@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use cuba_common::TenantId;
+use common::TenantId;
 use tonic::{Request, Response, Status};
 
 use crate::api::grpc::conversions::datetime_to_timestamp;
@@ -45,7 +45,7 @@ where
 
 use crate::domain::unit_of_work::UnitOfWorkFactory;
 
-// Removed unused import: use cuba_ports::EventPublisher;
+// Removed unused import: use ports::EventPublisher;
 
 impl<R, P, UR> RbacServiceImpl<R, P, UR>
 where
@@ -706,7 +706,7 @@ where
                     };
 
                     let allowed = handler.handle_check_user_permission(query).await?;
-                    Ok::<_, cuba_errors::AppError>((code, allowed))
+                    Ok::<_, errors::AppError>((code, allowed))
                 }
             })
             .collect();

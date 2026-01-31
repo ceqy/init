@@ -2,7 +2,7 @@
 
 ## 概述
 
-Cuba ERP 使用 gRPC 作为服务间通信协议，所有 API 定义使用 Protocol Buffers (proto3)。
+ERP 使用 gRPC 作为服务间通信协议，所有 API 定义使用 Protocol Buffers (proto3)。
 
 ## 文档结构
 

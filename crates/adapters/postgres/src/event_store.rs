@@ -1,8 +1,8 @@
 //! PostgreSQL Event Store 实现
 
 use async_trait::async_trait;
-use cuba_errors::{AppError, AppResult};
-use cuba_event_core::{EventEnvelope, EventStore, StoredEvent};
+use errors::{AppError, AppResult};
+use event_core::{EventEnvelope, EventStore, StoredEvent};
 use serde::Serialize;
 use sqlx::PgPool;
 
@@ -201,7 +201,7 @@ impl From<StoredEventRow> for StoredEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cuba_event_core::EventMetadata;
+    use event_core::EventMetadata;
     use serde::{Deserialize, Serialize};
     use uuid::Uuid;
 

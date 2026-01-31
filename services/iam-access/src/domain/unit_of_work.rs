@@ -3,7 +3,7 @@
 //! 提供跨多个 Repository 的事务协调能力，确保操作的原子性。
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
+use errors::AppResult;
 
 use crate::domain::policy::PolicyRepository;
 use crate::domain::role::{

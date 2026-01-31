@@ -7,7 +7,7 @@ use std::mem;
 use std::sync::Arc;
 
 use clickhouse::Row;
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use parking_lot::Mutex;
 use serde::Serialize;
 use tokio::sync::Notify;

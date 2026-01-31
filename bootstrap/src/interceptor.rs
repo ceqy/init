@@ -1,7 +1,7 @@
 //! gRPC Interceptors
 
-use cuba_auth_core::{Claims, TokenService};
-use cuba_errors::AppError;
+use auth_core::{Claims, TokenService};
+use errors::AppError;
 use tonic::{Request, Status};
 
 /// 认证拦截器

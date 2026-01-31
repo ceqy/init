@@ -1,7 +1,7 @@
 //! 租户上下文辅助工具
 
-use cuba_common::TenantId;
-use cuba_errors::AppResult;
+use common::TenantId;
+use errors::AppResult;
 use sqlx::{PgConnection, PgPool};
 
 /// 设置当前租户上下文（用于 RLS）
@@ -13,7 +13,7 @@ pub async fn set_tenant_context(conn: &mut PgConnection, tenant_id: &TenantId) -
     ))
     .execute(conn)
     .await
-    .map_err(|e| cuba_errors::AppError::database(e.to_string()))?;
+    .map_err(|e| errors::AppError::database(e.to_string()))?;
 
     Ok(())
 }
@@ -27,7 +27,7 @@ where
     let mut tx = pool
         .begin()
         .await
-        .map_err(|e| cuba_errors::AppError::database(e.to_string()))?;
+        .map_err(|e| errors::AppError::database(e.to_string()))?;
 
     // 设置租户上下文
     set_tenant_context(&mut tx, tenant_id).await?;
@@ -37,7 +37,7 @@ where
 
     tx.commit()
         .await
-        .map_err(|e| cuba_errors::AppError::database(e.to_string()))?;
+        .map_err(|e| errors::AppError::database(e.to_string()))?;
 
     Ok(result)
 }

@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 
 use super::commands::*;
 use crate::domain::policy::{Effect, Policy, PolicyId, events::PolicyEvent};

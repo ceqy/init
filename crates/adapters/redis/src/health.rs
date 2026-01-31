@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use cuba_errors::AppResult;
+use errors::AppResult;
 use tracing::{debug, error, info};
 
 use crate::pool::{check_connection, RedisPool};

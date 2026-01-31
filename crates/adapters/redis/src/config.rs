@@ -206,8 +206,8 @@ impl RedisConfig {
     }
 }
 
-/// 重试配置（使用 cuba_common::RetryConfig）
-pub type RetryConfig = cuba_common::RetryConfig;
+/// 重试配置（使用 common::RetryConfig）
+pub type RetryConfig = common::RetryConfig;
 
 /// 从 RedisConfig 创建重试配置
 pub fn retry_config_from_redis(config: &RedisConfig) -> RetryConfig {

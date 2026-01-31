@@ -1,5 +1,5 @@
 // use chrono::{Duration, Utc};
-use cuba_common::{TenantId, UserId};
+use common::{TenantId, UserId};
 use iam_identity::domain::oauth::{
     AccessToken, AuthorizationCode, OAuthClient, OAuthClientId, OAuthClientType, RefreshToken,
 };

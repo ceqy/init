@@ -2,8 +2,8 @@
 //!
 //! 定期扫描 outbox 表并发布未处理的消息
 
-use cuba_errors::AppResult;
-use cuba_ports::OutboxPort;
+use errors::AppResult;
+use ports::OutboxPort;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::interval;
@@ -143,10 +143,10 @@ impl OutboxProcessor {
     }
 
     /// 处理单个消息
-    async fn process_message(&self, message: &cuba_ports::OutboxMessage) -> AppResult<()> {
+    async fn process_message(&self, message: &ports::OutboxMessage) -> AppResult<()> {
         // 反序列化事件
         let event: IamDomainEvent = serde_json::from_str(&message.payload).map_err(|e| {
-            cuba_errors::AppError::internal(format!("Failed to deserialize event: {}", e))
+            errors::AppError::internal(format!("Failed to deserialize event: {}", e))
         })?;
 
         // 发布事件
@@ -159,7 +159,7 @@ impl OutboxProcessor {
     async fn cleanup_processed_messages(&self) -> AppResult<()> {
         let before = chrono::Utc::now()
             - chrono::Duration::from_std(self.config.retention_period).map_err(|e| {
-                cuba_errors::AppError::internal(format!("Invalid retention period: {}", e))
+                errors::AppError::internal(format!("Invalid retention period: {}", e))
             })?;
 
         let deleted = self.outbox.delete_processed(before).await?;
@@ -176,7 +176,7 @@ impl OutboxProcessor {
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use cuba_ports::OutboxMessage;
+    use ports::OutboxMessage;
     use std::sync::Mutex;
 
     struct MockOutbox {
@@ -257,7 +257,7 @@ mod tests {
     #[tokio::test]
     async fn test_process_pending_messages() {
         use chrono::Utc;
-        use cuba_common::{TenantId, UserId};
+        use common::{TenantId, UserId};
 
         let outbox = Arc::new(MockOutbox::new());
         let publisher = Arc::new(MockPublisher::new());

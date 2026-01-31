@@ -1,7 +1,7 @@
 //! Event Publisher trait 定义
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
+use errors::AppResult;
 use serde::Serialize;
 
 /// 事件发布者 trait

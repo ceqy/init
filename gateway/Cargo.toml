@@ -1,18 +1,18 @@
 [package]
-name = "cuba-gateway"
+name = "gateway"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-cuba-config = { workspace = true }
-cuba-errors = { workspace = true }
-cuba-telemetry = { workspace = true }
-cuba-auth-core = { workspace = true }
-cuba-bootstrap = { workspace = true }
-cuba-common = { workspace = true }
-cuba-adapter-redis = { workspace = true }
+config = { workspace = true }
+errors = { workspace = true }
+telemetry = { workspace = true }
+auth-core = { workspace = true }
+bootstrap = { workspace = true }
+common = { workspace = true }
+adapter-redis = { workspace = true }
 axum = { workspace = true, features = ["ws"] }
 tokio = { workspace = true }
 tower = { workspace = true }

@@ -1,4 +1,4 @@
-use cuba_errors::AppError;
+use errors::AppError;
 use thiserror::Error;
 use tonic::Status;
 

@@ -170,7 +170,7 @@ grpcurl -plaintext \
 1. 打开 Authy 应用
 2. 点击 "+" 添加账户
 3. 扫描 QR 码或手动输入 secret
-4. 设置账户名称为 "Cuba ERP"
+4. 设置账户名称为 "ERP"
 
 ---
 
@@ -244,7 +244,7 @@ curl http://localhost:51051/metrics
 date
 
 # 检查数据库中的 secret
-docker exec cuba-postgres psql -U postgres -d cuba -c \
+docker exec postgres psql -U postgres -d cuba -c \
   "SELECT username, two_factor_enabled, two_factor_secret IS NOT NULL as has_secret FROM users WHERE username = 'testuser';"
 ```
 
@@ -259,7 +259,7 @@ docker exec cuba-postgres psql -U postgres -d cuba -c \
 **解决方案**:
 ```bash
 # 查看备份码状态
-docker exec cuba-postgres psql -U postgres -d cuba -c \
+docker exec postgres psql -U postgres -d cuba -c \
   "SELECT id, is_used, used_at FROM backup_codes WHERE user_id = 'YOUR_USER_ID';"
 ```
 
@@ -280,8 +280,8 @@ docker ps | grep cuba
 docker-compose -f deploy/docker/docker-compose.yml up -d postgres redis
 
 # 检查日志
-docker logs cuba-postgres
-docker logs cuba-redis
+docker logs postgres
+docker logs redis
 ```
 
 ---

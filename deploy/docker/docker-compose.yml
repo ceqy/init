@@ -1,11 +1,11 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: cuba-postgres
+    container_name: erp-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: cuba
+      POSTGRES_DB: erp
     ports:
       - "5432:5432"
     volumes:
@@ -19,7 +19,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: cuba-redis
+    container_name: erp-redis
     ports:
       - "6379:6379"
     volumes:
@@ -32,7 +32,7 @@ services:
 
   kafka:
     image: apache/kafka:3.7.0
-    container_name: cuba-kafka
+    container_name: erp-kafka
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -53,9 +53,9 @@ services:
 
   clickhouse:
     image: clickhouse/clickhouse-server:24
-    container_name: cuba-clickhouse
+    container_name: erp-clickhouse
     environment:
-      CLICKHOUSE_DB: cuba
+      CLICKHOUSE_DB: erp
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: ""
     ports:

@@ -1,8 +1,8 @@
 //! PostgreSQL 用户 Repository 实现
 
 use async_trait::async_trait;
-use cuba_common::{TenantId, UserId};
-use cuba_errors::{AppError, AppResult};
+use common::{TenantId, UserId};
+use errors::{AppError, AppResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -366,7 +366,7 @@ impl UserRow {
             lock_reason: self.lock_reason,
             last_failed_login_at: self.last_failed_login_at,
             last_password_change_at: self.last_password_change_at,
-            audit_info: cuba_common::AuditInfo {
+            audit_info: common::AuditInfo {
                 created_at: self.created_at,
                 created_by: self.created_by.map(UserId::from_uuid),
                 updated_at: self.updated_at,

@@ -1,6 +1,6 @@
 //! 策略相关命令定义
 
-use cuba_common::TenantId;
+use common::TenantId;
 
 /// 创建策略命令
 #[derive(Debug, Clone)]

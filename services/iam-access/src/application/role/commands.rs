@@ -1,6 +1,6 @@
 //! 角色相关命令定义
 
-use cuba_common::TenantId;
+use common::TenantId;
 use uuid::Uuid;
 
 /// 创建角色命令

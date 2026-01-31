@@ -1,7 +1,7 @@
 //! PostgreSQL Unit of Work 实现
 
 use async_trait::async_trait;
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use sqlx::{PgPool, Postgres, Transaction};
 use std::sync::Arc;
 use tokio::sync::Mutex;

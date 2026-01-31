@@ -253,9 +253,9 @@ git reset --hard <commit-hash>
 - [ ] 服务启动: `cargo run --package iam-identity`
 - [ ] gRPC 端点可用: `grpcurl -plaintext localhost:50051 list`
 - [ ] 所有三个服务都注册:
-  - [ ] cuba.iam.auth.AuthService
-  - [ ] cuba.iam.user.UserService
-  - [ ] cuba.iam.oauth.OAuthService
+  - [ ] iam.auth.AuthService
+  - [ ] iam.user.UserService
+  - [ ] iam.oauth.OAuthService
 
 ---
 

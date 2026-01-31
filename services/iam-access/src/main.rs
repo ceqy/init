@@ -14,7 +14,7 @@ mod infrastructure;
 
 use std::sync::Arc;
 
-use cuba_bootstrap::{Infrastructure, run_server};
+use bootstrap::{Infrastructure, run_server};
 use tonic_reflection::server::Builder as ReflectionBuilder;
 use tracing::info;
 
@@ -34,7 +34,7 @@ pub const FILE_DESCRIPTOR_SET: &[u8] = tonic::include_file_descriptor_set!("iam_
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 使用 cuba-bootstrap 统一启动模式
+    // 使用 bootstrap 统一启动模式
     run_server("config", |infra: Infrastructure, mut server| async move {
         info!("Initializing IAM Access Service...");
 
@@ -55,14 +55,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let uow_factory = Arc::new(PostgresUnitOfWorkFactory::new(pool.clone()));
 
         // 初始化 EventPublisher (Redis)
-        use cuba_ports::EventPublisher;
+        use ports::EventPublisher;
         use infrastructure::events::RedisEventPublisher;
         use secrecy::ExposeSecret;
 
         let redis_url = config.redis.url.expose_secret();
         let event_publisher =
             RedisEventPublisher::new(redis_url, "iam_access_events").map_err(|e| {
-                cuba_errors::AppError::internal(format!("Failed to connect to Redis: {}", e))
+                errors::AppError::internal(format!("Failed to connect to Redis: {}", e))
             })?;
         let event_publisher = Arc::new(event_publisher);
 
@@ -133,7 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     use crate::domain::role::RoleRepository;
                     match role_repo.list_active_tenants().await {
                         Ok(tenant_ids) => {
-                            let tenant_ids: Vec<cuba_common::TenantId> = tenant_ids;
+                            let tenant_ids: Vec<common::TenantId> = tenant_ids;
                             info!("Starting cache warming for {} tenants", tenant_ids.len());
                             if let Err(e) =
                                 start_cache_warming(auth_cache, policy_repo, role_repo, tenant_ids)

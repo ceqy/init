@@ -2,7 +2,7 @@
 //!
 //! 提供 Pub/Sub 功能
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use futures::StreamExt;
 use redis::aio::ConnectionManager;
 use redis::{AsyncCommands, Client};

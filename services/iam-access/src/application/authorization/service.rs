@@ -4,8 +4,8 @@
 
 use std::sync::Arc;
 
-use cuba_common::TenantId;
-use cuba_errors::AppResult;
+use common::TenantId;
+use errors::AppResult;
 
 use crate::domain::policy::{EvaluationRequest, PolicyEvaluator, PolicyRepository};
 use crate::domain::role::{Permission, UserRoleRepository};

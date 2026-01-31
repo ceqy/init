@@ -1,6 +1,6 @@
 //! 发送手机验证码命令
 
-use cuba_cqrs_core::Command;
+use cqrs_core::Command;
 use serde::{Deserialize, Serialize};
 
 /// 发送手机验证码命令

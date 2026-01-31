@@ -31,7 +31,7 @@ impl UserTier {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cuba_auth_core::Claims;
+    use auth_core::Claims;
 
     fn create_test_claims(permissions: Vec<String>) -> Claims {
         Claims {

@@ -1,8 +1,8 @@
 //! 可疑登录检测服务
 
 use chrono::{Timelike, Utc};
-use cuba_common::{TenantId, UserId};
-use cuba_errors::AppResult;
+use common::{TenantId, UserId};
+use errors::AppResult;
 use std::sync::Arc;
 
 use crate::domain::repositories::auth::LoginLogRepository;

@@ -11,7 +11,7 @@ services:
   # Consul 服务注册中心
   consul:
     image: hashicorp/consul:1.18
-    container_name: cuba-consul
+    container_name: consul
     command: agent -server -ui -bootstrap-expect=1 -config-file=/consul/config/consul-config.json
     ports:
       - "8500:8500"  # HTTP API & UI
@@ -28,12 +28,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - cuba-network
+      - network
 
   # PostgreSQL 数据库
   postgres:
     image: postgres:16-alpine
-    container_name: cuba-postgres
+    container_name: postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -48,12 +48,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - cuba-network
+      - network
 
   # Redis 缓存
   redis:
     image: redis:7-alpine
-    container_name: cuba-redis
+    container_name: redis
     ports:
       - "6379:6379"
     volumes:
@@ -64,12 +64,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - cuba-network
+      - network
 
   # Kafka 消息队列
   kafka:
     image: apache/kafka:3.7.0
-    container_name: cuba-kafka
+    container_name: kafka
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -88,12 +88,12 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
-      - cuba-network
+      - network
 
   # ClickHouse 分析数据库
   clickhouse:
     image: clickhouse/clickhouse-server:24
-    container_name: cuba-clickhouse
+    container_name: clickhouse
     environment:
       CLICKHOUSE_DB: cuba
       CLICKHOUSE_USER: default
@@ -109,7 +109,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - cuba-network
+      - network
 
   # ============================================
   # 应用服务 + Envoy Sidecar
@@ -120,7 +120,7 @@ services:
     build:
       context: ../../
       dockerfile: services/iam-access/Dockerfile
-    container_name: cuba-iam-access
+    container_name: iam-access
     environment:
       # 注意：IAM 服务监听 50052，Envoy 监听 50051
       GRPC_PORT: 50052
@@ -139,13 +139,13 @@ services:
       clickhouse:
         condition: service_healthy
     networks:
-      - cuba-network
+      - network
     # 不直接暴露端口，通过 Envoy 访问
 
   # IAM Access Envoy Sidecar
   iam-access-envoy:
     image: envoyproxy/envoy:v1.29-latest
-    container_name: cuba-iam-access-envoy
+    container_name: iam-access-envoy
     command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
     ports:
       - "50051:50051"  # gRPC 端口
@@ -157,7 +157,7 @@ services:
       - iam-access
       - consul
     networks:
-      - cuba-network
+      - network
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "localhost:9902/ready"]
       interval: 10s
@@ -169,7 +169,7 @@ services:
     build:
       context: ../../
       dockerfile: gateway/Dockerfile
-    container_name: cuba-gateway
+    container_name: gateway
     environment:
       GATEWAY_HOST: 0.0.0.0
       GATEWAY_PORT: 8080
@@ -185,13 +185,13 @@ services:
       iam-access-envoy:
         condition: service_healthy
     networks:
-      - cuba-network
+      - network
     # 不直接暴露端口，通过 Nginx 或直接访问
 
   # Gateway Envoy Sidecar
   gateway-envoy:
     image: envoyproxy/envoy:v1.29-latest
-    container_name: cuba-gateway-envoy
+    container_name: gateway-envoy
     command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
     ports:
       - "50053:50051"  # gRPC 出站端口（Gateway -> IAM）
@@ -202,7 +202,7 @@ services:
       - consul
       - iam-access-envoy
     networks:
-      - cuba-network
+      - network
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "localhost:9901/ready"]
       interval: 10s
@@ -216,7 +216,7 @@ services:
   # Prometheus 指标收集
   prometheus:
     image: prom/prometheus:v2.48
-    container_name: cuba-prometheus
+    container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -228,12 +228,12 @@ services:
       - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     networks:
-      - cuba-network
+      - network
 
   # Grafana 可视化
   grafana:
     image: grafana/grafana:10.2.3
-    container_name: cuba-grafana
+    container_name: grafana
     ports:
       - "3001:3000"
     environment:
@@ -246,7 +246,7 @@ services:
     depends_on:
       - prometheus
     networks:
-      - cuba-network
+      - network
 
   # ============================================
   # 服务注册（初始化）
@@ -255,7 +255,7 @@ services:
   # Consul 服务注册初始化
   consul-registrator:
     image: curlimages/curl:8.5.0
-    container_name: cuba-consul-registrator
+    container_name: consul-registrator
     depends_on:
       consul:
         condition: service_healthy
@@ -269,7 +269,7 @@ services:
     volumes:
       - ../consul/services:/services:ro
     networks:
-      - cuba-network
+      - network
 
 volumes:
   consul_data:
@@ -281,5 +281,5 @@ volumes:
   grafana_data:
 
 networks:
-  cuba-network:
+  network:
     driver: bridge

@@ -1,5 +1,5 @@
 [package]
-name = "cuba-adapter-email"
+name = "adapter-email"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -7,8 +7,8 @@ license.workspace = true
 
 [dependencies]
 # 内部依赖
-cuba-errors = { workspace = true }
-cuba-config = { workspace = true }
+errors = { workspace = true }
+config = { workspace = true }
 
 # 邮件发送
 lettre = { workspace = true }

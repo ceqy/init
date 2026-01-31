@@ -1,11 +1,11 @@
-# Cuba ERP
+# ERP
 
 基于 Rust 的企业资源规划系统。
 
 ## 项目结构
 
 ```
-cuba-erp/
+erp/
 ├── .github/                   # GitHub 配置
 │   └── workflows/             # CI/CD 流水线
 │       ├── ci.yml             # 持续集成 (Rust 1.93, 全分支)

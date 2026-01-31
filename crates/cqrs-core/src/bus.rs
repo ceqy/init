@@ -1,7 +1,7 @@
 //! Command/Query Bus
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
+use errors::AppResult;
 
 use crate::{Command, Query};
 

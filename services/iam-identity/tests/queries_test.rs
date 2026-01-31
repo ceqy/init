@@ -1,7 +1,7 @@
 //! CQRS 查询测试
 
-use cuba_common::TenantId;
-use cuba_common::UserId;
+use common::TenantId;
+use common::UserId;
 use iam_identity::application::queries::oauth::{
     GetOAuthClientByIdQuery, ListTenantOAuthClientsQuery, ListUserAuthorizedAppsQuery,
     ListUserOAuthClientsQuery, OAuthClientQueryResult, ValidateOAuthClientQuery,

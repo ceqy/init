@@ -4,7 +4,7 @@
 
 use std::time::Duration;
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{BaseConsumer, Consumer};
 use rdkafka::metadata::Metadata;

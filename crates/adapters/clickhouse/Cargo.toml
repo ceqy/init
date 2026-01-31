@@ -1,15 +1,15 @@
 [package]
-name = "cuba-adapter-clickhouse"
+name = "adapter-clickhouse"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
-cuba-common = { workspace = true }
-cuba-errors = { workspace = true }
-cuba-ports = { workspace = true }
-cuba-adapter-kafka = { workspace = true }
+common = { workspace = true }
+errors = { workspace = true }
+ports = { workspace = true }
+adapter-kafka = { workspace = true }
 clickhouse = { workspace = true }
 sqlx = { workspace = true }
 async-trait = { workspace = true }

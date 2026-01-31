@@ -5,7 +5,7 @@
 //! - 如果布隆过滤器判断 key 不存在，直接返回，避免查询数据库
 //! - 适用于大量不存在的 key 的场景
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use redis::aio::ConnectionManager;
 use redis::{AsyncCommands, Script};
 

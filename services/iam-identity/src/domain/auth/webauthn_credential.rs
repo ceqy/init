@@ -15,7 +15,7 @@ pub struct WebAuthnCredential {
     pub user_id: Uuid,
 
     /// 租户 ID
-    pub tenant_id: cuba_common::TenantId,
+    pub tenant_id: common::TenantId,
 
     /// WebAuthn 凭证 ID（二进制）
     pub credential_id: Vec<u8>,
@@ -61,7 +61,7 @@ impl WebAuthnCredential {
         transports: Vec<String>,
         backup_eligible: bool,
         backup_state: bool,
-        tenant_id: cuba_common::TenantId,
+        tenant_id: common::TenantId,
     ) -> Self {
         Self {
             id: WebAuthnCredentialId::new(),
@@ -101,7 +101,7 @@ impl WebAuthnCredential {
         passkey: &Passkey,
         aaguid: Option<Uuid>,
         transports: Vec<String>,
-        tenant_id: cuba_common::TenantId,
+        tenant_id: common::TenantId,
     ) -> Result<Self, WebAuthnCredentialError> {
         // 使用方法访问器而不是字段
         let credential_id = passkey.cred_id().clone().into();
@@ -189,8 +189,8 @@ pub enum WebAuthnCredentialError {
     CounterMismatch { expected: u32, actual: u32 },
 }
 
-impl From<WebAuthnCredentialError> for cuba_errors::AppError {
+impl From<WebAuthnCredentialError> for errors::AppError {
     fn from(err: WebAuthnCredentialError) -> Self {
-        cuba_errors::AppError::validation(err.to_string())
+        errors::AppError::validation(err.to_string())
     }
 }

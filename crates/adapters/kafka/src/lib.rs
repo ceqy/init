@@ -1,4 +1,4 @@
-//! cuba-adapter-kafka - Kafka 适配器
+//! adapter-kafka - Kafka 适配器
 //!
 //! 提供完整的 Kafka 功能支持：
 //! - 消息生产（单条、批量、带 key）

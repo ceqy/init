@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use cuba_cqrs_core::QueryHandler;
-use cuba_errors::AppResult;
+use cqrs_core::QueryHandler;
+use errors::AppResult;
 use tracing::info;
 
 use crate::application::queries::auth::{
@@ -37,9 +37,9 @@ impl QueryHandler<ListUserSessionsQuery> for ListUserSessionsHandler {
             "Handling ListUserSessionsQuery"
         );
 
-        let user_id = cuba_common::UserId::from_uuid(
+        let user_id = common::UserId::from_uuid(
             uuid::Uuid::parse_str(&query.user_id)
-                .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?,
+                .map_err(|e| errors::AppError::validation(e.to_string()))?,
         );
 
         // 获取活跃会话
@@ -88,9 +88,9 @@ impl QueryHandler<GetBackupCodeCountQuery> for GetBackupCodeCountHandler {
             "Handling GetBackupCodeCountQuery"
         );
 
-        let user_id = cuba_common::UserId::from_uuid(
+        let user_id = common::UserId::from_uuid(
             uuid::Uuid::parse_str(&query.user_id)
-                .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?,
+                .map_err(|e| errors::AppError::validation(e.to_string()))?,
         );
 
         let remaining = self
@@ -137,9 +137,9 @@ impl QueryHandler<GetUser2FAStatusQuery> for GetUser2FAStatusHandler {
             "Handling GetUser2FAStatusQuery"
         );
 
-        let user_id = cuba_common::UserId::from_uuid(
+        let user_id = common::UserId::from_uuid(
             uuid::Uuid::parse_str(&query.user_id)
-                .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?,
+                .map_err(|e| errors::AppError::validation(e.to_string()))?,
         );
 
         // 检查备份码

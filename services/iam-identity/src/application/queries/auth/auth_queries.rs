@@ -1,7 +1,7 @@
 //! 认证查询
 
-use cuba_common::TenantId;
-use cuba_cqrs_core::Query;
+use common::TenantId;
+use cqrs_core::Query;
 
 /// 验证令牌查询
 #[derive(Debug, Clone)]

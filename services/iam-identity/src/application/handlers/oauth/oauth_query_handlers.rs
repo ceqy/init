@@ -4,8 +4,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use cuba_cqrs_core::QueryHandler;
-use cuba_errors::AppResult;
+use cqrs_core::QueryHandler;
+use errors::AppResult;
 use tracing::info;
 
 use crate::application::queries::oauth::{
@@ -39,7 +39,7 @@ impl QueryHandler<GetOAuthClientByIdQuery> for GetOAuthClientByIdHandler {
         );
 
         let client_id = OAuthClientId::from_str(&query.client_id)
-            .map_err(|e| cuba_errors::AppError::validation(e.to_string()))?;
+            .map_err(|e| errors::AppError::validation(e.to_string()))?;
 
         let client = self
             .client_repository

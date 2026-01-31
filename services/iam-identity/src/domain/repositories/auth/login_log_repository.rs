@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use cuba_common::{TenantId, UserId};
-use cuba_errors::AppResult;
+use common::{TenantId, UserId};
+use errors::AppResult;
 
 use crate::domain::auth::{LoginLog, LoginLogId, LoginResult};
 

@@ -1,8 +1,8 @@
 //! PostgreSQL 手机验证仓储实现
 
 use async_trait::async_trait;
-use cuba_common::{TenantId, UserId};
-use cuba_errors::{AppError, AppResult};
+use common::{TenantId, UserId};
+use errors::{AppError, AppResult};
 use sqlx::PgPool;
 use tracing::{debug, warn};
 

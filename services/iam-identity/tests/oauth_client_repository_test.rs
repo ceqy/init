@@ -1,4 +1,4 @@
-use cuba_common::{TenantId, UserId};
+use common::{TenantId, UserId};
 use iam_identity::domain::oauth::{OAuthClient, OAuthClientType};
 use iam_identity::domain::repositories::oauth::OAuthClientRepository;
 use iam_identity::infrastructure::persistence::oauth::PostgresOAuthClientRepository;

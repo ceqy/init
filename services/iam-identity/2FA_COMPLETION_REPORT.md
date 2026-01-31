@@ -103,7 +103,7 @@ services/iam-identity/migrations/
 - **算法**: SHA1
 - **位数**: 6
 - **时间窗口**: 30 秒
-- **QR 码格式**: `otpauth://totp/Cuba%20ERP:username?secret=XXX&issuer=Cuba%20ERP`
+- **QR 码格式**: `otpauth://totp/ERP%20ERP:username?secret=XXX&issuer=ERP%20ERP`
 
 ### 备份码配置
 - **数量**: 10 个
@@ -148,7 +148,7 @@ Enable2FARequest {
 // 响应
 Enable2FAResponse {
   secret: "JBSWY3DPEHPK3PXP"
-  qr_code_url: "otpauth://totp/Cuba%20ERP:username?secret=..."
+  qr_code_url: "otpauth://totp/ERP%20ERP:username?secret=..."
   backup_codes: []  // 空数组
   enabled: false    // 尚未启用
 }

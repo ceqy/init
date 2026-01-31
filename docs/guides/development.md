@@ -66,8 +66,8 @@ buf --version
 ## 克隆项目
 
 ```bash
-git clone https://github.com/cuba-erp/cuba-erp.git
-cd cuba-erp
+git clone https://github.com/erp/erp.git
+cd erp
 ```
 
 ## 启动基础设施
@@ -364,7 +364,7 @@ psql -h localhost -U postgres -d cuba
 ## 项目结构
 
 ```
-cuba-erp/
+erp/
 ├── crates/                    # 共享库
 │   ├── common/                # 通用类型和工具
 │   ├── errors/                # 统一错误处理
@@ -613,4 +613,4 @@ docker compose -f deploy/docker/docker-compose.yml restart postgres
 - [Tokio 文档](https://tokio.rs/)
 - [Tonic 文档](https://github.com/hyperium/tonic)
 - [SQLx 文档](https://github.com/launchbadge/sqlx)
-- [Cuba ERP 架构文档](../architecture.md)
+- [ERP 架构文档](../architecture.md)

@@ -1,6 +1,6 @@
 //! 密码服务
 
-use cuba_errors::AppResult;
+use errors::AppResult;
 
 use crate::domain::value_objects::HashedPassword;
 

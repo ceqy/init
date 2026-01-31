@@ -4,8 +4,8 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use tracing::info;
 
-use cuba_common::TenantId;
-use cuba_cqrs_core::CommandHandler;
+use common::TenantId;
+use cqrs_core::CommandHandler;
 
 use crate::application::commands::oauth::{AuthorizeCommand, CreateClientCommand, TokenCommand};
 use crate::application::handlers::oauth::{AuthorizeHandler, CreateClientHandler, TokenHandler};

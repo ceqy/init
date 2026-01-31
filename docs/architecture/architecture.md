@@ -2,7 +2,7 @@
 
 ## 概述
 
-Cuba ERP 采用微服务架构，基于 DDD（领域驱动设计）、CQRS（命令查询职责分离）和事件溯源模式。
+ERP 采用微服务架构，基于 DDD（领域驱动设计）、CQRS（命令查询职责分离）和事件溯源模式。
 
 ## 分层架构
 
@@ -39,10 +39,10 @@ Cuba ERP 采用微服务架构，基于 DDD（领域驱动设计）、CQRS（命
 
 具体的基础设施实现：
 
-- `cuba-adapter-postgres` - PostgreSQL 实现
-- `cuba-adapter-redis` - Redis 实现
-- `cuba-adapter-kafka` - Kafka 实现
-- `cuba-adapter-clickhouse` - ClickHouse 实现
+- `adapter-postgres` - PostgreSQL 实现
+- `adapter-redis` - Redis 实现
+- `adapter-kafka` - Kafka 实现
+- `adapter-clickhouse` - ClickHouse 实现
 
 ### Bootstrap (启动骨架)
 

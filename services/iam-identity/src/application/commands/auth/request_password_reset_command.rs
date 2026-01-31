@@ -1,6 +1,6 @@
 //! 请求密码重置命令
 
-use cuba_cqrs_core::Command;
+use cqrs_core::Command;
 use serde::{Deserialize, Serialize};
 
 /// 请求密码重置命令

@@ -5,8 +5,8 @@
 //! 2. Singleflight 模式 - 防止缓存击穿（同一时间大量请求同一个不存在的 key）
 
 use async_trait::async_trait;
-use cuba_errors::{AppError, AppResult};
-use cuba_ports::CachePort;
+use errors::{AppError, AppResult};
+use ports::CachePort;
 use rand::Rng;
 use std::collections::HashMap;
 use std::sync::Arc;

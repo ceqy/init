@@ -1,4 +1,4 @@
-//! Cuba ERP API Gateway
+//! ERP API Gateway
 
 mod audit;
 mod auth;
@@ -14,9 +14,9 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 
 use axum::{Router, http::HeaderValue, middleware as axum_middleware};
-use cuba_adapter_redis::create_connection_manager;
-use cuba_auth_core::TokenService;
-use cuba_telemetry::init_tracing;
+use adapter_redis::create_connection_manager;
+use auth_core::TokenService;
+use telemetry::init_tracing;
 use futures::StreamExt;
 use std::net::SocketAddr;
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -50,8 +50,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &config.jwt_secret,
         3600,                   // access_token_expires_in: 1 小时
         86400 * 7,              // refresh_token_expires_in: 7 天
-        "cuba-iam".to_string(), // issuer - 必须与 IAM 服务一致
-        "cuba-api".to_string(), // audience
+        "iam".to_string(), // issuer - 必须与 IAM 服务一致
+        "api".to_string(), // audience
     );
 
     // 初始化 gRPC 客户端

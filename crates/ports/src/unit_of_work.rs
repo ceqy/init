@@ -1,7 +1,7 @@
 //! Unit of Work trait 定义
 
 use async_trait::async_trait;
-use cuba_errors::AppResult;
+use errors::AppResult;
 
 /// Unit of Work trait
 #[async_trait]

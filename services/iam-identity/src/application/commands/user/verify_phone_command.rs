@@ -1,6 +1,6 @@
 //! 验证手机命令
 
-use cuba_cqrs_core::Command;
+use cqrs_core::Command;
 use serde::{Deserialize, Serialize};
 
 /// 验证手机命令

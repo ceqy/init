@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use clickhouse::Row;
-use cuba_errors::{AppError, AppResult};
-use cuba_ports::{
+use errors::{AppError, AppResult};
+use ports::{
     AnalyticsQueryOptions, AuditLogEntry, AuditLogFilter, AuditLogRepository,
     BusinessEvent, BusinessEventRepository, EventTrend,
 };

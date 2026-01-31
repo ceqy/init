@@ -6,7 +6,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use cuba_auth_core::{Claims, TokenService};
+use auth_core::{Claims, TokenService};
 use tracing::{debug, info, warn};
 
 /// 认证上下文
@@ -140,7 +140,7 @@ mod tests {
         middleware,
         routing::get,
     };
-    use cuba_common::{TenantId, UserId};
+    use common::{TenantId, UserId};
     use tower::ServiceExt;
 
     async fn handler() -> impl axum::response::IntoResponse {
@@ -154,8 +154,8 @@ mod tests {
             secret,
             3600,
             3600,
-            "cuba-iam".to_string(),
-            "cuba-api".to_string(),
+            "iam".to_string(),
+            "api".to_string(),
         );
         let user_id = UserId::new();
         let tenant_id = TenantId::new();
@@ -188,8 +188,8 @@ mod tests {
             secret,
             3600,
             3600,
-            "cuba-iam".to_string(),
-            "cuba-api".to_string(),
+            "iam".to_string(),
+            "api".to_string(),
         );
 
         let app = Router::new()
@@ -217,8 +217,8 @@ mod tests {
             secret,
             3600,
             3600,
-            "cuba-iam".to_string(),
-            "cuba-api".to_string(),
+            "iam".to_string(),
+            "api".to_string(),
         );
 
         let app = Router::new()
@@ -243,8 +243,8 @@ mod tests {
             secret,
             -3600,
             -3600,
-            "cuba-iam".to_string(),
-            "cuba-api".to_string(),
+            "iam".to_string(),
+            "api".to_string(),
         );
         let user_id = UserId::new();
         let tenant_id = TenantId::new();
@@ -278,16 +278,16 @@ mod tests {
             secret,
             3600,
             3600,
-            "cuba-iam".to_string(),
-            "cuba-api".to_string(),
+            "iam".to_string(),
+            "api".to_string(),
         );
 
         let wrong_secret_service = TokenService::new(
             "wrong_secret_at_least_32_characters",
             3600,
             3600,
-            "cuba-iam".to_string(),
-            "cuba-api".to_string(),
+            "iam".to_string(),
+            "api".to_string(),
         );
         let user_id = UserId::new();
         let tenant_id = TenantId::new();

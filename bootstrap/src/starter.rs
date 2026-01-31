@@ -6,8 +6,8 @@ use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use cuba_config::AppConfig;
-use cuba_errors::AppResult;
+use config::AppConfig;
+use errors::AppResult;
 use tonic::transport::Server;
 use tracing::{error, info};
 
@@ -55,7 +55,7 @@ impl ServiceConfig {
 /// # 示例
 ///
 /// ```ignore
-/// use cuba_bootstrap::run;
+/// use bootstrap::run;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {

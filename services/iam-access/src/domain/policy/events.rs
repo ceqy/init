@@ -1,7 +1,7 @@
 //! Policy 领域事件
 
 use super::policy::{Policy, PolicyId};
-use cuba_common::TenantId;
+use common::TenantId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

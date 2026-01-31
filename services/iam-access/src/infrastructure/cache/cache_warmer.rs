@@ -5,8 +5,8 @@
 use crate::domain::policy::Policy;
 use crate::domain::role::Role;
 use crate::infrastructure::cache::AuthCache;
-use cuba_common::TenantId;
-use cuba_errors::AppResult;
+use common::TenantId;
+use errors::AppResult;
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -148,7 +148,7 @@ impl CacheWarmer {
 mod tests {
     use super::*;
     use crate::infrastructure::cache::auth_cache::AuthCacheConfig;
-    use cuba_ports::CachePort;
+    use ports::CachePort;
     use std::collections::HashMap;
     use std::sync::Mutex;
 

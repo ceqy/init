@@ -1,4 +1,4 @@
-//! cuba-adapter-clickhouse - ClickHouse 适配器
+//! adapter-clickhouse - ClickHouse 适配器
 //!
 //! 提供完整的 ClickHouse 集成，包括：
 //! - 连接池管理

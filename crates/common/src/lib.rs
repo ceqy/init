@@ -1,4 +1,4 @@
-//! cuba-common - 通用类型和工具库
+//! common - 通用类型和工具库
 
 pub mod health;
 pub mod retry;

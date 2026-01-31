@@ -190,13 +190,13 @@ docker-compose -f deploy/docker/docker-compose.envoy.yml pull
 docker-compose -f deploy/docker/docker-compose.envoy.yml up -d postgres
 
 # 2. 等待数据库就绪
-until docker exec cuba-postgres pg_isready -U postgres; do sleep 1; done
+until docker exec postgres pg_isready -U postgres; do sleep 1; done
 
 # 3. 运行迁移
-docker exec cuba-postgres psql -U postgres -d cuba -f /migrations/init.sql
+docker exec postgres psql -U postgres -d cuba -f /migrations/init.sql
 
 # 4. 验证数据库
-docker exec cuba-postgres psql -U postgres -d cuba -c "\dt"
+docker exec postgres psql -U postgres -d cuba -c "\dt"
 ```
 
 ### 3. 启动服务
@@ -297,10 +297,10 @@ curl http://localhost:9090/api/v1/targets
 
 | 角色 | 姓名 | 电话 | 邮箱 | 职责 |
 |------|------|------|------|------|
-| 运维负责人 | - | - | ops@cuba-erp.com | 整体协调 |
-| DBA | - | - | dba@cuba-erp.com | 数据库问题 |
-| 平台工程师 | - | - | platform@cuba-erp.com | 基础设施 |
-| 安全工程师 | - | - | security@cuba-erp.com | 安全事件 |
+| 运维负责人 | - | - | ops@erp.com | 整体协调 |
+| DBA | - | - | dba@erp.com | 数据库问题 |
+| 平台工程师 | - | - | platform@erp.com | 基础设施 |
+| 安全工程师 | - | - | security@erp.com | 安全事件 |
 
 ---
 

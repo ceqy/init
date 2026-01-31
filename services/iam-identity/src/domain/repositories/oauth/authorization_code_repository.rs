@@ -1,8 +1,8 @@
 //! 授权码仓储接口
 
 use async_trait::async_trait;
-use cuba_common::TenantId;
-use cuba_errors::AppResult;
+use common::TenantId;
+use errors::AppResult;
 
 use crate::domain::oauth::{AuthorizationCode, OAuthClientId};
 
@@ -31,7 +31,7 @@ pub trait AuthorizationCodeRepository: Send + Sync {
     /// 删除用户的所有授权码
     async fn delete_by_user_id(
         &self,
-        user_id: &cuba_common::UserId,
+        user_id: &common::UserId,
         tenant_id: &TenantId,
     ) -> AppResult<u64>;
 

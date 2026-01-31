@@ -33,7 +33,7 @@ fn default_timeout_secs() -> u64 {
     30
 }
 
-use cuba_errors::AppResult;
+use errors::AppResult;
 
 /// 邮件发送接口
 #[async_trait::async_trait]

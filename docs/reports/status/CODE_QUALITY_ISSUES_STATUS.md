@@ -153,7 +153,7 @@ uow.session_repo().save(&session).await?;
 uow.commit().await?;  // 一起提交或回滚
 ```
 
-**建议**: 实现 `cuba-ports` 中的 `UnitOfWork` trait
+**建议**: 实现 `ports` 中的 `UnitOfWork` trait
 
 **优先级**: 🟡 中 - 当前使用单个 repository 操作，风险较低
 

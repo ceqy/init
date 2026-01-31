@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clickhouse::Row;
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use tracing::{debug, error, info};

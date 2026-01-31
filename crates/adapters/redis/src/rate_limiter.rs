@@ -2,7 +2,7 @@
 //!
 //! 提供基于 Redis 的分布式限流功能
 
-use cuba_errors::{AppError, AppResult};
+use errors::{AppError, AppResult};
 use redis::aio::ConnectionManager;
 use redis::{AsyncCommands, Script};
 use tracing::debug;
