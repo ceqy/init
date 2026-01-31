@@ -52,7 +52,7 @@ impl Infrastructure {
 
         // 1. 创建 PostgreSQL 连接池（必需，带重试）
         let pg_config = PostgresConfig::new(config.database.url.expose_secret())
-            .with_max_connections(config.database.max_connections);
+            .with_pool(1, config.database.max_connections);
         let postgres_pool = with_retry(&retry_config, "PostgreSQL connection", || {
             let cfg = pg_config.clone();
             async move { create_pool(&cfg).await }
@@ -66,7 +66,7 @@ impl Infrastructure {
         // 1.1 创建读库连接池（可选，用于读写分离）
         let rw_pool = if let Some(read_url) = &config.database.read_url {
             let read_config = PostgresConfig::new(read_url.expose_secret())
-                .with_max_connections(config.database.read_max_connections);
+                .with_pool(1, config.database.read_max_connections);
 
             match with_retry(&retry_config, "PostgreSQL read replica connection", || {
                 let cfg = read_config.clone();
