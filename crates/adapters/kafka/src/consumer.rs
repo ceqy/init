@@ -1,4 +1,8 @@
 //! Kafka Consumer
+//!
+//! 提供消息消费功能，支持重试和 DLQ
+
+use std::time::Duration;
 
 use cuba_errors::{AppError, AppResult};
 use futures_util::StreamExt;
@@ -6,11 +10,13 @@ use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 use rdkafka::message::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::util::Timeout;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
-/// Kafka Consumer 配置
+use crate::config::ConsumerConfig;
+
+/// Kafka Consumer 配置（简化版，保持向后兼容）
 #[derive(Debug, Clone)]
 pub struct KafkaConsumerConfig {
     pub brokers: String,
@@ -41,6 +47,11 @@ impl KafkaConsumerConfig {
         self
     }
 
+    pub fn with_topic(mut self, topic: impl Into<String>) -> Self {
+        self.topics.push(topic.into());
+        self
+    }
+
     pub fn with_max_retries(mut self, max_retries: u32) -> Self {
         self.max_retries = max_retries;
         self
@@ -55,32 +66,66 @@ impl KafkaConsumerConfig {
         self.dlq_suffix = suffix.into();
         self
     }
+
+    /// 转换为完整配置
+    pub fn to_consumer_config(&self) -> ConsumerConfig {
+        ConsumerConfig::new(&self.brokers, &self.group_id)
+            .with_topics(self.topics.clone())
+            .with_max_retries(self.max_retries)
+            .with_dlq(self.enable_dlq)
+            .with_dlq_suffix(&self.dlq_suffix)
+    }
+}
+
+/// 消费的消息
+#[derive(Debug, Clone)]
+pub struct ConsumedMessage {
+    /// Topic
+    pub topic: String,
+    /// 分区
+    pub partition: i32,
+    /// 偏移量
+    pub offset: i64,
+    /// 消息键
+    pub key: Option<String>,
+    /// 消息内容
+    pub payload: String,
+    /// 时间戳
+    pub timestamp: Option<i64>,
+}
+
+impl ConsumedMessage {
+    /// 解析 JSON 负载
+    pub fn parse_payload<T: for<'de> Deserialize<'de>>(&self) -> AppResult<T> {
+        serde_json::from_str(&self.payload)
+            .map_err(|e| AppError::validation(format!("Failed to parse payload: {}", e)))
+    }
 }
 
 /// DLQ 消息元数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct DlqMetadata {
+pub struct DlqMetadata {
     /// 原始 topic
-    original_topic: String,
+    pub original_topic: String,
     /// 原始 partition
-    original_partition: i32,
+    pub original_partition: i32,
     /// 原始 offset
-    original_offset: i64,
+    pub original_offset: i64,
     /// 失败原因
-    error_message: String,
+    pub error_message: String,
     /// 重试次数
-    retry_count: u32,
+    pub retry_count: u32,
     /// 失败时间戳
-    failed_at: i64,
+    pub failed_at: i64,
 }
 
 /// DLQ 消息包装
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct DlqMessage {
+pub struct DlqMessage {
     /// 元数据
-    metadata: DlqMetadata,
+    pub metadata: DlqMetadata,
     /// 原始消息内容
-    payload: String,
+    pub payload: String,
 }
 
 /// Kafka Event Consumer
@@ -91,11 +136,12 @@ pub struct KafkaEventConsumer {
 }
 
 impl KafkaEventConsumer {
+    /// 从简化配置创建
     pub fn new(config: KafkaConsumerConfig) -> AppResult<Self> {
         let consumer: StreamConsumer = ClientConfig::new()
             .set("bootstrap.servers", &config.brokers)
             .set("group.id", &config.group_id)
-            .set("enable.auto.commit", "false") // 禁用自动提交，改为手动提交
+            .set("enable.auto.commit", "false")
             .set("auto.offset.reset", "earliest")
             .create()
             .map_err(|e| AppError::internal(format!("Failed to create Kafka consumer: {}", e)))?;
@@ -105,7 +151,6 @@ impl KafkaEventConsumer {
             .subscribe(&topics)
             .map_err(|e| AppError::internal(format!("Failed to subscribe to topics: {}", e)))?;
 
-        // 如果启用 DLQ，创建 producer
         let dlq_producer = if config.enable_dlq {
             let producer: FutureProducer = ClientConfig::new()
                 .set("bootstrap.servers", &config.brokers)
@@ -117,6 +162,12 @@ impl KafkaEventConsumer {
             None
         };
 
+        info!(
+            group_id = %config.group_id,
+            topics = ?config.topics,
+            "Kafka consumer created"
+        );
+
         Ok(Self {
             consumer,
             dlq_producer,
@@ -124,10 +175,64 @@ impl KafkaEventConsumer {
         })
     }
 
-    /// 开始消费消息
+    /// 从完整配置创建
+    pub fn from_consumer_config(config: &ConsumerConfig) -> AppResult<Self> {
+        let mut client_config = ClientConfig::new();
+
+        for (key, value) in config.to_client_config_entries() {
+            client_config.set(&key, &value);
+        }
+
+        let consumer: StreamConsumer = client_config
+            .create()
+            .map_err(|e| AppError::internal(format!("Failed to create Kafka consumer: {}", e)))?;
+
+        let topics: Vec<&str> = config.topics.iter().map(|s| s.as_str()).collect();
+        consumer
+            .subscribe(&topics)
+            .map_err(|e| AppError::internal(format!("Failed to subscribe to topics: {}", e)))?;
+
+        let dlq_producer = if config.enable_dlq {
+            let producer: FutureProducer = ClientConfig::new()
+                .set("bootstrap.servers", &config.base.brokers)
+                .set("client.id", format!("{}-dlq-producer", config.group_id))
+                .create()
+                .map_err(|e| AppError::internal(format!("Failed to create DLQ producer: {}", e)))?;
+            Some(producer)
+        } else {
+            None
+        };
+
+        let simple_config = KafkaConsumerConfig {
+            brokers: config.base.brokers.clone(),
+            group_id: config.group_id.clone(),
+            topics: config.topics.clone(),
+            max_retries: config.max_retries,
+            enable_dlq: config.enable_dlq,
+            dlq_suffix: config.dlq_suffix.clone(),
+        };
+
+        Ok(Self {
+            consumer,
+            dlq_producer,
+            config: simple_config,
+        })
+    }
+
+    /// 开始消费消息（简单回调）
     pub async fn start<F, Fut>(&self, handler: F) -> AppResult<()>
     where
         F: Fn(String, String) -> Fut + Send + Sync,
+        Fut: std::future::Future<Output = AppResult<()>> + Send,
+    {
+        self.start_with_message(|msg| handler(msg.topic.clone(), msg.payload.clone()))
+            .await
+    }
+
+    /// 开始消费消息（完整消息回调）
+    pub async fn start_with_message<F, Fut>(&self, handler: F) -> AppResult<()>
+    where
+        F: Fn(ConsumedMessage) -> Fut + Send + Sync,
         Fut: std::future::Future<Output = AppResult<()>> + Send,
     {
         let mut stream = self.consumer.stream();
@@ -143,7 +248,6 @@ impl KafkaEventConsumer {
                         Some(Ok(s)) => s.to_string(),
                         Some(Err(e)) => {
                             error!("Failed to deserialize message payload: {}", e);
-                            // 反序列化失败，直接发送到 DLQ
                             if let Err(dlq_err) = self
                                 .send_to_dlq(
                                     &topic,
@@ -157,39 +261,48 @@ impl KafkaEventConsumer {
                             {
                                 error!("Failed to send to DLQ: {}", dlq_err);
                             }
-                            // 提交 offset，避免重复处理
                             if let Err(e) =
                                 self.consumer.commit_message(&message, CommitMode::Async)
                             {
-                                error!(
-                                    "Failed to commit offset after deserialization error: {}",
-                                    e
-                                );
+                                error!("Failed to commit offset: {}", e);
                             }
                             continue;
                         }
                         None => {
+                            debug!(topic = %topic, partition, offset, "Empty message, skipping");
                             continue;
                         }
                     };
 
-                    // 处理消息，带重试机制
+                    let key = message
+                        .key_view::<str>()
+                        .and_then(|r| r.ok())
+                        .map(|s| s.to_string());
+
+                    let timestamp = message.timestamp().to_millis();
+
+                    let consumed_msg = ConsumedMessage {
+                        topic: topic.clone(),
+                        partition,
+                        offset,
+                        key,
+                        payload: payload.clone(),
+                        timestamp,
+                    };
+
                     if let Err(e) = self
-                        .process_with_retry(
-                            &handler,
-                            topic.clone(),
-                            payload.clone(),
-                            partition,
-                            offset,
-                        )
+                        .process_with_retry(&handler, consumed_msg, partition, offset)
                         .await
                     {
                         error!(
-                            "Failed to process message from {} after {} retries: {}",
-                            topic, self.config.max_retries, e
+                            topic = %topic,
+                            partition,
+                            offset,
+                            retries = self.config.max_retries,
+                            error = %e,
+                            "Failed to process message after retries"
                         );
 
-                        // 发送到 DLQ
                         if let Err(dlq_err) = self
                             .send_to_dlq(
                                 &topic,
@@ -202,12 +315,10 @@ impl KafkaEventConsumer {
                             .await
                         {
                             error!("Failed to send to DLQ: {}", dlq_err);
-                            // DLQ 发送失败，不提交 offset，下次重新处理
                             continue;
                         }
                     }
 
-                    // 处理成功或已发送到 DLQ，提交 offset
                     if let Err(e) = self.consumer.commit_message(&message, CommitMode::Async) {
                         error!("Failed to commit offset: {}", e);
                     }
@@ -226,24 +337,27 @@ impl KafkaEventConsumer {
     async fn process_with_retry<F, Fut>(
         &self,
         handler: &F,
-        topic: String,
-        payload: String,
+        message: ConsumedMessage,
         partition: i32,
         offset: i64,
     ) -> AppResult<()>
     where
-        F: Fn(String, String) -> Fut + Send + Sync,
+        F: Fn(ConsumedMessage) -> Fut + Send + Sync,
         Fut: std::future::Future<Output = AppResult<()>> + Send,
     {
         let mut last_error = None;
+        let topic = message.topic.clone();
 
         for attempt in 0..=self.config.max_retries {
-            match handler(topic.clone(), payload.clone()).await {
+            match handler(message.clone()).await {
                 Ok(_) => {
                     if attempt > 0 {
                         info!(
-                            "Message processed successfully after {} retries (topic: {}, partition: {}, offset: {})",
-                            attempt, topic, partition, offset
+                            topic = %topic,
+                            partition,
+                            offset,
+                            attempt,
+                            "Message processed successfully after retry"
                         );
                     }
                     return Ok(());
@@ -252,15 +366,14 @@ impl KafkaEventConsumer {
                     last_error = Some(e);
                     if attempt < self.config.max_retries {
                         warn!(
-                            "Failed to process message (attempt {}/{}): {} (topic: {}, partition: {}, offset: {})",
-                            attempt + 1,
-                            self.config.max_retries + 1,
-                            last_error.as_ref().unwrap(),
-                            topic,
+                            topic = %topic,
                             partition,
-                            offset
+                            offset,
+                            attempt = attempt + 1,
+                            max_attempts = self.config.max_retries + 1,
+                            error = %last_error.as_ref().unwrap(),
+                            "Failed to process message, retrying"
                         );
-                        // 指数退避：100ms, 200ms, 400ms...
                         let backoff = Duration::from_millis(100 * 2_u64.pow(attempt));
                         tokio::time::sleep(backoff).await;
                     }
@@ -310,18 +423,79 @@ impl KafkaEventConsumer {
 
         let record: FutureRecord<'_, str, String> = FutureRecord::to(&dlq_topic)
             .payload(&dlq_payload)
-            .key(original_topic); // 使用原始 topic 作为 key，便于分区
+            .key(original_topic);
 
         dlq_producer
-            .send(record, Duration::from_secs(5))
+            .send(record, Timeout::After(Duration::from_secs(5)))
             .await
             .map_err(|(e, _)| AppError::internal(format!("Failed to send to DLQ: {}", e)))?;
 
         warn!(
-            "Message sent to DLQ: {} (original topic: {}, partition: {}, offset: {}, error: {})",
-            dlq_topic, original_topic, partition, offset, error_message
+            dlq_topic = %dlq_topic,
+            original_topic = %original_topic,
+            partition,
+            offset,
+            error = %error_message,
+            "Message sent to DLQ"
         );
 
         Ok(())
+    }
+
+    /// 获取消费者组 ID
+    pub fn group_id(&self) -> &str {
+        &self.config.group_id
+    }
+
+    /// 获取订阅的 topics
+    pub fn topics(&self) -> &[String] {
+        &self.config.topics
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_consumer_config() {
+        let config = KafkaConsumerConfig::new("localhost:9092", "test-group")
+            .with_topic("topic1")
+            .with_topic("topic2")
+            .with_max_retries(5);
+
+        assert_eq!(config.topics.len(), 2);
+        assert_eq!(config.max_retries, 5);
+    }
+
+    #[test]
+    fn test_dlq_message() {
+        let msg = DlqMessage {
+            metadata: DlqMetadata {
+                original_topic: "test".to_string(),
+                original_partition: 0,
+                original_offset: 100,
+                error_message: "test error".to_string(),
+                retry_count: 3,
+                failed_at: 1234567890,
+            },
+            payload: "test payload".to_string(),
+        };
+
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed: DlqMessage = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.metadata.original_topic, "test");
+    }
+
+    #[tokio::test]
+    #[ignore] // 需要 Kafka 实例
+    async fn test_consumer() {
+        let config = KafkaConsumerConfig::new("localhost:9092", "test-group")
+            .with_topic("test-topic");
+
+        let consumer = KafkaEventConsumer::new(config).unwrap();
+
+        // 这里只是测试创建，实际消费需要 Kafka 实例
+        assert_eq!(consumer.group_id(), "test-group");
     }
 }
