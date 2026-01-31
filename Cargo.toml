@@ -132,3 +132,18 @@ cuba-adapter-clickhouse = { path = "crates/adapters/clickhouse" }
 cuba-adapter-kafka = { path = "crates/adapters/kafka" }
 cuba-adapter-email = { path = "crates/adapters/email" }
 cuba-bootstrap = { path = "bootstrap" }
+
+# ============================================
+# 编译优化配置
+# ============================================
+
+[profile.dev]
+opt-level = 0
+debug = 1  # 减少调试信息，加快编译
+
+[profile.dev.package."*"]
+opt-level = 2  # 依赖使用优化编译
+
+[profile.release]
+lto = "thin"
+codegen-units = 16

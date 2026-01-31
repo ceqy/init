@@ -18,3 +18,19 @@ index = "https://rsproxy.cn/crates.io-index"
 # 网络配置
 [net]
 git-fetch-with-cli = true
+
+# ============================================
+# 构建优化配置
+# ============================================
+
+[build]
+incremental = true
+
+# Linux 使用 mold 链接器（需要先安装 mold）
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+[target.aarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
