@@ -2,78 +2,14 @@
 
 use cuba_errors::{AppError, AppResult};
 use sqlx::postgres::{PgPool, PgPoolOptions};
-use std::time::Duration;
 
-/// PostgreSQL 连接池配置
-#[derive(Debug, Clone)]
-pub struct PostgresConfig {
-    pub url: String,
-    pub max_connections: u32,
-    pub min_connections: u32,
-    pub connect_timeout: Duration,
-    pub idle_timeout: Duration,
-    pub max_lifetime: Option<Duration>,
-    pub acquire_timeout: Duration,
-}
-
-impl Default for PostgresConfig {
-    fn default() -> Self {
-        Self {
-            url: String::new(),
-            max_connections: 10, // 仅作为 fallback，实际值由 config 层控制
-            min_connections: 1,
-            connect_timeout: Duration::from_secs(30),
-            idle_timeout: Duration::from_secs(600), // 10 分钟
-            max_lifetime: Some(Duration::from_secs(1800)), // 30 分钟，防止连接泄漏
-            acquire_timeout: Duration::from_secs(30), // 获取连接超时
-        }
-    }
-}
-
-impl PostgresConfig {
-    pub fn new(url: impl Into<String>) -> Self {
-        Self {
-            url: url.into(),
-            ..Default::default()
-        }
-    }
-
-    pub fn with_max_connections(mut self, max: u32) -> Self {
-        self.max_connections = max;
-        self
-    }
-
-    pub fn with_min_connections(mut self, min: u32) -> Self {
-        self.min_connections = min;
-        self
-    }
-
-    pub fn with_connect_timeout(mut self, timeout: Duration) -> Self {
-        self.connect_timeout = timeout;
-        self
-    }
-
-    pub fn with_idle_timeout(mut self, timeout: Duration) -> Self {
-        self.idle_timeout = timeout;
-        self
-    }
-
-    pub fn with_max_lifetime(mut self, lifetime: Duration) -> Self {
-        self.max_lifetime = Some(lifetime);
-        self
-    }
-
-    pub fn with_acquire_timeout(mut self, timeout: Duration) -> Self {
-        self.acquire_timeout = timeout;
-        self
-    }
-}
+use crate::config::PostgresConfig;
 
 /// 创建 PostgreSQL 连接池
 pub async fn create_pool(config: &PostgresConfig) -> AppResult<PgPool> {
     let mut options = PgPoolOptions::new()
-        .max_connections(config.max_connections)
-        .min_connections(config.min_connections)
+        .max_connections(config.pool_max)
+        .min_connections(config.pool_min)
         .acquire_timeout(config.acquire_timeout)
         .idle_timeout(config.idle_timeout);
 
@@ -83,7 +19,7 @@ pub async fn create_pool(config: &PostgresConfig) -> AppResult<PgPool> {
     }
 
     options
-        .connect(&config.url)
+        .connect(&config.connection_url())
         .await
         .map_err(|e| AppError::database(format!("Failed to create pool: {}", e)))
 }
@@ -115,6 +51,26 @@ impl ReadWritePool {
             write_pool,
             read_pool,
         }
+    }
+
+    /// 从配置创建读写分离连接池
+    pub async fn from_config(config: &PostgresConfig) -> AppResult<Self> {
+        let write_pool = create_pool(config).await?;
+
+        let read_pool = if config.has_read_replicas() {
+            // 使用第一个只读副本创建读连接池
+            // 生产环境可以考虑使用负载均衡
+            let read_config = PostgresConfig::new(&config.read_replicas[0])
+                .with_pool(config.pool_min, config.pool_max)
+                .with_acquire_timeout(config.acquire_timeout)
+                .with_idle_timeout(config.idle_timeout);
+
+            Some(create_pool(&read_config).await?)
+        } else {
+            None
+        };
+
+        Ok(Self::new(write_pool, read_pool))
     }
 
     /// 获取写连接池（主库）
@@ -169,4 +125,25 @@ pub struct PoolStatus {
     pub read_idle: u32,
     /// 读连接池活跃连接数
     pub read_active: u32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pool_status() {
+        let status = PoolStatus {
+            write_size: 10,
+            write_idle: 7,
+            write_active: 3,
+            read_size: 5,
+            read_idle: 4,
+            read_active: 1,
+        };
+
+        assert_eq!(status.write_size, 10);
+        assert_eq!(status.write_active, 3);
+        assert_eq!(status.read_size, 5);
+    }
 }
