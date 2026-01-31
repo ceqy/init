@@ -3,9 +3,12 @@
 //! 统一管理所有微服务共享的基础设施资源
 
 use std::sync::Arc;
+use std::time::Duration;
 
-use clickhouse::Client as ClickHouseClient;
-use cuba_adapter_clickhouse::{ClickHouseConfig, create_client as create_clickhouse_client};
+use cuba_adapter_clickhouse::{
+    BatchConfig, BatchWriter, ClickHouseConfig as ChAdapterConfig, ClickHousePool,
+    CompressionMethod, ReplicaConfig,
+};
 use cuba_adapter_kafka::{KafkaEventPublisher, KafkaProducerConfig};
 pub use cuba_adapter_postgres::PoolStatus;
 use cuba_adapter_postgres::{PostgresConfig, ReadWritePool, create_pool};
@@ -13,8 +16,10 @@ use cuba_adapter_redis::{RedisCache, create_connection_manager};
 use cuba_auth_core::TokenService;
 use cuba_config::AppConfig;
 use cuba_errors::AppResult;
+use clickhouse::Row;
 use redis::aio::ConnectionManager;
 use secrecy::ExposeSecret;
+use serde::Serialize;
 use sqlx::PgPool;
 use tracing::info;
 
@@ -36,8 +41,8 @@ pub struct Infrastructure {
     token_service: Arc<TokenService>,
     /// Kafka Producer（可选）
     kafka_producer: Option<Arc<KafkaEventPublisher>>,
-    /// ClickHouse 客户端（可选）
-    clickhouse_client: Option<ClickHouseClient>,
+    /// ClickHouse 连接池（可选）
+    clickhouse_pool: Option<Arc<ClickHousePool>>,
 }
 
 impl Infrastructure {
@@ -125,18 +130,21 @@ impl Infrastructure {
             None
         };
 
-        // 5. 创建 ClickHouse 客户端（可选，不重试，因为是同步创建）
-        let clickhouse_client = if let Some(ch_config) = &config.clickhouse {
-            let ch_adapter_config =
-                ClickHouseConfig::new(ch_config.url.expose_secret(), &ch_config.database);
-            match create_clickhouse_client(&ch_adapter_config) {
-                Ok(client) => {
-                    info!("ClickHouse client created");
-                    Some(client)
+        // 5. 创建 ClickHouse 连接池（可选）
+        let clickhouse_pool = if let Some(ch_config) = &config.clickhouse {
+            let ch_adapter_config = Self::build_clickhouse_config(ch_config);
+            match ClickHousePool::new(ch_adapter_config) {
+                Ok(pool) => {
+                    info!(
+                        pool_max = ch_config.pool_max,
+                        batch_size = ch_config.batch_size,
+                        "ClickHouse connection pool created"
+                    );
+                    Some(Arc::new(pool))
                 }
                 Err(e) => {
                     tracing::warn!(
-                        "Failed to create ClickHouse client: {}, continuing without ClickHouse",
+                        "Failed to create ClickHouse pool: {}, continuing without ClickHouse",
                         e
                     );
                     None
@@ -154,8 +162,53 @@ impl Infrastructure {
             redis_conn,
             token_service,
             kafka_producer,
-            clickhouse_client,
+            clickhouse_pool,
         })
+    }
+
+    /// 构建 ClickHouse 适配器配置
+    fn build_clickhouse_config(config: &cuba_config::ClickHouseConfig) -> ChAdapterConfig {
+        let compression = match config.compression.to_lowercase().as_str() {
+            "zstd" => CompressionMethod::Zstd,
+            "none" => CompressionMethod::None,
+            _ => CompressionMethod::Lz4,
+        };
+
+        let replicas: Vec<ReplicaConfig> = config
+            .replicas
+            .iter()
+            .map(|r| ReplicaConfig {
+                url: r.url.clone(),
+                weight: r.weight,
+            })
+            .collect();
+
+        let mut ch_config = ChAdapterConfig::new(
+            config.url.expose_secret(),
+            &config.database,
+        )
+        .with_pool(config.pool_min, config.pool_max)
+        .with_connection_timeout(Duration::from_secs(config.connection_timeout_secs))
+        .with_idle_timeout(Duration::from_secs(config.idle_timeout_secs))
+        .with_retry(
+            config.retry_max_attempts,
+            Duration::from_millis(config.retry_initial_delay_ms),
+            Duration::from_millis(config.retry_max_delay_ms),
+        )
+        .with_batch(config.batch_size, Duration::from_secs(config.batch_timeout_secs))
+        .with_compression(compression);
+
+        if let Some(user) = &config.user {
+            if let Some(password) = &config.password {
+                ch_config = ch_config.with_auth(user, password.expose_secret());
+            }
+        }
+
+        if let Some(cluster_name) = &config.cluster_name {
+            ch_config = ch_config.with_cluster(cluster_name, replicas);
+        }
+
+        ch_config
     }
 
     /// 获取应用配置
@@ -203,9 +256,25 @@ impl Infrastructure {
         self.kafka_producer.clone()
     }
 
-    /// 获取 ClickHouse 客户端（如果可用）
-    pub fn clickhouse_client(&self) -> Option<&ClickHouseClient> {
-        self.clickhouse_client.as_ref()
+    /// 获取 ClickHouse 连接池（如果可用）
+    pub fn clickhouse_pool(&self) -> Option<Arc<ClickHousePool>> {
+        self.clickhouse_pool.clone()
+    }
+
+    /// 获取 ClickHouse 客户端（兼容旧 API）
+    pub fn clickhouse_client(&self) -> Option<&clickhouse::Client> {
+        self.clickhouse_pool.as_ref().map(|p| p.first_client())
+    }
+
+    /// 创建 ClickHouse 批量写入器
+    pub fn clickhouse_batch_writer<T: Row + Serialize + Send + Sync + 'static>(
+        &self,
+        table: &str,
+    ) -> Option<BatchWriter<T>> {
+        self.clickhouse_pool.as_ref().map(|pool| {
+            let batch_config = BatchConfig::from_clickhouse_config(pool.config());
+            BatchWriter::new(pool.clone(), table, batch_config)
+        })
     }
 
     /// 检查 Kafka 是否可用
@@ -215,7 +284,12 @@ impl Infrastructure {
 
     /// 检查 ClickHouse 是否可用
     pub fn has_clickhouse(&self) -> bool {
-        self.clickhouse_client.is_some()
+        self.clickhouse_pool.is_some()
+    }
+
+    /// 获取 ClickHouse 连接池状态
+    pub fn clickhouse_pool_status(&self) -> Option<cuba_adapter_clickhouse::PoolStatus> {
+        self.clickhouse_pool.as_ref().map(|p| p.status())
     }
 
     /// 获取 PostgreSQL 连接池状态

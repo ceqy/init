@@ -3,7 +3,7 @@
 //! 提供 /health 和 /ready 端点
 
 use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
-use cuba_adapter_clickhouse::check_connection as check_clickhouse;
+use cuba_adapter_clickhouse::check_pool_health;
 use serde::Serialize;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -154,9 +154,22 @@ impl HealthChecker {
     }
 
     async fn check_clickhouse(&self, infra: &Infrastructure) -> ComponentHealth {
-        if let Some(client) = infra.clickhouse_client() {
-            match check_clickhouse(client).await {
-                Ok(_) => ComponentHealth::healthy("clickhouse"),
+        if let Some(pool) = infra.clickhouse_pool() {
+            match check_pool_health(&pool).await {
+                Ok(_) => {
+                    let status = pool.status();
+                    ComponentHealth {
+                        name: "clickhouse".to_string(),
+                        status: "healthy".to_string(),
+                        message: Some(format!(
+                            "nodes: {}/{}, connections: {}/{}",
+                            status.healthy_nodes,
+                            status.total_nodes,
+                            status.active_connections,
+                            status.max_connections
+                        )),
+                    }
+                }
                 Err(e) => ComponentHealth::unhealthy("clickhouse", e.to_string()),
             }
         } else {

@@ -62,6 +62,93 @@ pub struct KafkaConfig {
 pub struct ClickHouseConfig {
     pub url: Secret<String>,
     pub database: String,
+    pub user: Option<String>,
+    pub password: Option<Secret<String>>,
+
+    // 连接池配置
+    #[serde(default = "default_ch_pool_min")]
+    pub pool_min: u32,
+    #[serde(default = "default_ch_pool_max")]
+    pub pool_max: u32,
+    #[serde(default = "default_ch_connection_timeout_secs")]
+    pub connection_timeout_secs: u64,
+    #[serde(default = "default_ch_idle_timeout_secs")]
+    pub idle_timeout_secs: u64,
+
+    // 重试配置
+    #[serde(default = "default_ch_retry_max_attempts")]
+    pub retry_max_attempts: u32,
+    #[serde(default = "default_ch_retry_initial_delay_ms")]
+    pub retry_initial_delay_ms: u64,
+    #[serde(default = "default_ch_retry_max_delay_ms")]
+    pub retry_max_delay_ms: u64,
+
+    // 批量写入配置
+    #[serde(default = "default_ch_batch_size")]
+    pub batch_size: usize,
+    #[serde(default = "default_ch_batch_timeout_secs")]
+    pub batch_timeout_secs: u64,
+
+    // 压缩配置
+    #[serde(default = "default_ch_compression")]
+    pub compression: String,
+
+    // 集群配置（可选）
+    pub cluster_name: Option<String>,
+    #[serde(default)]
+    pub replicas: Vec<ClickHouseReplicaConfig>,
+}
+
+/// ClickHouse 副本配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct ClickHouseReplicaConfig {
+    pub url: String,
+    #[serde(default = "default_replica_weight")]
+    pub weight: u32,
+}
+
+fn default_ch_pool_min() -> u32 {
+    1
+}
+
+fn default_ch_pool_max() -> u32 {
+    10
+}
+
+fn default_ch_connection_timeout_secs() -> u64 {
+    30
+}
+
+fn default_ch_idle_timeout_secs() -> u64 {
+    600
+}
+
+fn default_ch_retry_max_attempts() -> u32 {
+    3
+}
+
+fn default_ch_retry_initial_delay_ms() -> u64 {
+    100
+}
+
+fn default_ch_retry_max_delay_ms() -> u64 {
+    10000
+}
+
+fn default_ch_batch_size() -> usize {
+    10000
+}
+
+fn default_ch_batch_timeout_secs() -> u64 {
+    5
+}
+
+fn default_ch_compression() -> String {
+    "lz4".to_string()
+}
+
+fn default_replica_weight() -> u32 {
+    1
 }
 
 /// JWT 配置

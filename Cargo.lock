@@ -965,11 +965,19 @@ name = "cuba-adapter-clickhouse"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "clickhouse",
+ "cuba-adapter-kafka",
  "cuba-errors",
+ "cuba-ports",
+ "futures",
+ "parking_lot",
  "serde",
+ "serde_json",
+ "sqlx",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -1183,6 +1191,7 @@ dependencies = [
  "cuba-common",
  "cuba-errors",
  "serde",
+ "uuid",
 ]
 
 [[package]]
