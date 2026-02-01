@@ -2,4 +2,4 @@
 
 mod postgres;
 
-pub use postgres::PostgresRepository;
+pub use postgres::{PostgresMaterialGroupRepository, PostgresMaterialRepository, PostgresMaterialTypeRepository};

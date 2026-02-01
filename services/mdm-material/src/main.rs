@@ -23,7 +23,7 @@ use tonic_reflection::server::Builder as ReflectionBuilder;
 use tracing::info;
 
 use application::ServiceHandler;
-use infrastructure::persistence::PostgresRepository;
+use infrastructure::persistence::PostgresMaterialRepository;
 
 pub const FILE_DESCRIPTOR_SET: &[u8] = tonic::include_file_descriptor_set!("mdm_material_descriptor");
 
@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("Initializing mdm-material Service...");
 
         let pool = infra.postgres_pool();
-        let repo = Arc::new(PostgresRepository::new(pool));
+        let repo = Arc::new(PostgresMaterialRepository::new(pool));
         info!("Repository initialized");
 
         let _handler = Arc::new(ServiceHandler::new(repo));

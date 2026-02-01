@@ -1,16 +1,17 @@
 //! Business logic handler
 
 use std::sync::Arc;
-use crate::domain::Repository;
+
+use crate::domain::repositories::MaterialRepository;
 
 pub struct ServiceHandler {
     #[allow(dead_code)]
-    repo: Arc<dyn Repository>,
+    material_repo: Arc<dyn MaterialRepository>,
 }
 
 impl ServiceHandler {
-    pub fn new(repo: Arc<dyn Repository>) -> Self {
-        Self { repo }
+    pub fn new(material_repo: Arc<dyn MaterialRepository>) -> Self {
+        Self { material_repo }
     }
 }
 

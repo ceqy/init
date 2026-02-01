@@ -2702,6 +2702,7 @@ dependencies = [
  "common",
  "config",
  "cqrs-core",
+ "derive_more",
  "domain-core",
  "errors",
  "event-core",

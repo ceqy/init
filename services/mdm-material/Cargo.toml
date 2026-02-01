@@ -31,6 +31,7 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
+derive_more = { workspace = true }
 futures = { workspace = true }
 metrics = { workspace = true }
 secrecy = { workspace = true }
