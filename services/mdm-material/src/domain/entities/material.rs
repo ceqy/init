@@ -154,6 +154,78 @@ impl Material {
         }
     }
 
+    /// 从各部分构建物料（用于从数据库加载）
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_parts(
+        id: MaterialId,
+        tenant_id: TenantId,
+        material_number: MaterialNumber,
+        description: String,
+        localized_description: LocalizedText,
+        material_type_id: MaterialTypeId,
+        material_type_code: String,
+        material_group_id: Option<MaterialGroupId>,
+        material_group_code: String,
+        base_unit: String,
+        gross_weight: f64,
+        net_weight: f64,
+        weight_unit: String,
+        volume: f64,
+        volume_unit: String,
+        length: f64,
+        width: f64,
+        height: f64,
+        dimension_unit: String,
+        status: DataStatus,
+        plant_data: Vec<PlantData>,
+        sales_data: Vec<SalesData>,
+        purchase_data: Vec<PurchaseData>,
+        storage_data: Vec<StorageData>,
+        accounting_data: Vec<AccountingData>,
+        quality_data: Vec<QualityData>,
+        unit_conversions: Vec<UnitConversion>,
+        custom_attributes: HashMap<String, String>,
+        audit_info: AuditInfo,
+    ) -> Self {
+        Self {
+            id,
+            tenant_id,
+            material_number,
+            description,
+            localized_description,
+            material_type_id,
+            material_type_code,
+            material_group_id,
+            material_group_code,
+            base_unit,
+            old_material_number: String::new(),
+            external_material_group: String::new(),
+            division: String::new(),
+            gross_weight,
+            net_weight,
+            weight_unit,
+            volume,
+            volume_unit,
+            length,
+            width,
+            height,
+            dimension_unit,
+            ean_upc: String::new(),
+            ean_category: String::new(),
+            status,
+            deletion_flag: status == DataStatus::MarkedForDeletion,
+            plant_data,
+            sales_data,
+            purchase_data,
+            storage_data,
+            accounting_data,
+            quality_data,
+            unit_conversions,
+            custom_attributes,
+            audit_info,
+        }
+    }
+
     // ========== Getters ==========
 
     pub fn id(&self) -> &MaterialId {
