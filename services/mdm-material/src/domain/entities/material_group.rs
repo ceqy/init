@@ -159,6 +159,39 @@ impl MaterialGroup {
             self.audit_info.update(None);
         }
     }
+
+    /// 设置审计信息（用于从数据库恢复）
+    pub fn with_audit_info(mut self, audit_info: AuditInfo) -> Self {
+        self.audit_info = audit_info;
+        self
+    }
+
+    /// 从各部分构建物料组（用于从数据库恢复）
+    pub fn from_parts(
+        id: MaterialGroupId,
+        tenant_id: TenantId,
+        code: String,
+        name: String,
+        localized_name: Option<LocalizedText>,
+        parent_id: Option<MaterialGroupId>,
+        level: i32,
+        path: String,
+        is_leaf: bool,
+        audit_info: AuditInfo,
+    ) -> Self {
+        Self {
+            id,
+            tenant_id,
+            code,
+            name,
+            localized_name: localized_name.unwrap_or_default(),
+            parent_id,
+            level,
+            path,
+            is_leaf,
+            audit_info,
+        }
+    }
 }
 
 // ========== Entity/AggregateRoot trait 实现 ==========

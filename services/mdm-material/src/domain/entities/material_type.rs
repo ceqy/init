@@ -48,12 +48,13 @@ pub struct MaterialType {
 impl MaterialType {
     /// 创建新的物料类型
     pub fn new(
+        id: MaterialTypeId,
         tenant_id: TenantId,
         code: impl Into<String>,
         name: impl Into<String>,
     ) -> Self {
         Self {
-            id: MaterialTypeId::new(),
+            id,
             tenant_id,
             code: code.into(),
             name: name.into(),
@@ -190,6 +191,43 @@ impl MaterialType {
         self.default_valuation_class = valuation_class.into();
         self.default_price_control = price_control;
         self.audit_info.update(None);
+    }
+
+    // ========== Builder pattern setters (continued) ==========
+
+    pub fn with_quantity_update(mut self, value: bool) -> Self {
+        self.quantity_update = value;
+        self
+    }
+
+    pub fn with_value_update(mut self, value: bool) -> Self {
+        self.value_update = value;
+        self
+    }
+
+    pub fn with_internal_procurement(mut self, value: bool) -> Self {
+        self.internal_procurement = value;
+        self
+    }
+
+    pub fn with_external_procurement(mut self, value: bool) -> Self {
+        self.external_procurement = value;
+        self
+    }
+
+    pub fn with_default_valuation_class(mut self, value: Option<String>) -> Self {
+        self.default_valuation_class = value.unwrap_or_default();
+        self
+    }
+
+    pub fn with_default_price_control(mut self, value: PriceControl) -> Self {
+        self.default_price_control = value;
+        self
+    }
+
+    pub fn with_audit_info(mut self, audit_info: AuditInfo) -> Self {
+        self.audit_info = audit_info;
+        self
     }
 }
 
