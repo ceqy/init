@@ -2,10 +2,10 @@
 
 use async_trait::async_trait;
 use common::types::{PagedResult, Pagination, TenantId};
+use errors::AppResult;
 
 use crate::domain::entities::MaterialGroup;
 use crate::domain::value_objects::MaterialGroupId;
-use crate::error::ServiceResult;
 
 /// 物料组仓储接口
 #[async_trait]
@@ -15,23 +15,23 @@ pub trait MaterialGroupRepository: Send + Sync {
         &self,
         id: &MaterialGroupId,
         tenant_id: &TenantId,
-    ) -> ServiceResult<Option<MaterialGroup>>;
+    ) -> AppResult<Option<MaterialGroup>>;
 
     /// 根据编码查找物料组
     async fn find_by_code(
         &self,
         code: &str,
         tenant_id: &TenantId,
-    ) -> ServiceResult<Option<MaterialGroup>>;
+    ) -> AppResult<Option<MaterialGroup>>;
 
     /// 保存物料组（新建）
-    async fn save(&self, group: &MaterialGroup) -> ServiceResult<()>;
+    async fn save(&self, group: &MaterialGroup) -> AppResult<()>;
 
     /// 更新物料组
-    async fn update(&self, group: &MaterialGroup) -> ServiceResult<()>;
+    async fn update(&self, group: &MaterialGroup) -> AppResult<()>;
 
     /// 删除物料组
-    async fn delete(&self, id: &MaterialGroupId, tenant_id: &TenantId) -> ServiceResult<()>;
+    async fn delete(&self, id: &MaterialGroupId, tenant_id: &TenantId) -> AppResult<()>;
 
     /// 列表查询
     async fn list(
@@ -39,15 +39,15 @@ pub trait MaterialGroupRepository: Send + Sync {
         tenant_id: &TenantId,
         parent_id: Option<&MaterialGroupId>,
         pagination: Pagination,
-    ) -> ServiceResult<PagedResult<MaterialGroup>>;
+    ) -> AppResult<PagedResult<MaterialGroup>>;
 
     /// 查找子级物料组
     async fn find_children(
         &self,
         parent_id: &MaterialGroupId,
         tenant_id: &TenantId,
-    ) -> ServiceResult<Vec<MaterialGroup>>;
+    ) -> AppResult<Vec<MaterialGroup>>;
 
     /// 检查编码是否存在
-    async fn exists_by_code(&self, code: &str, tenant_id: &TenantId) -> ServiceResult<bool>;
+    async fn exists_by_code(&self, code: &str, tenant_id: &TenantId) -> AppResult<bool>;
 }

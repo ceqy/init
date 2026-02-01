@@ -2,12 +2,12 @@
 
 use async_trait::async_trait;
 use common::types::{PagedResult, Pagination, TenantId};
+use errors::AppResult;
 use sqlx::PgPool;
 
 use crate::domain::entities::{Material, MaterialFilter, MaterialGroup, MaterialSearchResult, MaterialType};
 use crate::domain::repositories::{MaterialGroupRepository, MaterialRepository, MaterialTypeRepository};
 use crate::domain::value_objects::{AlternativeMaterial, MaterialGroupId, MaterialId, MaterialNumber, MaterialTypeId};
-use crate::error::ServiceResult;
 
 pub struct PostgresMaterialRepository {
     #[allow(dead_code)]
@@ -26,7 +26,7 @@ impl MaterialRepository for PostgresMaterialRepository {
         &self,
         _id: &MaterialId,
         _tenant_id: &TenantId,
-    ) -> ServiceResult<Option<Material>> {
+    ) -> AppResult<Option<Material>> {
         // TODO: Implement
         Ok(None)
     }
@@ -35,22 +35,22 @@ impl MaterialRepository for PostgresMaterialRepository {
         &self,
         _number: &MaterialNumber,
         _tenant_id: &TenantId,
-    ) -> ServiceResult<Option<Material>> {
+    ) -> AppResult<Option<Material>> {
         // TODO: Implement
         Ok(None)
     }
 
-    async fn save(&self, _material: &Material) -> ServiceResult<()> {
+    async fn save(&self, _material: &Material) -> AppResult<()> {
         // TODO: Implement
         Ok(())
     }
 
-    async fn update(&self, _material: &Material) -> ServiceResult<()> {
+    async fn update(&self, _material: &Material) -> AppResult<()> {
         // TODO: Implement
         Ok(())
     }
 
-    async fn delete(&self, _id: &MaterialId, _tenant_id: &TenantId) -> ServiceResult<()> {
+    async fn delete(&self, _id: &MaterialId, _tenant_id: &TenantId) -> AppResult<()> {
         // TODO: Implement
         Ok(())
     }
@@ -60,7 +60,7 @@ impl MaterialRepository for PostgresMaterialRepository {
         _tenant_id: &TenantId,
         _filter: MaterialFilter,
         pagination: Pagination,
-    ) -> ServiceResult<PagedResult<Material>> {
+    ) -> AppResult<PagedResult<Material>> {
         // TODO: Implement
         Ok(PagedResult::new(vec![], 0, &pagination))
     }
@@ -70,7 +70,7 @@ impl MaterialRepository for PostgresMaterialRepository {
         _tenant_id: &TenantId,
         _query: &str,
         _pagination: Pagination,
-    ) -> ServiceResult<Vec<MaterialSearchResult>> {
+    ) -> AppResult<Vec<MaterialSearchResult>> {
         // TODO: Implement
         Ok(vec![])
     }
@@ -79,7 +79,7 @@ impl MaterialRepository for PostgresMaterialRepository {
         &self,
         _number: &MaterialNumber,
         _tenant_id: &TenantId,
-    ) -> ServiceResult<bool> {
+    ) -> AppResult<bool> {
         // TODO: Implement
         Ok(false)
     }
@@ -88,7 +88,7 @@ impl MaterialRepository for PostgresMaterialRepository {
         &self,
         _material_id: &MaterialId,
         _tenant_id: &TenantId,
-    ) -> ServiceResult<Vec<AlternativeMaterial>> {
+    ) -> AppResult<Vec<AlternativeMaterial>> {
         // TODO: Implement
         Ok(vec![])
     }
@@ -97,7 +97,7 @@ impl MaterialRepository for PostgresMaterialRepository {
         &self,
         _material_id: &MaterialId,
         _alternative: &AlternativeMaterial,
-    ) -> ServiceResult<()> {
+    ) -> AppResult<()> {
         // TODO: Implement
         Ok(())
     }
@@ -106,7 +106,7 @@ impl MaterialRepository for PostgresMaterialRepository {
         &self,
         _material_id: &MaterialId,
         _alternative_id: &MaterialId,
-    ) -> ServiceResult<()> {
+    ) -> AppResult<()> {
         // TODO: Implement
         Ok(())
     }
@@ -129,7 +129,7 @@ impl MaterialGroupRepository for PostgresMaterialGroupRepository {
         &self,
         _id: &MaterialGroupId,
         _tenant_id: &TenantId,
-    ) -> ServiceResult<Option<MaterialGroup>> {
+    ) -> AppResult<Option<MaterialGroup>> {
         // TODO: Implement
         Ok(None)
     }
@@ -138,22 +138,22 @@ impl MaterialGroupRepository for PostgresMaterialGroupRepository {
         &self,
         _code: &str,
         _tenant_id: &TenantId,
-    ) -> ServiceResult<Option<MaterialGroup>> {
+    ) -> AppResult<Option<MaterialGroup>> {
         // TODO: Implement
         Ok(None)
     }
 
-    async fn save(&self, _group: &MaterialGroup) -> ServiceResult<()> {
+    async fn save(&self, _group: &MaterialGroup) -> AppResult<()> {
         // TODO: Implement
         Ok(())
     }
 
-    async fn update(&self, _group: &MaterialGroup) -> ServiceResult<()> {
+    async fn update(&self, _group: &MaterialGroup) -> AppResult<()> {
         // TODO: Implement
         Ok(())
     }
 
-    async fn delete(&self, _id: &MaterialGroupId, _tenant_id: &TenantId) -> ServiceResult<()> {
+    async fn delete(&self, _id: &MaterialGroupId, _tenant_id: &TenantId) -> AppResult<()> {
         // TODO: Implement
         Ok(())
     }
@@ -163,7 +163,7 @@ impl MaterialGroupRepository for PostgresMaterialGroupRepository {
         _tenant_id: &TenantId,
         _parent_id: Option<&MaterialGroupId>,
         pagination: Pagination,
-    ) -> ServiceResult<PagedResult<MaterialGroup>> {
+    ) -> AppResult<PagedResult<MaterialGroup>> {
         // TODO: Implement
         Ok(PagedResult::new(vec![], 0, &pagination))
     }
@@ -172,12 +172,12 @@ impl MaterialGroupRepository for PostgresMaterialGroupRepository {
         &self,
         _parent_id: &MaterialGroupId,
         _tenant_id: &TenantId,
-    ) -> ServiceResult<Vec<MaterialGroup>> {
+    ) -> AppResult<Vec<MaterialGroup>> {
         // TODO: Implement
         Ok(vec![])
     }
 
-    async fn exists_by_code(&self, _code: &str, _tenant_id: &TenantId) -> ServiceResult<bool> {
+    async fn exists_by_code(&self, _code: &str, _tenant_id: &TenantId) -> AppResult<bool> {
         // TODO: Implement
         Ok(false)
     }
@@ -200,7 +200,7 @@ impl MaterialTypeRepository for PostgresMaterialTypeRepository {
         &self,
         _id: &MaterialTypeId,
         _tenant_id: &TenantId,
-    ) -> ServiceResult<Option<MaterialType>> {
+    ) -> AppResult<Option<MaterialType>> {
         // TODO: Implement
         Ok(None)
     }
@@ -209,17 +209,17 @@ impl MaterialTypeRepository for PostgresMaterialTypeRepository {
         &self,
         _code: &str,
         _tenant_id: &TenantId,
-    ) -> ServiceResult<Option<MaterialType>> {
+    ) -> AppResult<Option<MaterialType>> {
         // TODO: Implement
         Ok(None)
     }
 
-    async fn save(&self, _material_type: &MaterialType) -> ServiceResult<()> {
+    async fn save(&self, _material_type: &MaterialType) -> AppResult<()> {
         // TODO: Implement
         Ok(())
     }
 
-    async fn update(&self, _material_type: &MaterialType) -> ServiceResult<()> {
+    async fn update(&self, _material_type: &MaterialType) -> AppResult<()> {
         // TODO: Implement
         Ok(())
     }
@@ -228,12 +228,12 @@ impl MaterialTypeRepository for PostgresMaterialTypeRepository {
         &self,
         _tenant_id: &TenantId,
         pagination: Pagination,
-    ) -> ServiceResult<PagedResult<MaterialType>> {
+    ) -> AppResult<PagedResult<MaterialType>> {
         // TODO: Implement
         Ok(PagedResult::new(vec![], 0, &pagination))
     }
 
-    async fn exists_by_code(&self, _code: &str, _tenant_id: &TenantId) -> ServiceResult<bool> {
+    async fn exists_by_code(&self, _code: &str, _tenant_id: &TenantId) -> AppResult<bool> {
         // TODO: Implement
         Ok(false)
     }

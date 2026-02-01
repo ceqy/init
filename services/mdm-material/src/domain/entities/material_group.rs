@@ -1,10 +1,11 @@
 //! 物料组实体
 
 use common::types::{AuditInfo, TenantId};
+use domain_core::{AggregateRoot, Entity};
+use errors::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::value_objects::{LocalizedText, MaterialGroupId};
-use crate::error::{ServiceError, ServiceResult};
 
 /// 物料组实体
 ///
@@ -61,9 +62,9 @@ impl MaterialGroup {
         code: impl Into<String>,
         name: impl Into<String>,
         parent: &MaterialGroup,
-    ) -> ServiceResult<Self> {
+    ) -> AppResult<Self> {
         if parent.tenant_id != tenant_id {
-            return Err(ServiceError::InvalidInput(
+            return Err(AppError::validation(
                 "父级物料组属于不同租户".to_string(),
             ));
         }
@@ -86,10 +87,6 @@ impl MaterialGroup {
     }
 
     // ========== Getters ==========
-
-    pub fn id(&self) -> &MaterialGroupId {
-        &self.id
-    }
 
     pub fn tenant_id(&self) -> &TenantId {
         &self.tenant_id
@@ -127,10 +124,6 @@ impl MaterialGroup {
         self.parent_id.is_none()
     }
 
-    pub fn audit_info(&self) -> &AuditInfo {
-        &self.audit_info
-    }
-
     // ========== Setters ==========
 
     /// 设置多语言名称
@@ -165,5 +158,25 @@ impl MaterialGroup {
             self.is_leaf = true;
             self.audit_info.update(None);
         }
+    }
+}
+
+// ========== Entity/AggregateRoot trait 实现 ==========
+
+impl Entity for MaterialGroup {
+    type Id = MaterialGroupId;
+
+    fn id(&self) -> &Self::Id {
+        &self.id
+    }
+}
+
+impl AggregateRoot for MaterialGroup {
+    fn audit_info(&self) -> &AuditInfo {
+        &self.audit_info
+    }
+
+    fn audit_info_mut(&mut self) -> &mut AuditInfo {
+        &mut self.audit_info
     }
 }

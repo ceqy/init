@@ -2,10 +2,10 @@
 
 use async_trait::async_trait;
 use common::types::{PagedResult, Pagination, TenantId};
+use errors::AppResult;
 
 use crate::domain::entities::{Material, MaterialFilter, MaterialSearchResult};
 use crate::domain::value_objects::{AlternativeMaterial, MaterialId, MaterialNumber};
-use crate::error::ServiceResult;
 
 /// 物料仓储接口
 #[async_trait]
@@ -17,23 +17,23 @@ pub trait MaterialRepository: Send + Sync {
         &self,
         id: &MaterialId,
         tenant_id: &TenantId,
-    ) -> ServiceResult<Option<Material>>;
+    ) -> AppResult<Option<Material>>;
 
     /// 根据物料编号查找物料
     async fn find_by_number(
         &self,
         number: &MaterialNumber,
         tenant_id: &TenantId,
-    ) -> ServiceResult<Option<Material>>;
+    ) -> AppResult<Option<Material>>;
 
     /// 保存物料（新建）
-    async fn save(&self, material: &Material) -> ServiceResult<()>;
+    async fn save(&self, material: &Material) -> AppResult<()>;
 
     /// 更新物料
-    async fn update(&self, material: &Material) -> ServiceResult<()>;
+    async fn update(&self, material: &Material) -> AppResult<()>;
 
     /// 删除物料
-    async fn delete(&self, id: &MaterialId, tenant_id: &TenantId) -> ServiceResult<()>;
+    async fn delete(&self, id: &MaterialId, tenant_id: &TenantId) -> AppResult<()>;
 
     // ========== 查询 ==========
 
@@ -43,7 +43,7 @@ pub trait MaterialRepository: Send + Sync {
         tenant_id: &TenantId,
         filter: MaterialFilter,
         pagination: Pagination,
-    ) -> ServiceResult<PagedResult<Material>>;
+    ) -> AppResult<PagedResult<Material>>;
 
     /// 搜索物料
     async fn search(
@@ -51,14 +51,14 @@ pub trait MaterialRepository: Send + Sync {
         tenant_id: &TenantId,
         query: &str,
         pagination: Pagination,
-    ) -> ServiceResult<Vec<MaterialSearchResult>>;
+    ) -> AppResult<Vec<MaterialSearchResult>>;
 
     /// 检查物料编号是否存在
     async fn exists_by_number(
         &self,
         number: &MaterialNumber,
         tenant_id: &TenantId,
-    ) -> ServiceResult<bool>;
+    ) -> AppResult<bool>;
 
     // ========== 替代物料 ==========
 
@@ -67,19 +67,19 @@ pub trait MaterialRepository: Send + Sync {
         &self,
         material_id: &MaterialId,
         tenant_id: &TenantId,
-    ) -> ServiceResult<Vec<AlternativeMaterial>>;
+    ) -> AppResult<Vec<AlternativeMaterial>>;
 
     /// 保存替代物料关系
     async fn save_alternative(
         &self,
         material_id: &MaterialId,
         alternative: &AlternativeMaterial,
-    ) -> ServiceResult<()>;
+    ) -> AppResult<()>;
 
     /// 移除替代物料关系
     async fn remove_alternative(
         &self,
         material_id: &MaterialId,
         alternative_id: &MaterialId,
-    ) -> ServiceResult<()>;
+    ) -> AppResult<()>;
 }

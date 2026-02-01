@@ -1,6 +1,7 @@
 //! 物料类型实体
 
 use common::types::{AuditInfo, TenantId};
+use domain_core::{AggregateRoot, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::enums::PriceControl;
@@ -70,10 +71,6 @@ impl MaterialType {
 
     // ========== Getters ==========
 
-    pub fn id(&self) -> &MaterialTypeId {
-        &self.id
-    }
-
     pub fn tenant_id(&self) -> &TenantId {
         &self.tenant_id
     }
@@ -116,10 +113,6 @@ impl MaterialType {
 
     pub fn default_price_control(&self) -> PriceControl {
         self.default_price_control
-    }
-
-    pub fn audit_info(&self) -> &AuditInfo {
-        &self.audit_info
     }
 
     // ========== Builder pattern setters ==========
@@ -197,5 +190,25 @@ impl MaterialType {
         self.default_valuation_class = valuation_class.into();
         self.default_price_control = price_control;
         self.audit_info.update(None);
+    }
+}
+
+// ========== Entity/AggregateRoot trait 实现 ==========
+
+impl Entity for MaterialType {
+    type Id = MaterialTypeId;
+
+    fn id(&self) -> &Self::Id {
+        &self.id
+    }
+}
+
+impl AggregateRoot for MaterialType {
+    fn audit_info(&self) -> &AuditInfo {
+        &self.audit_info
+    }
+
+    fn audit_info_mut(&mut self) -> &mut AuditInfo {
+        &mut self.audit_info
     }
 }

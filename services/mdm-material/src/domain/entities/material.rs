@@ -3,6 +3,8 @@
 use std::collections::HashMap;
 
 use common::types::{AuditInfo, TenantId};
+use domain_core::{AggregateRoot, Entity};
+use errors::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::enums::DataStatus;
@@ -13,7 +15,6 @@ use crate::domain::value_objects::{
 use crate::domain::views::{
     AccountingData, PlantData, PurchaseData, QualityData, SalesData, StorageData,
 };
-use crate::error::{ServiceError, ServiceResult};
 
 /// 物料聚合根
 ///
@@ -368,9 +369,9 @@ impl Material {
     // ========== 状态管理 ==========
 
     /// 激活物料
-    pub fn activate(&mut self) -> ServiceResult<()> {
+    pub fn activate(&mut self) -> AppResult<()> {
         if !self.status.can_activate() {
-            return Err(ServiceError::InvalidInput(format!(
+            return Err(AppError::validation(format!(
                 "无法从 {:?} 状态激活物料",
                 self.status
             )));
@@ -381,9 +382,9 @@ impl Material {
     }
 
     /// 停用物料
-    pub fn deactivate(&mut self) -> ServiceResult<()> {
+    pub fn deactivate(&mut self) -> AppResult<()> {
         if !self.status.can_deactivate() {
-            return Err(ServiceError::InvalidInput(format!(
+            return Err(AppError::validation(format!(
                 "无法从 {:?} 状态停用物料",
                 self.status
             )));
@@ -394,9 +395,9 @@ impl Material {
     }
 
     /// 冻结物料
-    pub fn block(&mut self) -> ServiceResult<()> {
+    pub fn block(&mut self) -> AppResult<()> {
         if !self.status.can_block() {
-            return Err(ServiceError::InvalidInput(format!(
+            return Err(AppError::validation(format!(
                 "无法从 {:?} 状态冻结物料",
                 self.status
             )));
@@ -407,9 +408,9 @@ impl Material {
     }
 
     /// 标记删除
-    pub fn mark_for_deletion(&mut self) -> ServiceResult<()> {
+    pub fn mark_for_deletion(&mut self) -> AppResult<()> {
         if !self.status.can_mark_for_deletion() {
-            return Err(ServiceError::InvalidInput(
+            return Err(AppError::validation(
                 "物料已标记删除".to_string(),
             ));
         }
@@ -422,10 +423,10 @@ impl Material {
     // ========== 视图扩展 ==========
 
     /// 扩展到工厂
-    pub fn extend_to_plant(&mut self, plant_data: PlantData) -> ServiceResult<()> {
+    pub fn extend_to_plant(&mut self, plant_data: PlantData) -> AppResult<()> {
         let plant = plant_data.plant().to_string();
         if self.plant_data.iter().any(|p| p.plant() == plant) {
-            return Err(ServiceError::Conflict(format!(
+            return Err(AppError::conflict(format!(
                 "物料已扩展到工厂 {}",
                 plant
             )));
@@ -436,10 +437,10 @@ impl Material {
     }
 
     /// 扩展到销售组织
-    pub fn extend_to_sales_org(&mut self, sales_data: SalesData) -> ServiceResult<()> {
+    pub fn extend_to_sales_org(&mut self, sales_data: SalesData) -> AppResult<()> {
         let key = sales_data.key();
         if self.sales_data.iter().any(|s| s.key() == key) {
-            return Err(ServiceError::Conflict(format!(
+            return Err(AppError::conflict(format!(
                 "物料已扩展到销售组织 {}",
                 key
             )));
@@ -450,10 +451,10 @@ impl Material {
     }
 
     /// 扩展到采购组织
-    pub fn extend_to_purchase_org(&mut self, purchase_data: PurchaseData) -> ServiceResult<()> {
+    pub fn extend_to_purchase_org(&mut self, purchase_data: PurchaseData) -> AppResult<()> {
         let key = purchase_data.key();
         if self.purchase_data.iter().any(|p| p.key() == key) {
-            return Err(ServiceError::Conflict(format!(
+            return Err(AppError::conflict(format!(
                 "物料已扩展到采购组织 {}",
                 key
             )));
@@ -464,10 +465,10 @@ impl Material {
     }
 
     /// 扩展到仓储位置
-    pub fn extend_to_storage(&mut self, storage_data: StorageData) -> ServiceResult<()> {
+    pub fn extend_to_storage(&mut self, storage_data: StorageData) -> AppResult<()> {
         let key = storage_data.key();
         if self.storage_data.iter().any(|s| s.key() == key) {
-            return Err(ServiceError::Conflict(format!(
+            return Err(AppError::conflict(format!(
                 "物料已扩展到仓储位置 {}",
                 key
             )));
@@ -478,10 +479,10 @@ impl Material {
     }
 
     /// 扩展到会计视图
-    pub fn extend_to_accounting(&mut self, accounting_data: AccountingData) -> ServiceResult<()> {
+    pub fn extend_to_accounting(&mut self, accounting_data: AccountingData) -> AppResult<()> {
         let key = accounting_data.key();
         if self.accounting_data.iter().any(|a| a.key() == key) {
-            return Err(ServiceError::Conflict(format!(
+            return Err(AppError::conflict(format!(
                 "物料已扩展到会计视图 {}",
                 key
             )));
@@ -492,10 +493,10 @@ impl Material {
     }
 
     /// 扩展到质量视图
-    pub fn extend_to_quality(&mut self, quality_data: QualityData) -> ServiceResult<()> {
+    pub fn extend_to_quality(&mut self, quality_data: QualityData) -> AppResult<()> {
         let plant = quality_data.plant().to_string();
         if self.quality_data.iter().any(|q| q.plant() == plant) {
-            return Err(ServiceError::Conflict(format!(
+            return Err(AppError::conflict(format!(
                 "物料已扩展到质量视图 {}",
                 plant
             )));
@@ -508,12 +509,12 @@ impl Material {
     // ========== 视图更新 ==========
 
     /// 更新工厂数据
-    pub fn update_plant_data(&mut self, plant: &str, data: PlantData) -> ServiceResult<()> {
+    pub fn update_plant_data(&mut self, plant: &str, data: PlantData) -> AppResult<()> {
         let pos = self
             .plant_data
             .iter()
             .position(|p| p.plant() == plant)
-            .ok_or_else(|| ServiceError::NotFound(format!("工厂 {} 不存在", plant)))?;
+            .ok_or_else(|| AppError::not_found(format!("工厂 {} 不存在", plant)))?;
         self.plant_data[pos] = data;
         self.audit_info.update(None);
         Ok(())
@@ -525,25 +526,25 @@ impl Material {
         sales_org: &str,
         distribution_channel: &str,
         data: SalesData,
-    ) -> ServiceResult<()> {
+    ) -> AppResult<()> {
         let key = format!("{}_{}", sales_org, distribution_channel);
         let pos = self
             .sales_data
             .iter()
             .position(|s| s.key() == key)
-            .ok_or_else(|| ServiceError::NotFound(format!("销售组织 {} 不存在", key)))?;
+            .ok_or_else(|| AppError::not_found(format!("销售组织 {} 不存在", key)))?;
         self.sales_data[pos] = data;
         self.audit_info.update(None);
         Ok(())
     }
 
     /// 更新采购数据
-    pub fn update_purchase_data(&mut self, purchase_org: &str, data: PurchaseData) -> ServiceResult<()> {
+    pub fn update_purchase_data(&mut self, purchase_org: &str, data: PurchaseData) -> AppResult<()> {
         let pos = self
             .purchase_data
             .iter()
             .position(|p| p.purchase_org() == purchase_org)
-            .ok_or_else(|| ServiceError::NotFound(format!("采购组织 {} 不存在", purchase_org)))?;
+            .ok_or_else(|| AppError::not_found(format!("采购组织 {} 不存在", purchase_org)))?;
         self.purchase_data[pos] = data;
         self.audit_info.update(None);
         Ok(())
@@ -552,7 +553,7 @@ impl Material {
     // ========== 单位换算管理 ==========
 
     /// 添加单位换算
-    pub fn add_unit_conversion(&mut self, conversion: UnitConversion) -> ServiceResult<()> {
+    pub fn add_unit_conversion(&mut self, conversion: UnitConversion) -> AppResult<()> {
         let from = conversion.source_unit();
         let to = conversion.target_unit();
         if self
@@ -560,7 +561,7 @@ impl Material {
             .iter()
             .any(|c| c.source_unit() == from && c.target_unit() == to)
         {
-            return Err(ServiceError::Conflict(format!(
+            return Err(AppError::conflict(format!(
                 "单位换算 {} -> {} 已存在",
                 from, to
             )));
@@ -571,13 +572,13 @@ impl Material {
     }
 
     /// 移除单位换算
-    pub fn remove_unit_conversion(&mut self, from_unit: &str, to_unit: &str) -> ServiceResult<()> {
+    pub fn remove_unit_conversion(&mut self, from_unit: &str, to_unit: &str) -> AppResult<()> {
         let pos = self
             .unit_conversions
             .iter()
             .position(|c| c.source_unit() == from_unit && c.target_unit() == to_unit)
             .ok_or_else(|| {
-                ServiceError::NotFound(format!("单位换算 {} -> {} 不存在", from_unit, to_unit))
+                AppError::not_found(format!("单位换算 {} -> {} 不存在", from_unit, to_unit))
             })?;
         self.unit_conversions.remove(pos);
         self.audit_info.update(None);
@@ -643,6 +644,26 @@ impl Material {
         self.unit_conversions
             .iter()
             .find(|c| c.source_unit() == from_unit && c.target_unit() == to_unit)
+    }
+}
+
+// ========== Entity/AggregateRoot trait 实现 ==========
+
+impl Entity for Material {
+    type Id = MaterialId;
+
+    fn id(&self) -> &Self::Id {
+        &self.id
+    }
+}
+
+impl AggregateRoot for Material {
+    fn audit_info(&self) -> &AuditInfo {
+        &self.audit_info
+    }
+
+    fn audit_info_mut(&mut self) -> &mut AuditInfo {
+        &mut self.audit_info
     }
 }
 
