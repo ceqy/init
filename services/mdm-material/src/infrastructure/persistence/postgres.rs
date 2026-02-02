@@ -1070,6 +1070,207 @@ impl MaterialRepository for PostgresMaterialRepository {
 
         Ok(())
     }
+
+    // ========== 视图数据 ==========
+
+    async fn save_plant_data(
+        &self,
+        material_id: &MaterialId,
+        plant_data: &PlantData,
+    ) -> AppResult<()> {
+        // 使用 UPSERT 语法
+        sqlx::query(
+            r#"
+            INSERT INTO material_plant_data (
+                id, material_id, tenant_id, plant, plant_name,
+                mrp_type, mrp_controller, reorder_point, safety_stock,
+                minimum_lot_size, maximum_lot_size, fixed_lot_size, rounding_value,
+                planned_delivery_days, gr_processing_days,
+                procurement_type, special_procurement, production_scheduler,
+                storage_location, storage_bin, batch_management, serial_number_profile,
+                abc_indicator, status, deletion_flag,
+                created_at, created_by, updated_at, updated_by
+            ) VALUES (
+                gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, NOW(), NULL, NOW(), NULL
+            )
+            ON CONFLICT (material_id, plant, tenant_id)
+            DO UPDATE SET
+                plant_name = EXCLUDED.plant_name,
+                mrp_type = EXCLUDED.mrp_type,
+                mrp_controller = EXCLUDED.mrp_controller,
+                reorder_point = EXCLUDED.reorder_point,
+                safety_stock = EXCLUDED.safety_stock,
+                updated_at = NOW()
+            "#,
+        )
+        .bind(material_id.0)
+        .bind(plant_data.plant()) // tenant_id 需要从 material 获取
+        .bind(plant_data.plant())
+        .bind(plant_data.plant_name())
+        .bind(plant_data.mrp_type())
+        .bind(plant_data.mrp_controller())
+        .bind(plant_data.reorder_point())
+        .bind(plant_data.safety_stock())
+        .bind(plant_data.minimum_lot_size())
+        .bind(plant_data.maximum_lot_size())
+        .bind(plant_data.fixed_lot_size())
+        .bind(plant_data.rounding_value())
+        .bind(plant_data.planned_delivery_days())
+        .bind(plant_data.gr_processing_days())
+        .bind(plant_data.procurement_type() as i16)
+        .bind(plant_data.special_procurement())
+        .bind(plant_data.production_scheduler())
+        .bind(plant_data.storage_location())
+        .bind(plant_data.storage_bin())
+        .bind(plant_data.batch_management())
+        .bind(plant_data.serial_number_profile())
+        .bind(plant_data.abc_indicator())
+        .bind(0i16) // status placeholder
+        .bind(false)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("保存工厂数据失败: {}", e)))?;
+
+        Ok(())
+    }
+
+    async fn get_plant_data(
+        &self,
+        material_id: &MaterialId,
+        plant: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<PlantData>> {
+        let row = sqlx::query_as::<_, MaterialPlantDataRow>(
+            "SELECT * FROM material_plant_data WHERE material_id = $1 AND plant = $2 AND tenant_id = $3"
+        )
+        .bind(material_id.0)
+        .bind(plant)
+        .bind(tenant_id.0)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("查询工厂数据失败: {}", e)))?;
+
+        Ok(row.map(plant_data_from_row))
+    }
+
+    async fn save_sales_data(
+        &self,
+        _material_id: &MaterialId,
+        _sales_data: &SalesData,
+    ) -> AppResult<()> {
+        // TODO: 实现销售数据保存
+        Ok(())
+    }
+
+    async fn get_sales_data(
+        &self,
+        _material_id: &MaterialId,
+        _sales_org: &str,
+        _tenant_id: &TenantId,
+    ) -> AppResult<Option<SalesData>> {
+        // TODO: 实现销售数据查询
+        Ok(None)
+    }
+
+    async fn save_purchase_data(
+        &self,
+        _material_id: &MaterialId,
+        _purchase_data: &PurchaseData,
+    ) -> AppResult<()> {
+        // TODO: 实现采购数据保存
+        Ok(())
+    }
+
+    async fn get_purchase_data(
+        &self,
+        _material_id: &MaterialId,
+        _purchase_org: &str,
+        _tenant_id: &TenantId,
+    ) -> AppResult<Option<PurchaseData>> {
+        // TODO: 实现采购数据查询
+        Ok(None)
+    }
+
+    async fn save_storage_data(
+        &self,
+        _material_id: &MaterialId,
+        _storage_data: &StorageData,
+    ) -> AppResult<()> {
+        // TODO: 实现仓储数据保存
+        Ok(())
+    }
+
+    async fn get_storage_data(
+        &self,
+        _material_id: &MaterialId,
+        _tenant_id: &TenantId,
+    ) -> AppResult<Option<StorageData>> {
+        // TODO: 实现仓储数据查询
+        Ok(None)
+    }
+
+    async fn save_accounting_data(
+        &self,
+        _material_id: &MaterialId,
+        _accounting_data: &AccountingData,
+    ) -> AppResult<()> {
+        // TODO: 实现会计数据保存
+        Ok(())
+    }
+
+    async fn get_accounting_data(
+        &self,
+        _material_id: &MaterialId,
+        _tenant_id: &TenantId,
+    ) -> AppResult<Option<AccountingData>> {
+        // TODO: 实现会计数据查询
+        Ok(None)
+    }
+
+    async fn save_quality_data(
+        &self,
+        _material_id: &MaterialId,
+        _quality_data: &QualityData,
+    ) -> AppResult<()> {
+        // TODO: 实现质量数据保存
+        Ok(())
+    }
+
+    async fn get_quality_data(
+        &self,
+        _material_id: &MaterialId,
+        _tenant_id: &TenantId,
+    ) -> AppResult<Option<QualityData>> {
+        // TODO: 实现质量数据查询
+        Ok(None)
+    }
+
+    async fn find_unit_conversions(
+        &self,
+        material_id: &MaterialId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<UnitConversion>> {
+        let rows = sqlx::query_as::<_, MaterialUnitConversionRow>(
+            "SELECT * FROM material_unit_conversions WHERE material_id = $1 AND tenant_id = $2"
+        )
+        .bind(material_id.0)
+        .bind(tenant_id.0)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("查询单位换算失败: {}", e)))?;
+
+        Ok(rows.into_iter().filter_map(unit_conversion_from_row).collect())
+    }
+
+    async fn save_unit_conversion(
+        &self,
+        _material_id: &MaterialId,
+        _conversion: &UnitConversion,
+    ) -> AppResult<()> {
+        // TODO: 实现单位换算保存
+        Ok(())
+    }
 }
 
 // ============================================================================

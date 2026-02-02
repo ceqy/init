@@ -1,12 +1,7 @@
 //! API layer - gRPC service implementations
 
-pub mod grpc;
-mod service;
+pub mod conversions;
+pub mod grpc_service;
+pub mod proto_converters;
 
-pub use service::MaterialServiceImpl;
-
-pub mod proto {
-    pub mod material {
-        tonic::include_proto!("mdm.material.v1");
-    }
-}
+pub use grpc_service::MaterialServiceImpl;

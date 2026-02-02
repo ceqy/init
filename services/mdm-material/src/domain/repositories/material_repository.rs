@@ -5,7 +5,10 @@ use common::types::{PagedResult, Pagination, TenantId};
 use errors::AppResult;
 
 use crate::domain::entities::{Material, MaterialFilter, MaterialSearchResult};
-use crate::domain::value_objects::{AlternativeMaterial, MaterialId, MaterialNumber};
+use crate::domain::value_objects::{AlternativeMaterial, MaterialId, MaterialNumber, UnitConversion};
+use crate::domain::views::{
+    AccountingData, PlantData, PurchaseData, QualityData, SalesData, StorageData,
+};
 
 /// 物料仓储接口
 #[async_trait]
@@ -81,5 +84,110 @@ pub trait MaterialRepository: Send + Sync {
         &self,
         material_id: &MaterialId,
         alternative_id: &MaterialId,
+    ) -> AppResult<()>;
+
+    // ========== 视图数据 ==========
+
+    /// 保存工厂数据
+    async fn save_plant_data(
+        &self,
+        material_id: &MaterialId,
+        plant_data: &PlantData,
+    ) -> AppResult<()>;
+
+    /// 获取工厂数据
+    async fn get_plant_data(
+        &self,
+        material_id: &MaterialId,
+        plant: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<PlantData>>;
+
+    /// 保存销售数据
+    async fn save_sales_data(
+        &self,
+        material_id: &MaterialId,
+        sales_data: &SalesData,
+    ) -> AppResult<()>;
+
+    /// 获取销售数据
+    async fn get_sales_data(
+        &self,
+        material_id: &MaterialId,
+        sales_org: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<SalesData>>;
+
+    /// 保存采购数据
+    async fn save_purchase_data(
+        &self,
+        material_id: &MaterialId,
+        purchase_data: &PurchaseData,
+    ) -> AppResult<()>;
+
+    /// 获取采购数据
+    async fn get_purchase_data(
+        &self,
+        material_id: &MaterialId,
+        purchase_org: &str,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<PurchaseData>>;
+
+    /// 保存仓储数据
+    async fn save_storage_data(
+        &self,
+        material_id: &MaterialId,
+        storage_data: &StorageData,
+    ) -> AppResult<()>;
+
+    /// 获取仓储数据
+    async fn get_storage_data(
+        &self,
+        material_id: &MaterialId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<StorageData>>;
+
+    /// 保存会计数据
+    async fn save_accounting_data(
+        &self,
+        material_id: &MaterialId,
+        accounting_data: &AccountingData,
+    ) -> AppResult<()>;
+
+    /// 获取会计数据
+    async fn get_accounting_data(
+        &self,
+        material_id: &MaterialId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<AccountingData>>;
+
+    /// 保存质量数据
+    async fn save_quality_data(
+        &self,
+        material_id: &MaterialId,
+        quality_data: &QualityData,
+    ) -> AppResult<()>;
+
+    /// 获取质量数据
+    async fn get_quality_data(
+        &self,
+        material_id: &MaterialId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Option<QualityData>>;
+
+    // ========== 单位换算 ==========
+
+    /// 查找单位换算
+    async fn find_unit_conversions(
+        &self,
+        material_id: &MaterialId,
+        tenant_id: &TenantId,
+    ) -> AppResult<Vec<UnitConversion>>;
+
+    /// 保存单位换算
+    async fn save_unit_conversion(
+        &self,
+        material_id: &MaterialId,
+        conversion: &UnitConversion,
     ) -> AppResult<()>;
 }
