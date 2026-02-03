@@ -237,6 +237,30 @@ pub struct WebAuthnConfig {
     pub rp_origin: String,
 }
 
+/// MinIO 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct MinioConfig {
+    pub url: String,
+    pub access_key: Secret<String>,
+    pub secret_key: Secret<String>,
+}
+
+/// Elasticsearch 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct ElasticsearchConfig {
+    pub url: String,
+    pub username: String,
+    pub password: Secret<String>,
+}
+
+/// Grafana 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct GrafanaConfig {
+    pub url: String,
+    pub username: String,
+    pub password: Secret<String>,
+}
+
 /// 应用配置
 #[derive(Debug, Clone, Deserialize)]
 pub struct AppConfig {
@@ -252,6 +276,9 @@ pub struct AppConfig {
     pub email: EmailConfig,
     pub password_reset: PasswordResetConfig,
     pub webauthn: WebAuthnConfig,
+    pub minio: Option<MinioConfig>,
+    pub elasticsearch: Option<ElasticsearchConfig>,
+    pub grafana: Option<GrafanaConfig>,
 }
 
 impl AppConfig {
@@ -269,8 +296,31 @@ impl AppConfig {
         if let (Some(role_id), Some(secret_id), Some(addr)) =
             (vault_role_id, vault_secret_id, vault_addr)
         {
-            // 2. 执行 Vault 登录和拉取逻辑
-            vault_secrets = fetch_vault_secrets(&addr, &role_id, &secret_id).await?;
+            // 2. 准备拉取路径
+            let mut paths = HashMap::new();
+            paths.insert(
+                "database",
+                std::env::var("VAULT_DB_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "redis",
+                std::env::var("VAULT_REDIS_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "minio",
+                std::env::var("VAULT_MINIO_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "elasticsearch",
+                std::env::var("VAULT_ES_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "grafana",
+                std::env::var("VAULT_GRAFANA_PATH").unwrap_or_default(),
+            );
+
+            // 3. 执行 Vault 登录和拉取逻辑
+            vault_secrets = fetch_vault_secrets(&addr, &role_id, &secret_id, paths).await?;
         }
 
         // 3. 合并所有配置源
@@ -306,6 +356,7 @@ async fn fetch_vault_secrets(
     addr: &str,
     role_id: &str,
     secret_id: &str,
+    paths: HashMap<&str, String>,
 ) -> Result<HashMap<String, serde_json::Value>, ConfigError> {
     // 强制禁用代理
     let client = reqwest::Client::builder().no_proxy().build()?;
@@ -330,17 +381,6 @@ async fn fetch_vault_secrets(
     let mut root_map: HashMap<String, HashMap<String, serde_json::Value>> = HashMap::new();
 
     // 2. 拉取秘密
-    let paths = [
-        (
-            "database",
-            std::env::var("VAULT_DB_PATH").unwrap_or_default(),
-        ),
-        (
-            "redis",
-            std::env::var("VAULT_REDIS_PATH").unwrap_or_default(),
-        ),
-    ];
-
     for (prefix, path) in paths {
         if path.is_empty() {
             continue;

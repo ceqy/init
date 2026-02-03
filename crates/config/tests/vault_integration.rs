@@ -34,6 +34,22 @@ async fn test_vault_config_loading() {
                     println!("🚀 验证通过：成功获取并拼装了 Redis 密码！");
                 }
             }
+
+            // 4. 验证新服务
+            if let Some(minio) = config.minio {
+                println!("📦 MinIO URL: {}", minio.url);
+                println!("🚀 验证通过：成功从 Vault 获取 MinIO 配置！");
+            }
+
+            if let Some(es) = config.elasticsearch {
+                println!("🔍 ES URL: {}", es.url);
+                println!("🚀 验证通过：成功从 Vault 获取 ES 配置！");
+            }
+
+            if let Some(grafana) = config.grafana {
+                println!("📊 Grafana URL: {}", grafana.url);
+                println!("🚀 验证通过：成功从 Vault 获取 Grafana 配置！");
+            }
         }
         Err(e) => {
             panic!("❌ 配置加载失败: {:?}", e);
