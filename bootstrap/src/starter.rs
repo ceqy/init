@@ -1,4 +1,4 @@
-cargo test --test vault_integration -- --nocapture//! 服务启动器
+//! 服务启动器
 //!
 //! 提供统一的服务启动模式
 

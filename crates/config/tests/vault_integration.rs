@@ -35,9 +35,19 @@ async fn test_vault_config_loading() {
                 }
             }
 
-            // 4. 验证新服务
+            // 4. 验证核心数据库和缓存
+            if db_url.contains("10.0.0.10") {
+                println!("🚀 验证通过：成功从 Vault 获取到了 PostgreSQL 远程配置！");
+            }
+
+            if let Some(etcd) = config.etcd {
+                println!("📦 Etcd URL: {}", etcd.url.expose_secret());
+                println!("🚀 验证通过：成功从 Vault 获取 Etcd 配置！");
+            }
+
+            // 5. 验证存储与搜索
             if let Some(minio) = config.minio {
-                println!("📦 MinIO URL: {}", minio.url);
+                println!("📦 MinIO Endpoint: {}", minio.endpoint);
                 println!("🚀 验证通过：成功从 Vault 获取 MinIO 配置！");
             }
 
@@ -46,9 +56,36 @@ async fn test_vault_config_loading() {
                 println!("🚀 验证通过：成功从 Vault 获取 ES 配置！");
             }
 
-            if let Some(grafana) = config.grafana {
-                println!("📊 Grafana URL: {}", grafana.url);
-                println!("🚀 验证通过：成功从 Vault 获取 Grafana 配置！");
+            // 6. 验证消息队列
+            if let Some(mq) = config.mq {
+                if let Some(kafka) = mq.kafka {
+                    println!("󰓇 Kafka Bootstrap: {}", kafka.bootstrap_servers);
+                    println!("🚀 验证通过：成功从 Vault 获取 Kafka 配置！");
+                }
+                if let Some(rmq) = mq.rabbitmq {
+                    println!("󰓇 RabbitMQ URL: {}", rmq.url.expose_secret());
+                    println!("🚀 验证通过：成功从 Vault 获取 RabbitMQ 配置！");
+                }
+            }
+
+            // 7. 验证监控
+            if let Some(monitoring) = config.monitoring {
+                if let Some(grafana) = monitoring.grafana {
+                    println!("📊 Grafana URL: {}", grafana.url);
+                    println!("🚀 验证通过：成功从 Vault 获取 Grafana 配置！");
+                }
+                if let Some(prometheus) = monitoring.prometheus {
+                    println!("📊 Prometheus Host: {}", prometheus.host);
+                    println!("🚀 验证通过：成功从 Vault 获取 Prometheus 配置！");
+                }
+            }
+
+            // 8. 验证系统服务
+            if let Some(system) = config.system {
+                if let Some(ssh) = system.ssh {
+                    println!("󰆟 SSH Host: {}", ssh.host);
+                    println!("🚀 验证通过：成功从 Vault 获取 SSH 配置！");
+                }
             }
         }
         Err(e) => {

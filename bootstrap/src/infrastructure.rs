@@ -14,9 +14,9 @@ pub use adapter_postgres::PoolStatus;
 use adapter_postgres::{PostgresConfig, ReadWritePool, create_pool};
 use adapter_redis::{RedisCache, create_connection_manager};
 use auth_core::TokenService;
+use clickhouse::Row;
 use config::AppConfig;
 use errors::AppResult;
-use clickhouse::Row;
 use redis::aio::ConnectionManager;
 use secrecy::ExposeSecret;
 use serde::Serialize;
@@ -113,25 +113,26 @@ impl Infrastructure {
         ));
 
         // 4. 创建 Kafka Producer（可选，带重试）
-        let kafka_producer = if let Some(kafka_config) = &config.kafka {
-            let producer_config =
-                KafkaProducerConfig::new(&kafka_config.brokers).with_client_id(&config.app_name);
-            let result = with_retry_optional(&retry_config, "Kafka producer", || {
-                let cfg = producer_config.clone();
-                async move { KafkaEventPublisher::new(&cfg) }
-            })
-            .await;
-            if result.is_some() {
-                info!("Kafka producer created");
-            }
-            result.map(Arc::new)
-        } else {
-            info!("Kafka not configured, skipping");
-            None
-        };
+        let kafka_producer =
+            if let Some(kafka_config) = config.mq.as_ref().and_then(|mq| mq.kafka.as_ref()) {
+                let producer_config = KafkaProducerConfig::new(&kafka_config.bootstrap_servers)
+                    .with_client_id(&config.app_name);
+                let result = with_retry_optional(&retry_config, "Kafka producer", || {
+                    let cfg = producer_config.clone();
+                    async move { KafkaEventPublisher::new(&cfg) }
+                })
+                .await;
+                if result.is_some() {
+                    info!("Kafka producer created");
+                }
+                result.map(Arc::new)
+            } else {
+                info!("Kafka not configured, skipping");
+                None
+            };
 
         // 5. 创建 ClickHouse 连接池（可选）
-        let clickhouse_pool = if let Some(ch_config) = &config.clickhouse {
+        let clickhouse_pool = if let Some(ch_config) = config.clickhouse.as_ref() {
             let ch_adapter_config = Self::build_clickhouse_config(ch_config);
             match ClickHousePool::new(ch_adapter_config) {
                 Ok(pool) => {
@@ -183,20 +184,20 @@ impl Infrastructure {
             })
             .collect();
 
-        let mut ch_config = ChAdapterConfig::new(
-            config.url.expose_secret(),
-            &config.database,
-        )
-        .with_pool(config.pool_min, config.pool_max)
-        .with_connection_timeout(Duration::from_secs(config.connection_timeout_secs))
-        .with_idle_timeout(Duration::from_secs(config.idle_timeout_secs))
-        .with_retry(
-            config.retry_max_attempts,
-            Duration::from_millis(config.retry_initial_delay_ms),
-            Duration::from_millis(config.retry_max_delay_ms),
-        )
-        .with_batch(config.batch_size, Duration::from_secs(config.batch_timeout_secs))
-        .with_compression(compression);
+        let mut ch_config = ChAdapterConfig::new(config.url.expose_secret(), &config.database)
+            .with_pool(config.pool_min, config.pool_max)
+            .with_connection_timeout(Duration::from_secs(config.connection_timeout_secs))
+            .with_idle_timeout(Duration::from_secs(config.idle_timeout_secs))
+            .with_retry(
+                config.retry_max_attempts,
+                Duration::from_millis(config.retry_initial_delay_ms),
+                Duration::from_millis(config.retry_max_delay_ms),
+            )
+            .with_batch(
+                config.batch_size,
+                Duration::from_secs(config.batch_timeout_secs),
+            )
+            .with_compression(compression);
 
         if let Some(user) = &config.user {
             if let Some(password) = &config.password {

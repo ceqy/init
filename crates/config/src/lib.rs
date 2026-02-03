@@ -59,7 +59,23 @@ pub struct RedisConfig {
 /// Kafka 配置
 #[derive(Debug, Clone, Deserialize)]
 pub struct KafkaConfig {
-    pub brokers: String,
+    pub bootstrap_servers: String,
+    pub host: String,
+    pub port: u16,
+    pub security_protocol: Option<String>,
+    pub sasl_mechanism: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<Secret<String>>,
+}
+
+/// Etcd 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct EtcdConfig {
+    pub url: Secret<String>,
+    pub host: String,
+    pub port: u16,
+    pub username: Option<String>,
+    pub password: Option<Secret<String>>,
 }
 
 /// ClickHouse 配置
@@ -240,9 +256,14 @@ pub struct WebAuthnConfig {
 /// MinIO 配置
 #[derive(Debug, Clone, Deserialize)]
 pub struct MinioConfig {
-    pub url: String,
+    pub endpoint: String,
+    pub console_url: Option<String>,
+    pub host: String,
+    pub api_port: u16,
+    pub console_port: Option<u16>,
     pub access_key: Secret<String>,
     pub secret_key: Secret<String>,
+    pub region: Option<String>,
 }
 
 /// Elasticsearch 配置
@@ -257,8 +278,124 @@ pub struct ElasticsearchConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GrafanaConfig {
     pub url: String,
+    pub host: String,
+    pub port: u16,
     pub username: String,
     pub password: Secret<String>,
+}
+
+/// Prometheus 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct PrometheusConfig {
+    pub url: String,
+    pub host: String,
+    pub port: u16,
+    pub username: Option<String>,
+    pub password: Option<Secret<String>>,
+}
+
+/// Alertmanager 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlertmanagerConfig {
+    pub url: String,
+    pub host: String,
+    pub port: u16,
+    pub username: Option<String>,
+    pub password: Option<Secret<String>>,
+}
+
+/// Node Exporter 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct NodeExporterConfig {
+    pub url: String,
+    pub host: String,
+    pub port: u16,
+    pub username: Option<String>,
+    pub password: Option<Secret<String>>,
+}
+
+/// Loki 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct LokiConfig {
+    pub url: String,
+    pub host: String,
+    pub port: u16,
+}
+
+/// Jaeger 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct JaegerConfig {
+    pub url: String,
+    pub host: String,
+    pub ui_port: u16,
+    pub otlp_grpc_port: u16,
+    pub otlp_http_port: u16,
+}
+
+/// Promtail 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct PromtailConfig {
+    pub url: String,
+    pub host: String,
+    pub port: u16,
+}
+
+/// RabbitMQ 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct RabbitMQConfig {
+    pub url: Secret<String>,
+    pub management_url: Option<String>,
+    pub host: String,
+    pub amqp_port: u16,
+    pub management_port: Option<u16>,
+    pub username: String,
+    pub password: Secret<String>,
+    pub connection_string: Option<Secret<String>>,
+}
+
+/// SSH 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct SshConfig {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: Secret<String>,
+}
+
+/// Cockpit 配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct CockpitConfig {
+    pub url: String,
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: Secret<String>,
+}
+
+/// 消息队列聚合配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct MqConfig {
+    pub kafka: Option<KafkaConfig>,
+    pub rabbitmq: Option<RabbitMQConfig>,
+}
+
+/// 监控服务聚合配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct MonitoringConfig {
+    pub grafana: Option<GrafanaConfig>,
+    pub prometheus: Option<PrometheusConfig>,
+    pub alertmanager: Option<AlertmanagerConfig>,
+    pub node_exporter: Option<NodeExporterConfig>,
+    pub loki: Option<LokiConfig>,
+    pub jaeger: Option<JaegerConfig>,
+    pub promtail: Option<PromtailConfig>,
+}
+
+/// 系统服务聚合配置
+#[derive(Debug, Clone, Deserialize)]
+pub struct SystemConfig {
+    pub ssh: Option<SshConfig>,
+    pub cockpit: Option<CockpitConfig>,
 }
 
 /// 应用配置
@@ -268,7 +405,7 @@ pub struct AppConfig {
     pub app_env: String,
     pub database: DatabaseConfig,
     pub redis: RedisConfig,
-    pub kafka: Option<KafkaConfig>,
+    pub etcd: Option<EtcdConfig>,
     pub clickhouse: Option<ClickHouseConfig>,
     pub jwt: JwtConfig,
     pub server: ServerConfig,
@@ -278,7 +415,9 @@ pub struct AppConfig {
     pub webauthn: WebAuthnConfig,
     pub minio: Option<MinioConfig>,
     pub elasticsearch: Option<ElasticsearchConfig>,
-    pub grafana: Option<GrafanaConfig>,
+    pub mq: Option<MqConfig>,
+    pub monitoring: Option<MonitoringConfig>,
+    pub system: Option<SystemConfig>,
 }
 
 impl AppConfig {
@@ -291,13 +430,14 @@ impl AppConfig {
         let vault_secret_id = std::env::var("VAULT_SECRET_ID").ok();
         let vault_addr = std::env::var("VAULT_ADDR").ok();
 
-        let mut vault_secrets = HashMap::new();
+        let mut vault_secrets = serde_json::json!({});
 
         if let (Some(role_id), Some(secret_id), Some(addr)) =
             (vault_role_id, vault_secret_id, vault_addr)
         {
             // 2. 准备拉取路径
             let mut paths = HashMap::new();
+            // 核心服务
             paths.insert(
                 "database",
                 std::env::var("VAULT_DB_PATH").unwrap_or_default(),
@@ -306,6 +446,13 @@ impl AppConfig {
                 "redis",
                 std::env::var("VAULT_REDIS_PATH").unwrap_or_default(),
             );
+            paths.insert("etcd", std::env::var("VAULT_ETCD_PATH").unwrap_or_default());
+            paths.insert(
+                "clickhouse",
+                std::env::var("VAULT_CLICKHOUSE_PATH").unwrap_or_default(),
+            );
+
+            // 存储与搜索
             paths.insert(
                 "minio",
                 std::env::var("VAULT_MINIO_PATH").unwrap_or_default(),
@@ -314,9 +461,55 @@ impl AppConfig {
                 "elasticsearch",
                 std::env::var("VAULT_ES_PATH").unwrap_or_default(),
             );
+
+            // 消息队列 (聚合)
             paths.insert(
-                "grafana",
+                "mq.kafka",
+                std::env::var("VAULT_KAFKA_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "mq.rabbitmq",
+                std::env::var("VAULT_RABBITMQ_PATH").unwrap_or_default(),
+            );
+
+            // 监控 (聚合)
+            paths.insert(
+                "monitoring.grafana",
                 std::env::var("VAULT_GRAFANA_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "monitoring.prometheus",
+                std::env::var("VAULT_PROMETHEUS_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "monitoring.alertmanager",
+                std::env::var("VAULT_ALERTMANAGER_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "monitoring.node_exporter",
+                std::env::var("VAULT_NODE_EXPORTER_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "monitoring.loki",
+                std::env::var("VAULT_LOKI_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "monitoring.jaeger",
+                std::env::var("VAULT_JAEGER_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "monitoring.promtail",
+                std::env::var("VAULT_PROMTAIL_PATH").unwrap_or_default(),
+            );
+
+            // 系统服务 (聚合)
+            paths.insert(
+                "system.ssh",
+                std::env::var("VAULT_SSH_PATH").unwrap_or_default(),
+            );
+            paths.insert(
+                "system.cockpit",
+                std::env::var("VAULT_COCKPIT_PATH").unwrap_or_default(),
             );
 
             // 3. 执行 Vault 登录和拉取逻辑
@@ -324,14 +517,17 @@ impl AppConfig {
         }
 
         // 3. 合并所有配置源
-        // 我们先合并基础文件和环境变量，最后合并 Vault 拿到的秘密
         let mut figment = Figment::new()
             .merge(Toml::file(format!("{}/default.toml", config_dir)))
             .merge(Toml::file(format!("{}/{}.toml", config_dir, env)))
             .merge(Env::prefixed("").split("_"));
 
-        if !vault_secrets.is_empty() {
-            // 将 Vault 拿到的嵌套 Map 直接合并
+        if !vault_secrets.is_null()
+            && vault_secrets
+                .as_object()
+                .map(|o| !o.is_empty())
+                .unwrap_or(false)
+        {
             figment = figment.merge(Serialized::globals(vault_secrets));
         }
 
@@ -350,18 +546,15 @@ impl AppConfig {
         self.app_env == "development"
     }
 }
-
-/// 从 Vault 获取秘密并解析为 Figment 可用的 Map
+/// 从 Vault 获取秘密并解析为 Figment 可用的 JSON 对象
 async fn fetch_vault_secrets(
     addr: &str,
     role_id: &str,
     secret_id: &str,
     paths: HashMap<&str, String>,
-) -> Result<HashMap<String, serde_json::Value>, ConfigError> {
-    // 强制禁用代理
+) -> Result<serde_json::Value, ConfigError> {
     let client = reqwest::Client::builder().no_proxy().build()?;
 
-    // 1. AppRole 登录
     let login_url = format!("{}/v1/auth/approle/login", addr);
     let login_resp_raw = client
         .post(&login_url)
@@ -377,10 +570,8 @@ async fn fetch_vault_secrets(
         .as_str()
         .ok_or_else(|| ConfigError::Vault("Failed to get client token".into()))?;
 
-    // 使用嵌套 Map：{ "database": { "url": "..." } }
-    let mut root_map: HashMap<String, HashMap<String, serde_json::Value>> = HashMap::new();
+    let mut root = serde_json::json!({});
 
-    // 2. 拉取秘密
     for (prefix, path) in paths {
         if path.is_empty() {
             continue;
@@ -396,40 +587,50 @@ async fn fetch_vault_secrets(
             .await?;
 
         if let Some(data) = resp["data"]["data"].as_object() {
-            let section = root_map.entry(prefix.to_string()).or_default();
-            for (key, val) in data {
-                section.insert(key.clone(), val.clone());
+            let parts: Vec<&str> = prefix.split('.').collect();
+            let mut current = root.as_object_mut().unwrap();
+
+            for (i, part) in parts.iter().enumerate() {
+                if i == parts.len() - 1 {
+                    let section = current
+                        .entry(part.to_string())
+                        .or_insert(serde_json::json!({}))
+                        .as_object_mut()
+                        .ok_or_else(|| ConfigError::Vault(format!("Path conflict at {}", part)))?;
+
+                    for (key, val) in data {
+                        // 智能类型转换：Vault KV 通常将所有内容存为字符串
+                        // 如果字符串看起来像数字，我们尝试将其转为 JSON Number，以便 Figment 正确解析为 u16/u32
+                        let final_val = if let Some(s) = val.as_str() {
+                            if let Ok(n) = s.parse::<i64>() {
+                                serde_json::json!(n)
+                            } else if let Ok(f) = s.parse::<f64>() {
+                                serde_json::json!(f)
+                            } else if s == "true" {
+                                serde_json::json!(true)
+                            } else if s == "false" {
+                                serde_json::json!(false)
+                            } else {
+                                val.clone()
+                            }
+                        } else {
+                            val.clone()
+                        };
+                        section.insert(key.clone(), final_val);
+                    }
+                } else {
+                    let next = current
+                        .entry(part.to_string())
+                        .or_insert(serde_json::json!({}))
+                        .as_object_mut()
+                        .ok_or_else(|| ConfigError::Vault(format!("Path conflict at {}", part)))?;
+                    current = next;
+                }
             }
         }
     }
 
-    // 3. 特殊处理：构造数据库 URL
-    if let Some(db_section) = root_map.get_mut("database") {
-        if let (Some(u), Some(p)) = (db_section.get("username"), db_section.get("password")) {
-            if let (Some(user), Some(pass)) = (u.as_str(), p.as_str()) {
-                let db_url = format!("postgres://{}:{}@10.0.0.10:5432/erp", user, pass);
-                db_section.insert("url".to_string(), serde_json::Value::String(db_url));
-            }
-        }
-    }
-
-    // 4. 特殊处理：构造 Redis URL
-    if let Some(redis_section) = root_map.get_mut("redis") {
-        if let Some(p) = redis_section.get("password") {
-            if let Some(pass) = p.as_str() {
-                let redis_url = format!("redis://:{}@127.0.0.1:6379", pass);
-                redis_section.insert("url".to_string(), serde_json::Value::String(redis_url));
-            }
-        }
-    }
-
-    // 转为 Figment 能识别的顶层 Map
-    let mut final_map = HashMap::new();
-    for (k, v) in root_map {
-        final_map.insert(k, serde_json::to_value(v).unwrap());
-    }
-
-    Ok(final_map)
+    Ok(root)
 }
 
 #[cfg(test)]
