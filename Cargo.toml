@@ -15,6 +15,7 @@ members = [
     "crates/adapters/clickhouse",
     "crates/adapters/kafka",
     "crates/adapters/email",
+    "crates/adapters/vault",
     "bootstrap",
     "gateway",
     "services/*",
@@ -133,6 +134,7 @@ adapter-redis = { path = "crates/adapters/redis" }
 adapter-clickhouse = { path = "crates/adapters/clickhouse" }
 adapter-kafka = { path = "crates/adapters/kafka" }
 adapter-email = { path = "crates/adapters/email" }
+adapter-vault = { path = "crates/adapters/vault" }
 bootstrap = { path = "bootstrap" }
 
 # ============================================

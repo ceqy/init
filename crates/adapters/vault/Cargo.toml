@@ -1,0 +1,29 @@
+[package]
+name = "adapter-vault"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Internal crates
+errors = { workspace = true }
+
+# Vault client
+vaultrs = "0.7"
+vaultrs-login = "0.2"
+
+# Async
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+[dev-dependencies]
+tracing-subscriber = { workspace = true }
