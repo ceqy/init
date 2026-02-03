@@ -32,7 +32,8 @@ use tracing::info;
 use api::MaterialServiceImpl;
 use application::ServiceHandler;
 use infrastructure::persistence::{
-    PostgresMaterialGroupRepository, PostgresMaterialRepository, PostgresMaterialTypeRepository,
+    PostgresEventStore, PostgresMaterialGroupRepository, PostgresMaterialRepository,
+    PostgresMaterialTypeRepository,
 };
 use mdm_material::v1::material_service_server::MaterialServiceServer;
 
@@ -46,10 +47,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let pool = infra.postgres_pool();
         let material_repo = Arc::new(PostgresMaterialRepository::new(pool.clone()));
         let group_repo = Arc::new(PostgresMaterialGroupRepository::new(pool.clone()));
-        let type_repo = Arc::new(PostgresMaterialTypeRepository::new(pool));
-        info!("Repositories initialized");
+        let type_repo = Arc::new(PostgresMaterialTypeRepository::new(pool.clone()));
+        let event_store = Arc::new(PostgresEventStore::new(pool));
+        info!("Repositories and event store initialized");
 
-        let handler = Arc::new(ServiceHandler::new(material_repo, group_repo, type_repo));
+        let handler = Arc::new(
+            ServiceHandler::new(material_repo, group_repo, type_repo)
+                .with_event_store(event_store)
+        );
         let service = MaterialServiceImpl::new(handler);
 
         let reflection_service = ReflectionBuilder::configure()

@@ -1247,14 +1247,79 @@ impl MaterialService for MaterialServiceImpl {
         }))
     }
 
-    // ========== 其他方法（暂未实现） ==========
+    // ========== 其他方法 ==========
 
     async fn get_material_change_history(
         &self,
-        _request: Request<GetMaterialChangeHistoryRequest>,
+        request: Request<GetMaterialChangeHistoryRequest>,
     ) -> Result<Response<GetMaterialChangeHistoryResponse>, Status> {
-        // TODO: 需要实现事件溯源和变更历史查询
-        Err(Status::unimplemented("Change history requires event sourcing implementation"))
+        let metadata = request.metadata();
+        let tenant_id = extract_tenant_id(metadata).map_err(|e| Status::unauthenticated(e.to_string()))?;
+
+        let req = request.into_inner();
+
+        // 解析物料 ID
+        let material_id = parse_material_id(&req.material_id)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+        // 解析日期范围
+        let (from_date, to_date) = if let Some(date_range) = req.date_range {
+            (
+                proto_to_timestamp(date_range.start),
+                proto_to_timestamp(date_range.end),
+            )
+        } else {
+            (None, None)
+        };
+
+        // 解析分页参数
+        let pagination = req.pagination
+            .map(|p| ::common::types::Pagination {
+                page: p.page as u32,
+                page_size: p.page_size as u32,
+            })
+            .unwrap_or(::common::types::Pagination {
+                page: 1,
+                page_size: 20,
+            });
+
+        let page = pagination.page;
+        let page_size = pagination.page_size;
+
+        // 创建查询
+        let query = GetMaterialChangeHistoryQuery {
+            material_id,
+            tenant_id,
+            from_date,
+            to_date,
+            pagination,
+        };
+
+        // 执行查询
+        let (events, total) = self
+            .handler
+            .get_material_change_history(query)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 转换为 Proto ChangeLogEntry
+        let records = events
+            .iter()
+            .map(material_event_to_change_log_entry)
+            .collect();
+
+        // 构建分页响应
+        let total_pages = (total as f64 / page_size as f64).ceil() as i32;
+
+        Ok(Response::new(GetMaterialChangeHistoryResponse {
+            records,
+            pagination: Some(common::v1::PaginationResponse {
+                page: page as i32,
+                page_size: page_size as i32,
+                total: total as i32,
+                total_pages,
+            }),
+        }))
     }
 
     async fn get_alternative_materials(

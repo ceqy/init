@@ -587,3 +587,158 @@ pub fn unit_conversion_to_proto(
         ean_upc: conversion.ean_upc().unwrap_or("").to_string(),
     }
 }
+
+// ========== MaterialEvent 转换 ==========
+
+/// Domain MaterialEvent 转换为 Proto ChangeLogEntry
+pub fn material_event_to_change_log_entry(
+    event: &crate::domain::events::MaterialEvent,
+) -> common::v1::ChangeLogEntry {
+    use crate::domain::events::MaterialEvent;
+
+    match event {
+        MaterialEvent::Created(e) => common::v1::ChangeLogEntry {
+            id: e.metadata.event_id.to_string(),
+            entity_type: "Material".to_string(),
+            entity_id: e.material_id.to_string(),
+            change_type: "CREATE".to_string(),
+            field_name: "material".to_string(),
+            old_value: String::new(),
+            new_value: format!(
+                "物料编号: {}, 描述: {}, 类型: {}",
+                e.material_number.as_str(),
+                e.description,
+                e.material_type_code
+            ),
+            changed_by: e.metadata.user_id.clone().unwrap_or_default(),
+            changed_at: Some(prost_types::Timestamp {
+                seconds: e.metadata.occurred_at.timestamp(),
+                nanos: e.metadata.occurred_at.timestamp_subsec_nanos() as i32,
+            }),
+            change_reason: "物料创建".to_string(),
+        },
+        MaterialEvent::Updated(e) => common::v1::ChangeLogEntry {
+            id: e.metadata.event_id.to_string(),
+            entity_type: "Material".to_string(),
+            entity_id: e.material_id.to_string(),
+            change_type: "UPDATE".to_string(),
+            field_name: "material".to_string(),
+            old_value: String::new(),
+            new_value: e.changes.join(", "),
+            changed_by: e.metadata.user_id.clone().unwrap_or_default(),
+            changed_at: Some(prost_types::Timestamp {
+                seconds: e.metadata.occurred_at.timestamp(),
+                nanos: e.metadata.occurred_at.timestamp_subsec_nanos() as i32,
+            }),
+            change_reason: "物料更新".to_string(),
+        },
+        MaterialEvent::Activated(e) => common::v1::ChangeLogEntry {
+            id: e.metadata.event_id.to_string(),
+            entity_type: "Material".to_string(),
+            entity_id: e.material_id.to_string(),
+            change_type: "STATUS_CHANGE".to_string(),
+            field_name: "status".to_string(),
+            old_value: format!("{:?}", e.previous_status),
+            new_value: "Active".to_string(),
+            changed_by: e.metadata.user_id.clone().unwrap_or_default(),
+            changed_at: Some(prost_types::Timestamp {
+                seconds: e.metadata.occurred_at.timestamp(),
+                nanos: e.metadata.occurred_at.timestamp_subsec_nanos() as i32,
+            }),
+            change_reason: "物料激活".to_string(),
+        },
+        MaterialEvent::Deactivated(e) => common::v1::ChangeLogEntry {
+            id: e.metadata.event_id.to_string(),
+            entity_type: "Material".to_string(),
+            entity_id: e.material_id.to_string(),
+            change_type: "STATUS_CHANGE".to_string(),
+            field_name: "status".to_string(),
+            old_value: format!("{:?}", e.previous_status),
+            new_value: "Inactive".to_string(),
+            changed_by: e.metadata.user_id.clone().unwrap_or_default(),
+            changed_at: Some(prost_types::Timestamp {
+                seconds: e.metadata.occurred_at.timestamp(),
+                nanos: e.metadata.occurred_at.timestamp_subsec_nanos() as i32,
+            }),
+            change_reason: "物料停用".to_string(),
+        },
+        MaterialEvent::Blocked(e) => common::v1::ChangeLogEntry {
+            id: e.metadata.event_id.to_string(),
+            entity_type: "Material".to_string(),
+            entity_id: e.material_id.to_string(),
+            change_type: "STATUS_CHANGE".to_string(),
+            field_name: "status".to_string(),
+            old_value: format!("{:?}", e.previous_status),
+            new_value: "Blocked".to_string(),
+            changed_by: e.metadata.user_id.clone().unwrap_or_default(),
+            changed_at: Some(prost_types::Timestamp {
+                seconds: e.metadata.occurred_at.timestamp(),
+                nanos: e.metadata.occurred_at.timestamp_subsec_nanos() as i32,
+            }),
+            change_reason: e.reason.clone().unwrap_or_else(|| "物料冻结".to_string()),
+        },
+        MaterialEvent::MarkedForDeletion(e) => common::v1::ChangeLogEntry {
+            id: e.metadata.event_id.to_string(),
+            entity_type: "Material".to_string(),
+            entity_id: e.material_id.to_string(),
+            change_type: "STATUS_CHANGE".to_string(),
+            field_name: "deletion_flag".to_string(),
+            old_value: "false".to_string(),
+            new_value: "true".to_string(),
+            changed_by: e.metadata.user_id.clone().unwrap_or_default(),
+            changed_at: Some(prost_types::Timestamp {
+                seconds: e.metadata.occurred_at.timestamp(),
+                nanos: e.metadata.occurred_at.timestamp_subsec_nanos() as i32,
+            }),
+            change_reason: "标记删除".to_string(),
+        },
+        MaterialEvent::Deleted(e) => common::v1::ChangeLogEntry {
+            id: e.metadata.event_id.to_string(),
+            entity_type: "Material".to_string(),
+            entity_id: e.material_id.to_string(),
+            change_type: "DELETE".to_string(),
+            field_name: "material".to_string(),
+            old_value: e.material_number.as_str().to_string(),
+            new_value: String::new(),
+            changed_by: e.metadata.user_id.clone().unwrap_or_default(),
+            changed_at: Some(prost_types::Timestamp {
+                seconds: e.metadata.occurred_at.timestamp(),
+                nanos: e.metadata.occurred_at.timestamp_subsec_nanos() as i32,
+            }),
+            change_reason: "物料删除".to_string(),
+        },
+        MaterialEvent::ExtendedToPlant(e) => common::v1::ChangeLogEntry {
+            id: e.metadata.event_id.to_string(),
+            entity_type: "Material".to_string(),
+            entity_id: e.material_id.to_string(),
+            change_type: "UPDATE".to_string(),
+            field_name: "plant_data".to_string(),
+            old_value: String::new(),
+            new_value: format!("扩展到工厂: {}", e.plant),
+            changed_by: e.metadata.user_id.clone().unwrap_or_default(),
+            changed_at: Some(prost_types::Timestamp {
+                seconds: e.metadata.occurred_at.timestamp(),
+                nanos: e.metadata.occurred_at.timestamp_subsec_nanos() as i32,
+            }),
+            change_reason: "物料扩展到工厂".to_string(),
+        },
+        MaterialEvent::ExtendedToSalesOrg(e) => common::v1::ChangeLogEntry {
+            id: e.metadata.event_id.to_string(),
+            entity_type: "Material".to_string(),
+            entity_id: e.material_id.to_string(),
+            change_type: "UPDATE".to_string(),
+            field_name: "sales_data".to_string(),
+            old_value: String::new(),
+            new_value: format!(
+                "扩展到销售组织: {}, 分销渠道: {}",
+                e.sales_org, e.distribution_channel
+            ),
+            changed_by: e.metadata.user_id.clone().unwrap_or_default(),
+            changed_at: Some(prost_types::Timestamp {
+                seconds: e.metadata.occurred_at.timestamp(),
+                nanos: e.metadata.occurred_at.timestamp_subsec_nanos() as i32,
+            }),
+            change_reason: "物料扩展到销售组织".to_string(),
+        },
+    }
+}
