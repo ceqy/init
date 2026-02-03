@@ -376,7 +376,7 @@ fn money_to_proto(money: &Option<Money>) -> Option<common::v1::Money> {
 }
 
 /// Proto Timestamp 转换为 Domain DateTime
-fn proto_to_timestamp(proto: Option<prost_types::Timestamp>) -> Option<DateTime<Utc>> {
+pub fn proto_to_timestamp(proto: Option<prost_types::Timestamp>) -> Option<DateTime<Utc>> {
     proto.and_then(|ts| {
         DateTime::from_timestamp(ts.seconds, ts.nanos as u32)
     })
@@ -535,5 +535,55 @@ fn purchase_status_to_proto(value: PurchaseMaterialStatus) -> v1::PurchaseMateri
         PurchaseMaterialStatus::Unspecified => v1::PurchaseMaterialStatus::Unspecified,
         PurchaseMaterialStatus::Active => v1::PurchaseMaterialStatus::Active,
         PurchaseMaterialStatus::Blocked => v1::PurchaseMaterialStatus::Blocked,
+    }
+}
+
+// ========== AlternativeMaterial 转换 ==========
+
+/// Domain AlternativeMaterial 转换为 Proto AlternativeMaterial
+pub fn alternative_material_to_proto(
+    alt: &crate::domain::value_objects::AlternativeMaterial,
+) -> v1::AlternativeMaterial {
+    v1::AlternativeMaterial {
+        material_id: alt.material_id().to_string(),
+        material_number: alt.material_number().to_string(),
+        description: alt.description().to_string(),
+        plant: alt.plant().unwrap_or("").to_string(),
+        priority: alt.priority(),
+        validity: Some(common::v1::ValidityPeriod {
+            valid_from: timestamp_to_proto(&alt.valid_from()),
+            valid_to: timestamp_to_proto(&alt.valid_to()),
+        }),
+    }
+}
+
+// ========== UnitConversion 转换 ==========
+
+/// Proto UnitConversion 转换为 Domain UnitConversion
+pub fn proto_to_unit_conversion(proto: v1::UnitConversion) -> Option<crate::domain::value_objects::UnitConversion> {
+    let mut conversion = crate::domain::value_objects::UnitConversion::new(
+        proto.from_unit,
+        proto.to_unit,
+        proto.numerator,
+        proto.denominator,
+    ).ok()?;
+
+    if !proto.ean_upc.is_empty() {
+        conversion = conversion.with_ean_upc(proto.ean_upc);
+    }
+
+    Some(conversion)
+}
+
+/// Domain UnitConversion 转换为 Proto UnitConversion
+pub fn unit_conversion_to_proto(
+    conversion: &crate::domain::value_objects::UnitConversion,
+) -> v1::UnitConversion {
+    v1::UnitConversion {
+        from_unit: conversion.source_unit().to_string(),
+        to_unit: conversion.target_unit().to_string(),
+        numerator: conversion.numerator(),
+        denominator: conversion.denominator(),
+        ean_upc: conversion.ean_upc().unwrap_or("").to_string(),
     }
 }

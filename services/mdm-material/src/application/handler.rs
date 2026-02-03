@@ -8,6 +8,7 @@ use errors::{AppError, AppResult};
 use tracing::{info, warn};
 
 use crate::domain::entities::{Material, MaterialGroup, MaterialSearchResult, MaterialType};
+use crate::domain::events::MaterialEvent;
 use crate::domain::repositories::{
     MaterialGroupRepository, MaterialRepository, MaterialTypeRepository,
 };
@@ -15,6 +16,7 @@ use crate::domain::value_objects::{MaterialGroupId, MaterialId, MaterialNumber, 
 use crate::domain::views::{
     AccountingData, PlantData, PurchaseData, QualityData, SalesData, StorageData,
 };
+use crate::infrastructure::persistence::EventStore;
 
 use super::commands::*;
 use super::queries::*;
@@ -23,6 +25,7 @@ pub struct ServiceHandler {
     material_repo: Arc<dyn MaterialRepository>,
     group_repo: Arc<dyn MaterialGroupRepository>,
     type_repo: Arc<dyn MaterialTypeRepository>,
+    event_store: Option<Arc<dyn EventStore>>,
 }
 
 impl ServiceHandler {
@@ -35,7 +38,13 @@ impl ServiceHandler {
             material_repo,
             group_repo,
             type_repo,
+            event_store: None,
         }
+    }
+
+    pub fn with_event_store(mut self, event_store: Arc<dyn EventStore>) -> Self {
+        self.event_store = Some(event_store);
+        self
     }
 
     // ========== 物料基础 CRUD ==========
@@ -1126,5 +1135,227 @@ impl ServiceHandler {
 
         info!("Found {} material types", result.total);
         Ok(result)
+    }
+
+    // ========== 替代物料管理 ==========
+
+    /// 获取替代物料列表
+    pub async fn get_alternative_materials(
+        &self,
+        query: GetAlternativeMaterialsQuery,
+    ) -> AppResult<Vec<crate::domain::value_objects::AlternativeMaterial>> {
+        info!(
+            "Getting alternative materials for material: {}",
+            query.material_id.0
+        );
+
+        let alternatives = self
+            .material_repo
+            .find_alternatives(&query.material_id, &query.tenant_id)
+            .await?;
+
+        // 如果指定了工厂，过滤结果
+        if let Some(plant) = query.plant {
+            Ok(alternatives
+                .into_iter()
+                .filter(|alt| alt.is_applicable_to_plant(&plant))
+                .collect())
+        } else {
+            Ok(alternatives)
+        }
+    }
+
+    /// 设置替代物料
+    pub async fn set_alternative_material(&self, cmd: SetAlternativeMaterialCommand) -> AppResult<()> {
+        info!(
+            "Setting alternative material {} for material {}",
+            cmd.alternative_material_id.0, cmd.material_id.0
+        );
+
+        // 验证主物料存在
+        let _material = self
+            .material_repo
+            .find_by_id(&cmd.material_id, &cmd.tenant_id)
+            .await?
+            .ok_or_else(|| AppError::not_found(format!("物料 {} 不存在", cmd.material_id.0)))?;
+
+        // 验证替代物料存在
+        let alt_material = self
+            .material_repo
+            .find_by_id(&cmd.alternative_material_id, &cmd.tenant_id)
+            .await?
+            .ok_or_else(|| {
+                AppError::not_found(format!("替代物料 {} 不存在", cmd.alternative_material_id.0))
+            })?;
+
+        // 不能将物料设置为自己的替代物料
+        if cmd.material_id == cmd.alternative_material_id {
+            return Err(AppError::validation("物料不能设置为自己的替代物料"));
+        }
+
+        // 创建替代物料关系
+        let mut alternative = crate::domain::value_objects::AlternativeMaterial::new(
+            cmd.alternative_material_id.clone(),
+            alt_material.material_number().to_string(),
+            alt_material.description().to_string(),
+            cmd.priority,
+        );
+
+        if let Some(plant) = cmd.plant {
+            alternative = alternative.with_plant(plant);
+        }
+
+        alternative = alternative.with_validity(cmd.valid_from, cmd.valid_to);
+
+        // 保存替代物料关系
+        self.material_repo
+            .save_alternative(&cmd.material_id, &alternative)
+            .await?;
+
+        info!(
+            "Alternative material {} set for material {}",
+            cmd.alternative_material_id.0, cmd.material_id.0
+        );
+
+        Ok(())
+    }
+
+    /// 移除替代物料
+    pub async fn remove_alternative_material(
+        &self,
+        cmd: RemoveAlternativeMaterialCommand,
+    ) -> AppResult<()> {
+        info!(
+            "Removing alternative material {} from material {}",
+            cmd.alternative_material_id.0, cmd.material_id.0
+        );
+
+        // 验证主物料存在
+        self.material_repo
+            .find_by_id(&cmd.material_id, &cmd.tenant_id)
+            .await?
+            .ok_or_else(|| AppError::not_found(format!("物料 {} 不存在", cmd.material_id.0)))?;
+
+        // 移除替代物料关系
+        self.material_repo
+            .remove_alternative(&cmd.material_id, &cmd.alternative_material_id)
+            .await?;
+
+        info!(
+            "Alternative material {} removed from material {}",
+            cmd.alternative_material_id.0, cmd.material_id.0
+        );
+
+        Ok(())
+    }
+
+    // ========== 单位换算管理 ==========
+
+    /// 创建单位换算
+    pub async fn create_unit_conversion(&self, cmd: CreateUnitConversionCommand) -> AppResult<()> {
+        info!(
+            "Creating unit conversion for material: {} ({} -> {})",
+            cmd.material_id.0, cmd.from_unit, cmd.to_unit
+        );
+
+        // 验证物料存在
+        self.material_repo
+            .find_by_id(&cmd.material_id, &cmd.tenant_id)
+            .await?
+            .ok_or_else(|| AppError::not_found(format!("物料 {} 不存在", cmd.material_id.0)))?;
+
+        // 创建单位换算
+        let mut conversion = crate::domain::value_objects::UnitConversion::new(
+            cmd.from_unit.clone(),
+            cmd.to_unit.clone(),
+            cmd.numerator,
+            cmd.denominator,
+        )
+        .map_err(|e| AppError::validation(e.to_string()))?;
+
+        if let Some(ean_upc) = cmd.ean_upc {
+            conversion = conversion.with_ean_upc(ean_upc);
+        }
+
+        // 保存单位换算
+        self.material_repo
+            .save_unit_conversion(&cmd.material_id, &conversion)
+            .await?;
+
+        info!(
+            "Unit conversion created for material: {} ({} -> {})",
+            cmd.material_id.0, cmd.from_unit, cmd.to_unit
+        );
+
+        Ok(())
+    }
+
+    /// 删除单位换算
+    pub async fn delete_unit_conversion(&self, cmd: DeleteUnitConversionCommand) -> AppResult<()> {
+        info!(
+            "Deleting unit conversion for material: {} ({} -> {})",
+            cmd.material_id.0, cmd.from_unit, cmd.to_unit
+        );
+
+        // 验证物料存在
+        self.material_repo
+            .find_by_id(&cmd.material_id, &cmd.tenant_id)
+            .await?
+            .ok_or_else(|| AppError::not_found(format!("物料 {} 不存在", cmd.material_id.0)))?;
+
+        // 删除单位换算
+        self.material_repo
+            .delete_unit_conversion(&cmd.material_id, &cmd.from_unit, &cmd.to_unit)
+            .await?;
+
+        info!(
+            "Unit conversion deleted for material: {} ({} -> {})",
+            cmd.material_id.0, cmd.from_unit, cmd.to_unit
+        );
+
+        Ok(())
+    }
+
+    // ========== 变更历史查询 ==========
+
+    /// 获取物料变更历史
+    pub async fn get_material_change_history(
+        &self,
+        query: GetMaterialChangeHistoryQuery,
+    ) -> AppResult<(Vec<MaterialEvent>, i64)> {
+        info!(
+            "Getting change history for material: {}",
+            query.material_id.0
+        );
+
+        // 检查事件存储是否可用
+        let event_store = self
+            .event_store
+            .as_ref()
+            .ok_or_else(|| AppError::internal("事件存储未配置"))?;
+
+        // 验证物料存在
+        self.material_repo
+            .find_by_id(&query.material_id, &query.tenant_id)
+            .await?
+            .ok_or_else(|| AppError::not_found(format!("物料 {} 不存在", query.material_id.0)))?;
+
+        // 查询事件历史
+        let (events, total) = event_store
+            .get_events_by_time_range(
+                &query.material_id,
+                &query.tenant_id,
+                query.from_date,
+                query.to_date,
+                query.pagination,
+            )
+            .await?;
+
+        info!(
+            "Found {} change records for material {}",
+            total, query.material_id.0
+        );
+
+        Ok((events, total))
     }
 }

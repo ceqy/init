@@ -190,4 +190,12 @@ pub trait MaterialRepository: Send + Sync {
         material_id: &MaterialId,
         conversion: &UnitConversion,
     ) -> AppResult<()>;
+
+    /// 删除单位换算
+    async fn delete_unit_conversion(
+        &self,
+        material_id: &MaterialId,
+        from_unit: &str,
+        to_unit: &str,
+    ) -> AppResult<()>;
 }

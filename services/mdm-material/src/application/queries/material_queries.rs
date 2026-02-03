@@ -79,3 +79,21 @@ pub struct GetQualityDataQuery {
     pub material_id: MaterialId,
     pub tenant_id: TenantId,
 }
+
+/// 获取替代物料查询
+#[derive(Debug, Clone)]
+pub struct GetAlternativeMaterialsQuery {
+    pub material_id: MaterialId,
+    pub tenant_id: TenantId,
+    pub plant: Option<String>,
+}
+
+/// 获取物料变更历史查询
+#[derive(Debug, Clone)]
+pub struct GetMaterialChangeHistoryQuery {
+    pub material_id: MaterialId,
+    pub tenant_id: TenantId,
+    pub from_date: Option<chrono::DateTime<chrono::Utc>>,
+    pub to_date: Option<chrono::DateTime<chrono::Utc>>,
+    pub pagination: Pagination,
+}

@@ -1156,94 +1156,374 @@ impl MaterialRepository for PostgresMaterialRepository {
 
     async fn save_sales_data(
         &self,
-        _material_id: &MaterialId,
-        _sales_data: &SalesData,
+        material_id: &MaterialId,
+        sales_data: &SalesData,
     ) -> AppResult<()> {
-        // TODO: 实现销售数据保存
+        // 使用 UPSERT 语法
+        sqlx::query(
+            r#"
+            INSERT INTO material_sales_data (
+                id, material_id, tenant_id, sales_org, distribution_channel,
+                sales_unit, minimum_order_quantity, minimum_delivery_quantity,
+                delivery_unit, delivery_unit_quantity,
+                pricing_reference_material, item_category_group, account_assignment_group,
+                tax_classification, status,
+                created_at, created_by, updated_at, updated_by
+            ) VALUES (
+                gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                NOW(), NULL, NOW(), NULL
+            )
+            ON CONFLICT (material_id, sales_org, distribution_channel)
+            DO UPDATE SET
+                sales_unit = EXCLUDED.sales_unit,
+                minimum_order_quantity = EXCLUDED.minimum_order_quantity,
+                minimum_delivery_quantity = EXCLUDED.minimum_delivery_quantity,
+                delivery_unit = EXCLUDED.delivery_unit,
+                pricing_reference_material = EXCLUDED.pricing_reference_material,
+                account_assignment_group = EXCLUDED.account_assignment_group,
+                tax_classification = EXCLUDED.tax_classification,
+                status = EXCLUDED.status,
+                updated_at = NOW()
+            "#,
+        )
+        .bind(material_id.0)
+        .bind(material_id.0) // tenant_id - 需要从 material 获取，这里暂时用 material_id
+        .bind(sales_data.sales_org())
+        .bind(sales_data.distribution_channel())
+        .bind(if sales_data.sales_unit().is_empty() { None } else { Some(sales_data.sales_unit()) })
+        .bind(if sales_data.minimum_order_quantity() == 0.0 { None } else { Some(sales_data.minimum_order_quantity()) })
+        .bind(if sales_data.minimum_delivery_quantity() == 0.0 { None } else { Some(sales_data.minimum_delivery_quantity()) })
+        .bind(if sales_data.delivery_unit().is_empty() { None } else { Some(sales_data.delivery_unit()) })
+        .bind(None::<f64>) // delivery_unit_quantity
+        .bind(if sales_data.pricing_reference_material().is_empty() { None } else { Some(sales_data.pricing_reference_material()) })
+        .bind(if sales_data.material_pricing_group().is_empty() { None } else { Some(sales_data.material_pricing_group()) })
+        .bind(if sales_data.account_assignment_group().is_empty() { None } else { Some(sales_data.account_assignment_group()) })
+        .bind(if sales_data.tax_classification().is_empty() { None } else { Some(sales_data.tax_classification()) })
+        .bind(sales_data.status() as i16)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("保存销售数据失败: {}", e)))?;
+
         Ok(())
     }
 
     async fn get_sales_data(
         &self,
-        _material_id: &MaterialId,
-        _sales_org: &str,
-        _tenant_id: &TenantId,
+        material_id: &MaterialId,
+        sales_org: &str,
+        tenant_id: &TenantId,
     ) -> AppResult<Option<SalesData>> {
-        // TODO: 实现销售数据查询
-        Ok(None)
+        let row = sqlx::query_as::<_, MaterialSalesDataRow>(
+            "SELECT * FROM material_sales_data WHERE material_id = $1 AND sales_org = $2 AND tenant_id = $3"
+        )
+        .bind(material_id.0)
+        .bind(sales_org)
+        .bind(tenant_id.0)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("查询销售数据失败: {}", e)))?;
+
+        Ok(row.map(sales_data_from_row))
     }
 
     async fn save_purchase_data(
         &self,
-        _material_id: &MaterialId,
-        _purchase_data: &PurchaseData,
+        material_id: &MaterialId,
+        purchase_data: &PurchaseData,
     ) -> AppResult<()> {
-        // TODO: 实现采购数据保存
+        // 使用 UPSERT 语法
+        let (std_price_amount, std_price_currency) = purchase_data
+            .standard_price()
+            .map(|p| (Some(p.amount), Some(p.currency.clone())))
+            .unwrap_or((None, None));
+
+        sqlx::query(
+            r#"
+            INSERT INTO material_purchase_data (
+                id, material_id, tenant_id, purchase_org, plant,
+                purchase_unit, purchasing_group, order_unit,
+                planned_delivery_days, gr_processing_days,
+                under_delivery_tolerance, over_delivery_tolerance, unlimited_over_delivery,
+                preferred_vendor_id, standard_price_amount, standard_price_currency,
+                price_unit, status,
+                created_at, created_by, updated_at, updated_by
+            ) VALUES (
+                gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+                NOW(), NULL, NOW(), NULL
+            )
+            ON CONFLICT (material_id, purchase_org, tenant_id)
+            DO UPDATE SET
+                plant = EXCLUDED.plant,
+                purchase_unit = EXCLUDED.purchase_unit,
+                purchasing_group = EXCLUDED.purchasing_group,
+                planned_delivery_days = EXCLUDED.planned_delivery_days,
+                under_delivery_tolerance = EXCLUDED.under_delivery_tolerance,
+                over_delivery_tolerance = EXCLUDED.over_delivery_tolerance,
+                preferred_vendor_id = EXCLUDED.preferred_vendor_id,
+                standard_price_amount = EXCLUDED.standard_price_amount,
+                standard_price_currency = EXCLUDED.standard_price_currency,
+                status = EXCLUDED.status,
+                updated_at = NOW()
+            "#,
+        )
+        .bind(material_id.0)
+        .bind(material_id.0) // tenant_id
+        .bind(purchase_data.purchase_org())
+        .bind(if purchase_data.plant().is_empty() { None } else { Some(purchase_data.plant()) })
+        .bind(if purchase_data.purchase_unit().is_empty() { None } else { Some(purchase_data.purchase_unit()) })
+        .bind(if purchase_data.purchasing_group().is_empty() { None } else { Some(purchase_data.purchasing_group()) })
+        .bind(None::<String>) // order_unit
+        .bind(if purchase_data.planned_delivery_days() == 0 { None } else { Some(purchase_data.planned_delivery_days()) })
+        .bind(None::<i32>) // gr_processing_days
+        .bind(if purchase_data.under_delivery_tolerance() == 0.0 { None } else { Some(purchase_data.under_delivery_tolerance()) })
+        .bind(if purchase_data.over_delivery_tolerance() == 0.0 { None } else { Some(purchase_data.over_delivery_tolerance()) })
+        .bind(Some(purchase_data.unlimited_over_delivery()))
+        .bind(if purchase_data.preferred_vendor_id().is_empty() { None } else { Some(purchase_data.preferred_vendor_id()) })
+        .bind(std_price_amount)
+        .bind(std_price_currency)
+        .bind(None::<f64>) // price_unit
+        .bind(purchase_data.status() as i16)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("保存采购数据失败: {}", e)))?;
+
         Ok(())
     }
 
     async fn get_purchase_data(
         &self,
-        _material_id: &MaterialId,
-        _purchase_org: &str,
-        _tenant_id: &TenantId,
+        material_id: &MaterialId,
+        purchase_org: &str,
+        tenant_id: &TenantId,
     ) -> AppResult<Option<PurchaseData>> {
-        // TODO: 实现采购数据查询
-        Ok(None)
+        let row = sqlx::query_as::<_, MaterialPurchaseDataRow>(
+            "SELECT * FROM material_purchase_data WHERE material_id = $1 AND purchase_org = $2 AND tenant_id = $3"
+        )
+        .bind(material_id.0)
+        .bind(purchase_org)
+        .bind(tenant_id.0)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("查询采购数据失败: {}", e)))?;
+
+        Ok(row.map(purchase_data_from_row))
     }
 
     async fn save_storage_data(
         &self,
-        _material_id: &MaterialId,
-        _storage_data: &StorageData,
+        material_id: &MaterialId,
+        storage_data: &StorageData,
     ) -> AppResult<()> {
-        // TODO: 实现仓储数据保存
+        // 使用 UPSERT 语法
+        sqlx::query(
+            r#"
+            INSERT INTO material_storage_data (
+                id, material_id, tenant_id, plant, storage_location,
+                warehouse_number, storage_type, storage_bin,
+                picking_area, max_storage_quantity, min_storage_quantity,
+                replenishment_quantity,
+                created_at, created_by, updated_at, updated_by
+            ) VALUES (
+                gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+                NOW(), NULL, NOW(), NULL
+            )
+            ON CONFLICT (material_id, plant, storage_location, tenant_id)
+            DO UPDATE SET
+                warehouse_number = EXCLUDED.warehouse_number,
+                storage_type = EXCLUDED.storage_type,
+                storage_bin = EXCLUDED.storage_bin,
+                picking_area = EXCLUDED.picking_area,
+                max_storage_quantity = EXCLUDED.max_storage_quantity,
+                min_storage_quantity = EXCLUDED.min_storage_quantity,
+                updated_at = NOW()
+            "#,
+        )
+        .bind(material_id.0)
+        .bind(material_id.0) // tenant_id
+        .bind(storage_data.plant())
+        .bind(storage_data.storage_location())
+        .bind(if storage_data.warehouse_number().is_empty() { None } else { Some(storage_data.warehouse_number()) })
+        .bind(if storage_data.storage_type().is_empty() { None } else { Some(storage_data.storage_type()) })
+        .bind(if storage_data.storage_bin().is_empty() { None } else { Some(storage_data.storage_bin()) })
+        .bind(if storage_data.picking_area().is_empty() { None } else { Some(storage_data.picking_area()) })
+        .bind(if storage_data.max_storage_quantity() == 0.0 { None } else { Some(storage_data.max_storage_quantity()) })
+        .bind(if storage_data.min_storage_quantity() == 0.0 { None } else { Some(storage_data.min_storage_quantity()) })
+        .bind(None::<f64>) // replenishment_quantity
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("保存仓储数据失败: {}", e)))?;
+
         Ok(())
     }
 
     async fn get_storage_data(
         &self,
-        _material_id: &MaterialId,
-        _tenant_id: &TenantId,
+        material_id: &MaterialId,
+        tenant_id: &TenantId,
     ) -> AppResult<Option<StorageData>> {
-        // TODO: 实现仓储数据查询
-        Ok(None)
+        // 获取第一条仓储数据记录
+        let row = sqlx::query_as::<_, MaterialStorageDataRow>(
+            "SELECT * FROM material_storage_data WHERE material_id = $1 AND tenant_id = $2 LIMIT 1"
+        )
+        .bind(material_id.0)
+        .bind(tenant_id.0)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("查询仓储数据失败: {}", e)))?;
+
+        Ok(row.map(storage_data_from_row))
     }
 
     async fn save_accounting_data(
         &self,
-        _material_id: &MaterialId,
-        _accounting_data: &AccountingData,
+        material_id: &MaterialId,
+        accounting_data: &AccountingData,
     ) -> AppResult<()> {
-        // TODO: 实现会计数据保存
+        // 使用 UPSERT 语法
+        let (std_price_amount, std_price_currency) = accounting_data
+            .standard_price()
+            .map(|p| (Some(p.amount), Some(p.currency.clone())))
+            .unwrap_or((None, None));
+
+        let (moving_avg_amount, moving_avg_currency) = accounting_data
+            .moving_average_price()
+            .map(|p| (Some(p.amount), Some(p.currency.clone())))
+            .unwrap_or((None, None));
+
+        sqlx::query(
+            r#"
+            INSERT INTO material_accounting_data (
+                id, material_id, tenant_id, plant, valuation_area,
+                valuation_class, valuation_category, price_control,
+                standard_price_amount, standard_price_currency,
+                moving_average_price_amount, moving_average_price_currency,
+                price_unit, inventory_account, price_difference_account,
+                cost_element, costing_lot_size, with_qty_structure,
+                created_at, created_by, updated_at, updated_by
+            ) VALUES (
+                gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+                NOW(), NULL, NOW(), NULL
+            )
+            ON CONFLICT (material_id, plant, valuation_area, tenant_id)
+            DO UPDATE SET
+                valuation_class = EXCLUDED.valuation_class,
+                price_control = EXCLUDED.price_control,
+                standard_price_amount = EXCLUDED.standard_price_amount,
+                standard_price_currency = EXCLUDED.standard_price_currency,
+                moving_average_price_amount = EXCLUDED.moving_average_price_amount,
+                moving_average_price_currency = EXCLUDED.moving_average_price_currency,
+                inventory_account = EXCLUDED.inventory_account,
+                price_difference_account = EXCLUDED.price_difference_account,
+                cost_element = EXCLUDED.cost_element,
+                with_qty_structure = EXCLUDED.with_qty_structure,
+                updated_at = NOW()
+            "#,
+        )
+        .bind(material_id.0)
+        .bind(material_id.0) // tenant_id
+        .bind(accounting_data.plant())
+        .bind(accounting_data.valuation_area())
+        .bind(if accounting_data.valuation_class().is_empty() { None } else { Some(accounting_data.valuation_class()) })
+        .bind(None::<String>) // valuation_category
+        .bind(accounting_data.price_control() as i16)
+        .bind(std_price_amount)
+        .bind(std_price_currency)
+        .bind(moving_avg_amount)
+        .bind(moving_avg_currency)
+        .bind(if accounting_data.price_unit_quantity() == 1 { None } else { Some(accounting_data.price_unit_quantity() as f64) })
+        .bind(if accounting_data.inventory_account().is_empty() { None } else { Some(accounting_data.inventory_account()) })
+        .bind(if accounting_data.price_difference_account().is_empty() { None } else { Some(accounting_data.price_difference_account()) })
+        .bind(if accounting_data.cost_element().is_empty() { None } else { Some(accounting_data.cost_element()) })
+        .bind(None::<f64>) // costing_lot_size
+        .bind(Some(accounting_data.has_qty_structure()))
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("保存会计数据失败: {}", e)))?;
+
         Ok(())
     }
 
     async fn get_accounting_data(
         &self,
-        _material_id: &MaterialId,
-        _tenant_id: &TenantId,
+        material_id: &MaterialId,
+        tenant_id: &TenantId,
     ) -> AppResult<Option<AccountingData>> {
-        // TODO: 实现会计数据查询
-        Ok(None)
+        // 获取第一条会计数据记录
+        let row = sqlx::query_as::<_, MaterialAccountingDataRow>(
+            "SELECT * FROM material_accounting_data WHERE material_id = $1 AND tenant_id = $2 LIMIT 1"
+        )
+        .bind(material_id.0)
+        .bind(tenant_id.0)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("查询会计数据失败: {}", e)))?;
+
+        Ok(row.map(accounting_data_from_row))
     }
 
     async fn save_quality_data(
         &self,
-        _material_id: &MaterialId,
-        _quality_data: &QualityData,
+        material_id: &MaterialId,
+        quality_data: &QualityData,
     ) -> AppResult<()> {
-        // TODO: 实现质量数据保存
+        // 使用 UPSERT 语法
+        sqlx::query(
+            r#"
+            INSERT INTO material_quality_data (
+                id, material_id, tenant_id, plant,
+                inspection_active, inspection_type, inspection_interval,
+                sample_percentage, shelf_life_days, remaining_shelf_life_days,
+                certificate_type, certificate_required,
+                created_at, created_by, updated_at, updated_by
+            ) VALUES (
+                gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+                NOW(), NULL, NOW(), NULL
+            )
+            ON CONFLICT (material_id, plant, tenant_id)
+            DO UPDATE SET
+                inspection_active = EXCLUDED.inspection_active,
+                inspection_type = EXCLUDED.inspection_type,
+                sample_percentage = EXCLUDED.sample_percentage,
+                shelf_life_days = EXCLUDED.shelf_life_days,
+                remaining_shelf_life_days = EXCLUDED.remaining_shelf_life_days,
+                certificate_required = EXCLUDED.certificate_required,
+                updated_at = NOW()
+            "#,
+        )
+        .bind(material_id.0)
+        .bind(material_id.0) // tenant_id
+        .bind(quality_data.plant())
+        .bind(quality_data.inspection_active())
+        .bind(if quality_data.inspection_type().is_empty() { None } else { Some(quality_data.inspection_type()) })
+        .bind(None::<i32>) // inspection_interval
+        .bind(if quality_data.sample_percentage() == 0.0 { None } else { Some(quality_data.sample_percentage()) })
+        .bind(if quality_data.shelf_life_days() == 0 { None } else { Some(quality_data.shelf_life_days()) })
+        .bind(if quality_data.remaining_shelf_life() == 0 { None } else { Some(quality_data.remaining_shelf_life()) })
+        .bind(None::<String>) // certificate_type
+        .bind(Some(quality_data.certificate_required()))
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("保存质量数据失败: {}", e)))?;
+
         Ok(())
     }
 
     async fn get_quality_data(
         &self,
-        _material_id: &MaterialId,
-        _tenant_id: &TenantId,
+        material_id: &MaterialId,
+        tenant_id: &TenantId,
     ) -> AppResult<Option<QualityData>> {
-        // TODO: 实现质量数据查询
-        Ok(None)
+        // 获取第一条质量数据记录
+        let row = sqlx::query_as::<_, MaterialQualityDataRow>(
+            "SELECT * FROM material_quality_data WHERE material_id = $1 AND tenant_id = $2 LIMIT 1"
+        )
+        .bind(material_id.0)
+        .bind(tenant_id.0)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("查询质量数据失败: {}", e)))?;
+
+        Ok(row.map(quality_data_from_row))
     }
 
     async fn find_unit_conversions(
@@ -1265,10 +1545,75 @@ impl MaterialRepository for PostgresMaterialRepository {
 
     async fn save_unit_conversion(
         &self,
-        _material_id: &MaterialId,
-        _conversion: &UnitConversion,
+        material_id: &MaterialId,
+        conversion: &UnitConversion,
     ) -> AppResult<()> {
-        // TODO: 实现单位换算保存
+        // 获取物料的 tenant_id
+        let tenant_id: Option<(uuid::Uuid,)> =
+            sqlx::query_as("SELECT tenant_id FROM materials WHERE id = $1")
+                .bind(material_id.0)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| AppError::database(format!("查询物料失败: {}", e)))?;
+
+        let tenant_id = tenant_id
+            .ok_or_else(|| AppError::not_found(format!("物料 {} 不存在", material_id.0)))?
+            .0;
+
+        // 使用 UPSERT 语句保存或更新单位换算
+        sqlx::query(
+            r#"
+            INSERT INTO material_unit_conversions (
+                id, material_id, tenant_id, from_unit, to_unit, numerator, denominator, ean_upc,
+                created_at, created_by, updated_at, updated_by
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NULL, NOW(), NULL)
+            ON CONFLICT (material_id, from_unit, to_unit)
+            DO UPDATE SET
+                numerator = EXCLUDED.numerator,
+                denominator = EXCLUDED.denominator,
+                ean_upc = EXCLUDED.ean_upc,
+                updated_at = NOW()
+            "#,
+        )
+        .bind(uuid::Uuid::new_v4())
+        .bind(material_id.0)
+        .bind(tenant_id)
+        .bind(conversion.source_unit())
+        .bind(conversion.target_unit())
+        .bind(Decimal::from_f64_retain(conversion.numerator()).unwrap_or_default())
+        .bind(Decimal::from_f64_retain(conversion.denominator()).unwrap_or_default())
+        .bind(conversion.ean_upc())
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("保存单位换算失败: {}", e)))?;
+
+        Ok(())
+    }
+
+    async fn delete_unit_conversion(
+        &self,
+        material_id: &MaterialId,
+        from_unit: &str,
+        to_unit: &str,
+    ) -> AppResult<()> {
+        let result = sqlx::query(
+            "DELETE FROM material_unit_conversions WHERE material_id = $1 AND from_unit = $2 AND to_unit = $3"
+        )
+        .bind(material_id.0)
+        .bind(from_unit)
+        .bind(to_unit)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::database(format!("删除单位换算失败: {}", e)))?;
+
+        if result.rows_affected() == 0 {
+            return Err(AppError::not_found(format!(
+                "单位换算 {} -> {} 不存在",
+                from_unit, to_unit
+            )));
+        }
+
         Ok(())
     }
 }

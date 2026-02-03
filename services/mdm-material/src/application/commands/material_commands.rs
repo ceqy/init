@@ -3,9 +3,8 @@
 use common::types::{TenantId, UserId};
 use errors::AppResult;
 
-use crate::domain::enums::{PriceControl, ProcurementType};
 use crate::domain::value_objects::{
-    LocalizedText, MaterialGroupId, MaterialId, MaterialNumber, MaterialTypeId,
+    LocalizedText, MaterialGroupId, MaterialId, MaterialTypeId,
 };
 use crate::domain::views::{
     AccountingData, PlantData, PurchaseData, QualityData, SalesData, StorageData,
@@ -259,4 +258,50 @@ pub struct MarkForDeletionCommand {
     pub material_id: MaterialId,
     pub tenant_id: TenantId,
     pub user_id: UserId,
+}
+
+/// 设置替代物料命令
+#[derive(Debug, Clone)]
+pub struct SetAlternativeMaterialCommand {
+    pub material_id: MaterialId,
+    pub alternative_material_id: MaterialId,
+    pub tenant_id: TenantId,
+    pub user_id: UserId,
+    pub plant: Option<String>,
+    pub priority: i32,
+    pub valid_from: Option<chrono::DateTime<chrono::Utc>>,
+    pub valid_to: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+/// 移除替代物料命令
+#[derive(Debug, Clone)]
+pub struct RemoveAlternativeMaterialCommand {
+    pub material_id: MaterialId,
+    pub alternative_material_id: MaterialId,
+    pub tenant_id: TenantId,
+    pub user_id: UserId,
+    pub plant: Option<String>,
+}
+
+/// 创建单位换算命令
+#[derive(Debug, Clone)]
+pub struct CreateUnitConversionCommand {
+    pub material_id: MaterialId,
+    pub tenant_id: TenantId,
+    pub user_id: UserId,
+    pub from_unit: String,
+    pub to_unit: String,
+    pub numerator: f64,
+    pub denominator: f64,
+    pub ean_upc: Option<String>,
+}
+
+/// 删除单位换算命令
+#[derive(Debug, Clone)]
+pub struct DeleteUnitConversionCommand {
+    pub material_id: MaterialId,
+    pub tenant_id: TenantId,
+    pub user_id: UserId,
+    pub from_unit: String,
+    pub to_unit: String,
 }

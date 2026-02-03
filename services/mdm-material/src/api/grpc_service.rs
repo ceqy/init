@@ -1259,41 +1259,201 @@ impl MaterialService for MaterialServiceImpl {
 
     async fn get_alternative_materials(
         &self,
-        _request: Request<GetAlternativeMaterialsRequest>,
+        request: Request<GetAlternativeMaterialsRequest>,
     ) -> Result<Response<GetAlternativeMaterialsResponse>, Status> {
-        // TODO: 需要实现替代物料关系管理
-        Err(Status::unimplemented("Alternative materials not yet implemented"))
+        let metadata = request.metadata();
+        let tenant_id = extract_tenant_id(metadata).map_err(|e| Status::unauthenticated(e.to_string()))?;
+
+        let req = request.into_inner();
+
+        // 解析物料 ID
+        let material_id = parse_material_id(&req.material_id)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+        // 创建查询
+        let query = GetAlternativeMaterialsQuery {
+            material_id,
+            tenant_id,
+            plant: if req.plant.is_empty() { None } else { Some(req.plant) },
+        };
+
+        // 执行查询
+        let alternatives = self
+            .handler
+            .get_alternative_materials(query)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 转换为 Proto
+        let proto_alternatives = alternatives
+            .iter()
+            .map(alternative_material_to_proto)
+            .collect();
+
+        Ok(Response::new(GetAlternativeMaterialsResponse {
+            alternatives: proto_alternatives,
+        }))
     }
 
     async fn set_alternative_material(
         &self,
-        _request: Request<SetAlternativeMaterialRequest>,
+        request: Request<SetAlternativeMaterialRequest>,
     ) -> Result<Response<()>, Status> {
-        // TODO: 需要实现替代物料关系管理
-        Err(Status::unimplemented("Alternative materials not yet implemented"))
+        let metadata = request.metadata();
+        let tenant_id = extract_tenant_id(metadata).map_err(|e| Status::unauthenticated(e.to_string()))?;
+        let user_id = extract_user_id(metadata).map_err(|e| Status::unauthenticated(e.to_string()))?;
+
+        let req = request.into_inner();
+
+        // 解析物料 ID
+        let material_id = parse_material_id(&req.material_id)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+        let alternative_material_id = parse_material_id(&req.alternative_material_id)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+        // 解析有效期
+        let (valid_from, valid_to) = if let Some(validity) = req.validity {
+            (
+                proto_to_timestamp(validity.valid_from),
+                proto_to_timestamp(validity.valid_to),
+            )
+        } else {
+            (None, None)
+        };
+
+        // 创建命令
+        let cmd = SetAlternativeMaterialCommand {
+            material_id,
+            alternative_material_id,
+            tenant_id,
+            user_id,
+            plant: if req.plant.is_empty() { None } else { Some(req.plant) },
+            priority: req.priority,
+            valid_from,
+            valid_to,
+        };
+
+        // 执行命令
+        self.handler
+            .set_alternative_material(cmd)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(()))
     }
 
     async fn remove_alternative_material(
         &self,
-        _request: Request<RemoveAlternativeMaterialRequest>,
+        request: Request<RemoveAlternativeMaterialRequest>,
     ) -> Result<Response<()>, Status> {
-        // TODO: 需要实现替代物料关系管理
-        Err(Status::unimplemented("Alternative materials not yet implemented"))
+        let metadata = request.metadata();
+        let tenant_id = extract_tenant_id(metadata).map_err(|e| Status::unauthenticated(e.to_string()))?;
+        let user_id = extract_user_id(metadata).map_err(|e| Status::unauthenticated(e.to_string()))?;
+
+        let req = request.into_inner();
+
+        // 解析物料 ID
+        let material_id = parse_material_id(&req.material_id)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+        let alternative_material_id = parse_material_id(&req.alternative_material_id)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+        // 创建命令
+        let cmd = RemoveAlternativeMaterialCommand {
+            material_id,
+            alternative_material_id,
+            tenant_id,
+            user_id,
+            plant: if req.plant.is_empty() { None } else { Some(req.plant) },
+        };
+
+        // 执行命令
+        self.handler
+            .remove_alternative_material(cmd)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(()))
     }
 
     async fn create_unit_conversion(
         &self,
-        _request: Request<CreateUnitConversionRequest>,
+        request: Request<CreateUnitConversionRequest>,
     ) -> Result<Response<CreateUnitConversionResponse>, Status> {
-        // TODO: 需要实现单位换算管理
-        Err(Status::unimplemented("Unit conversion not yet implemented"))
+        let metadata = request.metadata();
+        let tenant_id = extract_tenant_id(metadata).map_err(|e| Status::unauthenticated(e.to_string()))?;
+        let user_id = extract_user_id(metadata).map_err(|e| Status::unauthenticated(e.to_string()))?;
+
+        let req = request.into_inner();
+
+        // 解析物料 ID
+        let material_id = parse_material_id(&req.material_id)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+        // 解析单位换算
+        let conversion = req.conversion
+            .ok_or_else(|| Status::invalid_argument("conversion is required"))?;
+
+        // 创建命令
+        let cmd = CreateUnitConversionCommand {
+            material_id: material_id.clone(),
+            tenant_id: tenant_id.clone(),
+            user_id,
+            from_unit: conversion.from_unit,
+            to_unit: conversion.to_unit,
+            numerator: conversion.numerator,
+            denominator: conversion.denominator,
+            ean_upc: if conversion.ean_upc.is_empty() { None } else { Some(conversion.ean_upc) },
+        };
+
+        // 执行命令
+        self.handler
+            .create_unit_conversion(cmd)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 获取更新后的物料
+        let query = GetMaterialQuery {
+            material_id,
+            tenant_id,
+        };
+        let material = self.handler.get_material(query).await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(CreateUnitConversionResponse {
+            material: Some(material_to_proto(&material)),
+        }))
     }
 
     async fn delete_unit_conversion(
         &self,
-        _request: Request<DeleteUnitConversionRequest>,
+        request: Request<DeleteUnitConversionRequest>,
     ) -> Result<Response<()>, Status> {
-        // TODO: 需要实现单位换算管理
-        Err(Status::unimplemented("Unit conversion not yet implemented"))
+        let metadata = request.metadata();
+        let tenant_id = extract_tenant_id(metadata).map_err(|e| Status::unauthenticated(e.to_string()))?;
+        let user_id = extract_user_id(metadata).map_err(|e| Status::unauthenticated(e.to_string()))?;
+
+        let req = request.into_inner();
+
+        // 解析物料 ID
+        let material_id = parse_material_id(&req.material_id)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+        // 创建命令
+        let cmd = DeleteUnitConversionCommand {
+            material_id,
+            tenant_id,
+            user_id,
+            from_unit: req.from_unit,
+            to_unit: req.to_unit,
+        };
+
+        // 执行命令
+        self.handler
+            .delete_unit_conversion(cmd)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(()))
     }
 }
