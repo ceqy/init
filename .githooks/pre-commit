@@ -1,0 +1,89 @@
+#!/bin/bash
+# Git Pre-commit Hook - 防止提交敏感信息
+
+set -e
+
+echo "🔍 检查敏感信息..."
+
+# 定义敏感信息模式
+PATTERNS=(
+    # IP 地址（私有网段）
+    "10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]+"
+    "192\.168\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]+"
+    "172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]+"
+    
+    # UUID 格式的凭证
+    "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    
+    # 常见密钥模式
+    "password\s*=\s*['\"][^'\"]{8,}['\"]"
+    "secret\s*=\s*['\"][^'\"]{8,}['\"]"
+    "token\s*=\s*['\"][^'\"]{8,}['\"]"
+    
+    # AWS keys
+    "AKIA[0-9A-Z]{16}"
+    
+    # Private keys
+    "-----BEGIN.*PRIVATE KEY-----"
+)
+
+# 排除的文件（允许包含示例数据）
+EXCLUDE_FILES=(
+    ".env.example"
+    "*.md"
+    "*.test.*"
+    "*/tests/*"
+    "*/examples/*"
+)
+
+# 检查暂存的文件
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$STAGED_FILES" ]; then
+    exit 0
+fi
+
+FOUND_ISSUES=0
+
+for FILE in $STAGED_FILES; do
+    # 跳过排除的文件
+    SKIP=0
+    for EXCLUDE in "${EXCLUDE_FILES[@]}"; do
+        if [[ "$FILE" == $EXCLUDE ]]; then
+            SKIP=1
+            break
+        fi
+    done
+    
+    if [ $SKIP -eq 1 ]; then
+        continue
+    fi
+    
+    # 检查文件内容
+    CONTENT=$(git diff --cached "$FILE")
+    
+    for PATTERN in "${PATTERNS[@]}"; do
+        if echo "$CONTENT" | grep -qE "$PATTERN"; then
+            echo "❌ 发现潜在敏感数据: $FILE"
+            echo "   模式: $PATTERN"
+            FOUND_ISSUES=1
+        fi
+    done
+done
+
+if [ $FOUND_ISSUES -eq 1 ]; then
+    echo ""
+    echo "⚠️  提交已阻止：检测到敏感信息！"
+    echo ""
+    echo "请执行以下操作："
+    echo "  1. 从文件中移除敏感数据"
+    echo "  2. 使用占位符如 'your-server-here' 或 'xxx'"
+    echo "  3. 将真实凭证移至 .env.local（不会被跟踪）"
+    echo ""
+    echo "如需绕过检查（不推荐）："
+    echo "  git commit --no-verify"
+    exit 1
+fi
+
+echo "✅ 未检测到敏感信息"
+exit 0
