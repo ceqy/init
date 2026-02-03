@@ -84,7 +84,7 @@ where
     S::Future: Send + 'static,
 {
     // 1. 加载配置
-    let config = AppConfig::load(config_dir)?;
+    let config = AppConfig::load(config_dir).await?;
 
     // 2. 初始化运行时
     init_runtime(&config);
@@ -156,7 +156,7 @@ where
     Fut: Future<Output = AppResult<()>>,
 {
     // 1. 加载配置
-    let config = AppConfig::load(config_dir)?;
+    let config = AppConfig::load(config_dir).await?;
 
     // 2. 初始化运行时
     init_runtime(&config);
@@ -225,7 +225,7 @@ where
     Fut: Future<Output = Result<tonic::transport::server::Router, Box<dyn std::error::Error>>>,
 {
     // 1. 加载配置
-    let config = AppConfig::load(config_dir)?;
+    let config = AppConfig::load(config_dir).await?;
 
     // 2. 初始化运行时
     init_runtime(&config);

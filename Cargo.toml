@@ -116,6 +116,7 @@ mockall = { version = "0.13" }
 hex = { version = "0.4" }
 futures = { version = "0.3" }
 url = { version = "2.5.8" }
+reqwest = { version = "0.12", features = ["json"] }
 
 # Internal crates
 common = { path = "crates/common" }

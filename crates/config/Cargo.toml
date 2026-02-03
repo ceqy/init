@@ -8,5 +8,14 @@ license.workspace = true
 [dependencies]
 figment = { workspace = true }
 secrecy = { workspace = true, features = ["serde"] }
-serde = { workspace = true }
+serde = { workspace = true , features = ["derive"]}
+serde_json = { workspace = true }
 thiserror = { workspace = true }
+
+# 核心依赖：用于请求 Vault API
+reqwest = { workspace = true, features = ["json"] }
+# 用于处理异步运行时
+tokio = { workspace = true, features = ["rt", "macros"] }
+
+[dev-dependencies]
+dotenvy = { workspace = true }

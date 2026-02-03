@@ -2,9 +2,10 @@
 
 use figment::{
     Figment,
-    providers::{Env, Format, Toml},
+    providers::{Env, Format, Serialized, Toml},
 };
 use serde::Deserialize;
+use std::collections::HashMap;
 use thiserror::Error;
 
 use secrecy::Secret;
@@ -13,6 +14,10 @@ use secrecy::Secret;
 pub enum ConfigError {
     #[error("Failed to load config: {0}")]
     Load(#[from] Box<figment::Error>),
+    #[error("Vault error: {0}")]
+    Vault(String),
+    #[error("HTTP error: {0}")]
+    Http(#[from] reqwest::Error),
 }
 
 /// 数据库配置
@@ -251,15 +256,36 @@ pub struct AppConfig {
 
 impl AppConfig {
     /// 从配置文件和环境变量加载配置
-    pub fn load(config_dir: &str) -> Result<Self, ConfigError> {
+    pub async fn load(config_dir: &str) -> Result<Self, ConfigError> {
         let env = std::env::var("APP_ENV").unwrap_or_else(|_| "development".to_string());
 
-        let config: Self = Figment::new()
+        // 1. 加载引导配置 (Vault 凭证)
+        let vault_role_id = std::env::var("VAULT_ROLE_ID").ok();
+        let vault_secret_id = std::env::var("VAULT_SECRET_ID").ok();
+        let vault_addr = std::env::var("VAULT_ADDR").ok();
+
+        let mut vault_secrets = HashMap::new();
+
+        if let (Some(role_id), Some(secret_id), Some(addr)) =
+            (vault_role_id, vault_secret_id, vault_addr)
+        {
+            // 2. 执行 Vault 登录和拉取逻辑
+            vault_secrets = fetch_vault_secrets(&addr, &role_id, &secret_id).await?;
+        }
+
+        // 3. 合并所有配置源
+        // 我们先合并基础文件和环境变量，最后合并 Vault 拿到的秘密
+        let mut figment = Figment::new()
             .merge(Toml::file(format!("{}/default.toml", config_dir)))
             .merge(Toml::file(format!("{}/{}.toml", config_dir, env)))
-            .merge(Env::prefixed("").split("_"))
-            .extract()
-            .map_err(Box::new)?;
+            .merge(Env::prefixed("").split("_"));
+
+        if !vault_secrets.is_empty() {
+            // 将 Vault 拿到的嵌套 Map 直接合并
+            figment = figment.merge(Serialized::globals(vault_secrets));
+        }
+
+        let config: Self = figment.extract().map_err(Box::new)?;
 
         Ok(config)
     }
@@ -273,6 +299,97 @@ impl AppConfig {
     pub fn is_development(&self) -> bool {
         self.app_env == "development"
     }
+}
+
+/// 从 Vault 获取秘密并解析为 Figment 可用的 Map
+async fn fetch_vault_secrets(
+    addr: &str,
+    role_id: &str,
+    secret_id: &str,
+) -> Result<HashMap<String, serde_json::Value>, ConfigError> {
+    // 强制禁用代理
+    let client = reqwest::Client::builder().no_proxy().build()?;
+
+    // 1. AppRole 登录
+    let login_url = format!("{}/v1/auth/approle/login", addr);
+    let login_resp_raw = client
+        .post(&login_url)
+        .json(&serde_json::json!({ "role_id": role_id, "secret_id": secret_id }))
+        .send()
+        .await?;
+
+    let login_text = login_resp_raw.text().await?;
+    let login_resp: serde_json::Value = serde_json::from_str(&login_text)
+        .map_err(|e| ConfigError::Vault(format!("Failed to parse login JSON: {}", e)))?;
+
+    let token = login_resp["auth"]["client_token"]
+        .as_str()
+        .ok_or_else(|| ConfigError::Vault("Failed to get client token".into()))?;
+
+    // 使用嵌套 Map：{ "database": { "url": "..." } }
+    let mut root_map: HashMap<String, HashMap<String, serde_json::Value>> = HashMap::new();
+
+    // 2. 拉取秘密
+    let paths = [
+        (
+            "database",
+            std::env::var("VAULT_DB_PATH").unwrap_or_default(),
+        ),
+        (
+            "redis",
+            std::env::var("VAULT_REDIS_PATH").unwrap_or_default(),
+        ),
+    ];
+
+    for (prefix, path) in paths {
+        if path.is_empty() {
+            continue;
+        }
+
+        let secret_url = format!("{}/v1/{}", addr, path);
+        let resp: serde_json::Value = client
+            .get(&secret_url)
+            .header("X-Vault-Token", token)
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        if let Some(data) = resp["data"]["data"].as_object() {
+            let section = root_map.entry(prefix.to_string()).or_default();
+            for (key, val) in data {
+                section.insert(key.clone(), val.clone());
+            }
+        }
+    }
+
+    // 3. 特殊处理：构造数据库 URL
+    if let Some(db_section) = root_map.get_mut("database") {
+        if let (Some(u), Some(p)) = (db_section.get("username"), db_section.get("password")) {
+            if let (Some(user), Some(pass)) = (u.as_str(), p.as_str()) {
+                let db_url = format!("postgres://{}:{}@10.0.0.10:5432/erp", user, pass);
+                db_section.insert("url".to_string(), serde_json::Value::String(db_url));
+            }
+        }
+    }
+
+    // 4. 特殊处理：构造 Redis URL
+    if let Some(redis_section) = root_map.get_mut("redis") {
+        if let Some(p) = redis_section.get("password") {
+            if let Some(pass) = p.as_str() {
+                let redis_url = format!("redis://:{}@127.0.0.1:6379", pass);
+                redis_section.insert("url".to_string(), serde_json::Value::String(redis_url));
+            }
+        }
+    }
+
+    // 转为 Figment 能识别的顶层 Map
+    let mut final_map = HashMap::new();
+    for (k, v) in root_map {
+        final_map.insert(k, serde_json::to_value(v).unwrap());
+    }
+
+    Ok(final_map)
 }
 
 #[cfg(test)]
